@@ -40,15 +40,15 @@ class _HomeScreenState extends State<HomeScreen> {
           SnackBar(content: Text('Книга "${imported.name}" импортирована')),
         );
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Импорт отменён')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Импорт отменён')),
+        );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка: $e')),
+      );
     }
   }
 
@@ -58,7 +58,10 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Мои книги'),
         actions: [
-          IconButton(icon: const Icon(Icons.add), onPressed: _addTemplate),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _addTemplate,
+          ),
           IconButton(
             icon: const Icon(Icons.upload),
             onPressed: _importTemplate,
@@ -78,12 +81,28 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: box.length,
             itemBuilder: (context, index) {
               final template = box.getAt(index)!;
+              final completed = template.completedLeaves;
+              final total = template.totalLeaves;
+              final progress = total > 0 ? completed / total : 0.0;
+
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: ListTile(
                   title: Text(template.name),
-                  subtitle: Text(
-                    '${template.completedLeaves}/${template.totalLeaves}',
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.grey[300],
+                        color: Colors.blue,
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('$completed/$total'),
+                    ],
                   ),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) async {
@@ -105,9 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           await FileUtils.exportTemplate(template);
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Книга экспортирована'),
-                            ),
+                            const SnackBar(content: Text('Книга экспортирована')),
                           );
                         } catch (e) {
                           if (!mounted) return;

@@ -5,11 +5,7 @@ class BookScreen extends StatefulWidget {
   final Node node;
   final VoidCallback onNodeUpdated;
 
-  const BookScreen({
-    super.key,
-    required this.node,
-    required this.onNodeUpdated,
-  });
+  const BookScreen({super.key, required this.node, required this.onNodeUpdated});
 
   @override
   State<BookScreen> createState() => _BookScreenState();
@@ -38,43 +34,53 @@ class _BookScreenState extends State<BookScreen> {
     widget.onNodeUpdated();
   }
 
-  Widget _buildNodeTile(Node node) {
+  Widget _buildNodeTile(Node node, int depth) {
     final bool isLeaf = node.children.isEmpty;
+    final icon = isLeaf
+        ? (node.completed
+        ? const Icon(Icons.check_circle, color: Colors.green)
+        : const Icon(Icons.radio_button_unchecked, color: Colors.grey))
+        : (node.isExpanded
+        ? const Icon(Icons.folder_open)
+        : const Icon(Icons.folder));
+
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: isLeaf
-          ? CheckboxListTile(
-              title: Text(node.name),
-              value: node.completed,
-              onChanged: (value) => _toggleCompleted(node),
-              secondary: const Icon(Icons.task),
-            )
-          : ListTile(
-              title: Text(node.name),
-              subtitle: Text('${node.completedLeaves}/${node.totalLeaves}'),
-              trailing: IconButton(
-                icon: Icon(
-                  node.isExpanded ? Icons.expand_less : Icons.expand_more,
-                ),
-                onPressed: () => _toggleExpanded(node),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      child: InkWell(
+        onTap: isLeaf
+            ? () => _toggleCompleted(node)
+            : () => _toggleExpanded(node),
+        child: Padding(
+          padding: EdgeInsets.only(left: depth * 16.0),
+          child: ListTile(
+            leading: icon,
+            title: Text(
+              node.name,
+              style: TextStyle(
+                fontWeight: isLeaf ? FontWeight.normal : FontWeight.bold,
+                decoration: isLeaf && node.completed
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
               ),
-              onTap: () => _toggleExpanded(node),
             ),
+            trailing: !isLeaf
+                ? Icon(node.isExpanded
+                ? Icons.expand_less
+                : Icons.expand_more)
+                : null,
+          ),
+        ),
+      ),
     );
   }
 
-  List<Widget> _buildChildren(Node node) {
+  List<Widget> _buildChildren(Node node, int depth) {
     final List<Widget> widgets = [];
     for (int i = 0; i < node.children.length; i++) {
       final child = node.children[i];
-      widgets.add(_buildNodeTile(child));
+      widgets.add(_buildNodeTile(child, depth));
       if (child.isExpanded && child.children.isNotEmpty) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0),
-            child: Column(children: _buildChildren(child)),
-          ),
-        );
+        widgets.addAll(_buildChildren(child, depth + 1));
       }
     }
     return widgets;
@@ -83,7 +89,9 @@ class _BookScreenState extends State<BookScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_node.name)),
+      appBar: AppBar(
+        title: Text(_node.name),
+      ),
       body: Column(
         children: [
           Card(
@@ -98,10 +106,7 @@ class _BookScreenState extends State<BookScreen> {
                     children: [
                       const Text(
                         'Прогресс',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       Text(
                         '${_node.completedLeaves}/${_node.totalLeaves}',
@@ -123,7 +128,11 @@ class _BookScreenState extends State<BookScreen> {
               ),
             ),
           ),
-          Expanded(child: ListView(children: _buildChildren(_node))),
+          Expanded(
+            child: ListView(
+              children: _buildChildren(_node, 0),
+            ),
+          ),
         ],
       ),
     );
