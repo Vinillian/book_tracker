@@ -1,0 +1,162 @@
+{
+  "name": "Современный учебник JavaScript",
+  "children": [
+    {
+      "name": "Введение",
+      "children": [
+        { "name": "Что такое JavaScript?", "children": [] },
+        { "name": "Руководства и справочники", "children": [] },
+        { "name": "Редакторы кода", "children": [] },
+        { "name": "Консоль разработчика", "children": [] }
+      ]
+    },
+    {
+      "name": "Основы JavaScript",
+      "children": [
+        { "name": "Привет, мир!", "children": [] },
+        { "name": "Структура кода", "children": [] },
+        { "name": "Строгий режим", "children": [] },
+        { "name": "Переменные", "children": [] },
+        { "name": "Типы данных", "children": [] },
+        { "name": "Взаимодействие: alert, prompt, confirm", "children": [] },
+        { "name": "Преобразование типов", "children": [] },
+        { "name": "Базовые операторы, математика", "children": [] },
+        { "name": "Операторы сравнения", "children": [] },
+        { "name": "Условные операторы: if, '?'", "children": [] },
+        { "name": "Логические операторы", "children": [] },
+        { "name": "Циклы while и for", "children": [] },
+        { "name": "Конструкция switch", "children": [] },
+        { "name": "Функции", "children": [] },
+        { "name": "Function Expression", "children": [] },
+        { "name": "Стрелочные функции", "children": [] },
+        { "name": "Особенности JavaScript", "children": [] }
+      ]
+    },
+    {
+      "name": "Качество кода",
+      "children": [
+        { "name": "Отладка в браузере", "children": [] },
+        { "name": "Советы по стилю кода", "children": [] },
+        { "name": "Комментарии", "children": [] },
+        { "name": "Автоматические тесты", "children": [] }
+      ]
+    },
+    {
+      "name": "Объекты: основы",
+      "children": [
+        { "name": "Объекты", "children": [] },
+        { "name": "Копирование объектов", "children": [] },
+        { "name": "Сборка мусора", "children": [] },
+        { "name": "Методы объекта, this", "children": [] },
+        { "name": "Конструктор, оператор new", "children": [] }
+      ]
+    },
+    {
+      "name": "Типы данных",
+      "children": [
+        { "name": "Числа", "children": [] },
+        { "name": "Строки", "children": [] },
+        { "name": "Массивы", "children": [] },
+        { "name": "Перебираемые объекты", "children": [] },
+        { "name": "Map и Set", "children": [] },
+        { "name": "WeakMap и WeakSet", "children": [] },
+        { "name": "Object.keys, values, entries", "children": [] },
+        { "name": "Деструктурирующее присваивание", "children": [] },
+        { "name": "Дата и время", "children": [] },
+        { "name": "Формат JSON", "children": [] }
+      ]
+    },
+    {
+      "name": "Продвинутая работа с функциями",
+      "children": [
+        { "name": "Рекурсия и стек", "children": [] },
+        { "name": "Замыкания", "children": [] },
+        { "name": "Объект функции, NFE", "children": [] },
+        { "name": "Планирование: setTimeout и setInterval", "children": [] },
+        { "name": "Декораторы и переадресация вызова", "children": [] },
+        { "name": "Привязка контекста к функции", "children": [] }
+      ]
+    },
+    {
+      "name": "Свойства объекта, их конфигурация",
+      "children": [
+        { "name": "Флаги и дескрипторы свойств", "children": [] },
+        { "name": "Геттеры и сеттеры", "children": [] }
+      ]
+    },
+    {
+      "name": "Прототипы, наследование",
+      "children": [
+        { "name": "Прототипное наследование", "children": [] },
+        { "name": "F.prototype", "children": [] },
+        { "name": "Встроенные прототипы", "children": [] },
+        { "name": "Методы прототипов", "children": [] }
+      ]
+    },
+    {
+      "name": "Классы",
+      "children": [
+        { "name": "Класс: базовый синтаксис", "children": [] },
+        { "name": "Наследование классов", "children": [] },
+        { "name": "Статические свойства и методы", "children": [] },
+        { "name": "Приватные, защищённые свойства", "children": [] },
+        { "name": "Расширение встроенных классов", "children": [] },
+        { "name": "instanceof", "children": [] }
+      ]
+    },
+    {
+      "name": "Обработка ошибок",
+      "children": [
+        { "name": "try..catch", "children": [] },
+        { "name": "Проброс ошибок", "children": [] }
+      ]
+    },
+    {
+      "name": "Промисы, async/await",
+      "children": [
+        { "name": "Введение: колбэки", "children": [] },
+        { "name": "Промисы", "children": [] },
+        { "name": "Цепочка промисов", "children": [] },
+        { "name": "Промисы: обработка ошибок", "children": [] },
+        { "name": "Promise API", "children": [] },
+        { "name": "Промисификация", "children": [] },
+        { "name": "Async/await", "children": [] }
+      ]
+    },
+    {
+      "name": "Генераторы, продвинутая итерация",
+      "children": [
+        { "name": "Генераторы", "children": [] },
+        { "name": "Async итераторы", "children": [] },
+        { "name": "Async генераторы", "children": [] }
+      ]
+    },
+    {
+      "name": "Модули",
+      "children": [
+        { "name": "Модули, введение", "children": [] },
+        { "name": "Экспорт и импорт", "children": [] },
+        { "name": "Динамические импорты", "children": [] }
+      ]
+    },
+    {
+      "name": "Браузер: документ, события, интерфейсы",
+      "children": [
+        { "name": "Браузерное окружение", "children": [] },
+        { "name": "DOM-дерево", "children": [] },
+        { "name": "Навигация по DOM", "children": [] },
+        { "name": "Поиск элементов", "children": [] },
+        { "name": "Свойства узлов", "children": [] },
+        { "name": "Атрибуты и свойства", "children": [] },
+        { "name": "Изменение документа", "children": [] },
+        { "name": "Стили и классы", "children": [] },
+        { "name": "Размеры и прокрутка", "children": [] },
+        { "name": "Введение в события", "children": [] },
+        { "name": "Всплытие и погружение", "children": [] },
+        { "name": "Делегирование событий", "children": [] },
+        { "name": "Действия браузера по умолчанию", "children": [] },
+        { "name": "Генерация событий", "children": [] }
+      ]
+    }
+  ]
+}
