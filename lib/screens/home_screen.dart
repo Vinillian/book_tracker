@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/node.dart';
+import '../models/settings.dart';
 import 'editor_screen.dart';
 import 'book_screen.dart';
+import 'settings_screen.dart';
 import '../utils/file_utils.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Function(String) onThemeChanged;
+
+  const HomeScreen({super.key, required this.onThemeChanged});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -14,11 +18,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Box<Node> templatesBox;
+  late Box<AppSettings> settingsBox;
 
   @override
   void initState() {
     super.initState();
     templatesBox = Hive.box<Node>('templates');
+    settingsBox = Hive.box<AppSettings>('settings');
   }
 
   void _addTemplate() {
@@ -40,15 +46,15 @@ class _HomeScreenState extends State<HomeScreen> {
           SnackBar(content: Text('Книга "${imported.name}" импортирована')),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Импорт отменён')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Импорт отменён')));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     }
   }
 
@@ -59,9 +65,23 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Мои книги'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _addTemplate,
+            icon: const Icon(Icons.settings),
+            onPressed: () async {
+              final settings = settingsBox.get('appSettings');
+              final currentMode = settings?.themeMode ?? 'system';
+
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(
+                    currentThemeMode: currentMode,
+                    onThemeChanged: widget.onThemeChanged,
+                  ),
+                ),
+              );
+            },
           ),
+          IconButton(icon: const Icon(Icons.add), onPressed: _addTemplate),
           IconButton(
             icon: const Icon(Icons.upload),
             onPressed: _importTemplate,
@@ -124,7 +144,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           await FileUtils.exportTemplate(template);
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Книга экспортирована')),
+                            const SnackBar(
+                              content: Text('Книга экспортирована'),
+                            ),
                           );
                         } catch (e) {
                           if (!mounted) return;
