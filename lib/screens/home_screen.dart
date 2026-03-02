@@ -19,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late Box<Node> templatesBox;
   late Box<AppSettings> settingsBox;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -32,10 +33,6 @@ class _HomeScreenState extends State<HomeScreen> {
     templatesBox.add(newTemplate);
   }
 
-  void _deleteTemplate(int index) {
-    templatesBox.deleteAt(index);
-  }
-
   Future<void> _importTemplate() async {
     try {
       final imported = await FileUtils.importTemplate();
@@ -46,15 +43,15 @@ class _HomeScreenState extends State<HomeScreen> {
           SnackBar(content: Text('Книга "${imported.name}" импортирована')),
         );
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Импорт отменён')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Импорт отменён')),
+        );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка: $e')),
+      );
     }
   }
 
@@ -81,7 +78,10 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.add), onPressed: _addTemplate),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _addTemplate,
+          ),
           IconButton(
             icon: const Icon(Icons.upload),
             onPressed: _importTemplate,
@@ -89,111 +89,145 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: ValueListenableBuilder(
-        valueListenable: templatesBox.listenable(),
-        builder: (context, Box<Node> box, _) {
-          if (box.isEmpty) {
-            return const Center(
-              child: Text('Нет книг. Нажмите + для создания.'),
-            );
-          }
-          return ListView.builder(
-            itemCount: box.length,
-            itemBuilder: (context, index) {
-              final template = box.getAt(index)!;
-              final completed = template.completedLeaves;
-              final total = template.totalLeaves;
-              final progress = total > 0 ? completed / total : 0.0;
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SearchBar(
+              hintText: 'Поиск книг...',
+              leading: const Icon(Icons.search),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: ValueListenableBuilder(
+              valueListenable: templatesBox.listenable(),
+              builder: (context, Box<Node> box, _) {
+                if (box.isEmpty) {
+                  return const Center(
+                    child: Text('Нет книг. Нажмите + для создания.'),
+                  );
+                }
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: ListTile(
-                  title: Text(template.name),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: Colors.grey[300],
-                        color: Colors.blue,
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 4),
-                      Text('$completed/$total'),
-                    ],
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) async {
-                      if (value == 'edit') {
-                        final updated = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditorScreen(node: template),
-                          ),
-                        );
-                        if (!mounted) return;
-                        if (updated != null) {
-                          templatesBox.putAt(index, updated);
-                        }
-                      } else if (value == 'delete') {
-                        _deleteTemplate(index);
-                      } else if (value == 'export') {
-                        try {
-                          await FileUtils.exportTemplate(template);
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Книга экспортирована'),
+                // Получаем все записи (ключ + значение)
+                final entries = box.toMap().entries.toList();
+                // Фильтруем по названию
+                final filteredEntries = _searchQuery.isEmpty
+                    ? entries
+                    : entries.where((entry) =>
+                    entry.value.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+                    .toList();
+
+                if (filteredEntries.isEmpty) {
+                  return const Center(
+                    child: Text('Нет книг, соответствующих запросу.'),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: filteredEntries.length,
+                  itemBuilder: (context, index) {
+                    final entry = filteredEntries[index];
+                    final key = entry.key;
+                    final template = entry.value;
+                    final completed = template.completedLeaves;
+                    final total = template.totalLeaves;
+                    final progress = total > 0 ? completed / total : 0.0;
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: ListTile(
+                        title: Text(template.name),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            LinearProgressIndicator(
+                              value: progress,
+                              backgroundColor: Colors.grey[300],
+                              color: Colors.blue,
+                              minHeight: 8,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            const SizedBox(height: 4),
+                            Text('$completed/$total'),
+                          ],
+                        ),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) async {
+                            if (value == 'edit') {
+                              final updated = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EditorScreen(node: template),
+                                ),
+                              );
+                              if (!mounted) return;
+                              if (updated != null) {
+                                templatesBox.put(key, updated);
+                              }
+                            } else if (value == 'delete') {
+                              templatesBox.delete(key);
+                            } else if (value == 'export') {
+                              try {
+                                await FileUtils.exportTemplate(template);
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Книга экспортирована')),
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Ошибка экспорта: $e')),
+                                );
+                              }
+                            }
+                          },
+                          itemBuilder: (BuildContext context) {
+                            return [
+                              const PopupMenuItem<String>(
+                                value: 'edit',
+                                child: Text('Редактировать'),
+                              ),
+                              const PopupMenuItem<String>(
+                                value: 'delete',
+                                child: Text('Удалить'),
+                              ),
+                              const PopupMenuItem<String>(
+                                value: 'export',
+                                child: Text('Экспорт'),
+                              ),
+                            ];
+                          },
+                          icon: const Icon(Icons.more_vert),
+                        ),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => BookScreen(
+                                node: template,
+                                onNodeUpdated: () {
+                                  templatesBox.put(key, template);
+                                },
+                              ),
                             ),
                           );
-                        } catch (e) {
                           if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Ошибка экспорта: $e')),
-                          );
-                        }
-                      }
-                    },
-                    itemBuilder: (BuildContext context) {
-                      return [
-                        const PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Text('Редактировать'),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Text('Удалить'),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'export',
-                          child: Text('Экспорт'),
-                        ),
-                      ];
-                    },
-                    icon: const Icon(Icons.more_vert),
-                  ),
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BookScreen(
-                          node: template,
-                          onNodeUpdated: () {
-                            templatesBox.putAt(index, template);
-                          },
-                        ),
+                          setState(() {});
+                        },
                       ),
                     );
-                    if (!mounted) return;
-                    setState(() {});
                   },
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
