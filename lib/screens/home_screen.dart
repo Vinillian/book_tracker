@@ -5,6 +5,7 @@ import '../models/settings.dart';
 import 'editor_screen.dart';
 import 'book_screen.dart';
 import 'settings_screen.dart';
+import 'statistics_screen.dart';
 import '../utils/file_utils.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -43,15 +44,15 @@ class _HomeScreenState extends State<HomeScreen> {
           SnackBar(content: Text('Книга "${imported.name}" импортирована')),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Импорт отменён')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Импорт отменён')));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     }
   }
 
@@ -61,6 +62,17 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Мои книги'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const StatisticsScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () async {
@@ -78,10 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _addTemplate,
-          ),
+          IconButton(icon: const Icon(Icons.add), onPressed: _addTemplate),
           IconButton(
             icon: const Icon(Icons.upload),
             onPressed: _importTemplate,
@@ -118,9 +127,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Фильтруем по названию
                 final filteredEntries = _searchQuery.isEmpty
                     ? entries
-                    : entries.where((entry) =>
-                    entry.value.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-                    .toList();
+                    : entries
+                          .where(
+                            (entry) => entry.value.name.toLowerCase().contains(
+                              _searchQuery.toLowerCase(),
+                            ),
+                          )
+                          .toList();
 
                 if (filteredEntries.isEmpty) {
                   return const Center(
@@ -139,7 +152,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     final progress = total > 0 ? completed / total : 0.0;
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
                       child: ListTile(
                         title: Text(template.name),
                         subtitle: Column(
@@ -163,7 +179,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               final updated = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => EditorScreen(node: template),
+                                  builder: (context) =>
+                                      EditorScreen(node: template),
                                 ),
                               );
                               if (!mounted) return;
@@ -177,12 +194,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                 await FileUtils.exportTemplate(template);
                                 if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Книга экспортирована')),
+                                  const SnackBar(
+                                    content: Text('Книга экспортирована'),
+                                  ),
                                 );
                               } catch (e) {
                                 if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Ошибка экспорта: $e')),
+                                  SnackBar(
+                                    content: Text('Ошибка экспорта: $e'),
+                                  ),
                                 );
                               }
                             }
