@@ -5,7 +5,11 @@ class BookScreen extends StatefulWidget {
   final Node node;
   final VoidCallback onNodeUpdated;
 
-  const BookScreen({super.key, required this.node, required this.onNodeUpdated});
+  const BookScreen({
+    super.key,
+    required this.node,
+    required this.onNodeUpdated,
+  });
 
   @override
   State<BookScreen> createState() => _BookScreenState();
@@ -38,11 +42,11 @@ class _BookScreenState extends State<BookScreen> {
     final bool isLeaf = node.children.isEmpty;
     final icon = isLeaf
         ? (node.completed
-        ? const Icon(Icons.check_circle, color: Colors.green)
-        : const Icon(Icons.radio_button_unchecked, color: Colors.grey))
+              ? const Icon(Icons.check_circle, color: Colors.green)
+              : const Icon(Icons.radio_button_unchecked, color: Colors.grey))
         : (node.isExpanded
-        ? const Icon(Icons.folder_open)
-        : const Icon(Icons.folder));
+              ? const Icon(Icons.folder_open)
+              : const Icon(Icons.folder));
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
@@ -63,11 +67,39 @@ class _BookScreenState extends State<BookScreen> {
                     : TextDecoration.none,
               ),
             ),
-            trailing: !isLeaf
-                ? Icon(node.isExpanded
-                ? Icons.expand_less
-                : Icons.expand_more)
-                : null,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isLeaf) ...[
+                  // Микростатистика для папок
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Text(
+                      '${node.completedLeaves}/${node.totalLeaves}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      value: node.totalLeaves > 0
+                          ? node.completedLeaves / node.totalLeaves
+                          : 0,
+                      strokeWidth: 2,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        node.completedLeaves == node.totalLeaves
+                            ? Colors.green
+                            : Colors.blue,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(node.isExpanded ? Icons.expand_less : Icons.expand_more),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -89,9 +121,7 @@ class _BookScreenState extends State<BookScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_node.name),
-      ),
+      appBar: AppBar(title: Text(_node.name)),
       body: Column(
         children: [
           Card(
@@ -106,7 +136,10 @@ class _BookScreenState extends State<BookScreen> {
                     children: [
                       const Text(
                         'Прогресс',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         '${_node.completedLeaves}/${_node.totalLeaves}',
@@ -128,11 +161,7 @@ class _BookScreenState extends State<BookScreen> {
               ),
             ),
           ),
-          Expanded(
-            child: ListView(
-              children: _buildChildren(_node, 0),
-            ),
-          ),
+          Expanded(child: ListView(children: _buildChildren(_node, 0))),
         ],
       ),
     );
