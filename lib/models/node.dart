@@ -17,7 +17,16 @@ class Node {
   DateTime? plannedDate;
 
   @HiveField(4)
-  bool completed; // true для выполненных листьев
+  bool completed; // для single-задач
+
+  @HiveField(5)
+  String stepType; // 'single' или 'stepByStep'
+
+  @HiveField(6)
+  int totalSteps; // общее количество шагов (для stepByStep)
+
+  @HiveField(7)
+  int completedSteps; // выполнено шагов (для stepByStep)
 
   Node({
     required this.name,
@@ -25,23 +34,45 @@ class Node {
     this.isExpanded = false,
     this.plannedDate,
     this.completed = false,
+    this.stepType = 'single',
+    this.totalSteps = 1,
+    this.completedSteps = 0,
   });
 
-  // Конструктор для листа
-  Node.leaf(this.name, {this.plannedDate, this.completed = false})
-    : children = [],
-      isExpanded = false;
+  // Конструктор для листа (по умолчанию single)
+  Node.leaf(
+    this.name, {
+    this.plannedDate,
+    this.stepType = 'single',
+    this.totalSteps = 1,
+    this.completedSteps = 0,
+  }) : children = [],
+       isExpanded = false,
+       completed = false;
 
-  // Рекурсивный подсчёт количества листьев
+  // Общее количество "единиц" прогресса
   int get totalLeaves {
-    if (children.isEmpty) return 1;
+    if (children.isEmpty) {
+      return stepType == 'single' ? 1 : totalSteps;
+    }
     return children.fold(0, (sum, child) => sum + child.totalLeaves);
   }
 
-  // Рекурсивный подсчёт выполненных листьев
+  // Количество выполненных "единиц" прогресса
   int get completedLeaves {
-    if (children.isEmpty) return completed ? 1 : 0;
+    if (children.isEmpty) {
+      if (stepType == 'single') return completed ? 1 : 0;
+      return completedSteps;
+    }
     return children.fold(0, (sum, child) => sum + child.completedLeaves);
+  }
+
+  // Переключение для single-задач
+  void toggle() {
+    if (children.isNotEmpty) return;
+    if (stepType == 'single') {
+      completed = !completed;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -50,6 +81,9 @@ class Node {
       'children': children.map((c) => c.toJson()).toList(),
       'plannedDate': plannedDate?.toIso8601String(),
       'completed': completed,
+      'stepType': stepType,
+      'totalSteps': totalSteps,
+      'completedSteps': completedSteps,
     };
   }
 
@@ -63,6 +97,9 @@ class Node {
           ? DateTime.parse(json['plannedDate'])
           : null,
       completed: json['completed'] ?? false,
+      stepType: json['stepType'] ?? 'single',
+      totalSteps: json['totalSteps'] ?? 1,
+      completedSteps: json['completedSteps'] ?? 0,
     );
   }
 }

@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/node.dart';
-import '../models/settings.dart';
 import 'editor_screen.dart';
 import 'book_screen.dart';
-import 'settings_screen.dart';
-import 'statistics_screen.dart';
 import '../utils/file_utils.dart';
 
 class HomeScreen extends StatefulWidget {
-  final Function(String) onThemeChanged;
-
-  const HomeScreen({super.key, required this.onThemeChanged});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -19,19 +14,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Box<Node> templatesBox;
-  late Box<AppSettings> settingsBox;
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     templatesBox = Hive.box<Node>('templates');
-    settingsBox = Hive.box<AppSettings>('settings');
   }
 
   void _addTemplate() {
     final newTemplate = Node(name: 'Новая книга', children: []);
     templatesBox.add(newTemplate);
+  }
+
+  void _deleteTemplate(int index) {
+    templatesBox.deleteAt(index);
   }
 
   Future<void> _importTemplate() async {
@@ -62,34 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Мои книги'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const StatisticsScreen(),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () async {
-              final settings = settingsBox.get('appSettings');
-              final currentMode = settings?.themeMode ?? 'system';
-
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsScreen(
-                    currentThemeMode: currentMode,
-                    onThemeChanged: widget.onThemeChanged,
-                  ),
-                ),
-              );
-            },
-          ),
           IconButton(icon: const Icon(Icons.add), onPressed: _addTemplate),
           IconButton(
             icon: const Icon(Icons.upload),
@@ -122,9 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }
 
-                // Получаем все записи (ключ + значение)
                 final entries = box.toMap().entries.toList();
-                // Фильтруем по названию
                 final filteredEntries = _searchQuery.isEmpty
                     ? entries
                     : entries

@@ -22,13 +22,16 @@ class NodeAdapter extends TypeAdapter<Node> {
       isExpanded: fields[2] as bool,
       plannedDate: fields[3] as DateTime?,
       completed: fields[4] as bool,
+      stepType: fields[5] as String,
+      totalSteps: fields[6] as int,
+      completedSteps: fields[7] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, Node obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -38,7 +41,13 @@ class NodeAdapter extends TypeAdapter<Node> {
       ..writeByte(3)
       ..write(obj.plannedDate)
       ..writeByte(4)
-      ..write(obj.completed);
+      ..write(obj.completed)
+      ..writeByte(5)
+      ..write(obj.stepType)
+      ..writeByte(6)
+      ..write(obj.totalSteps)
+      ..writeByte(7)
+      ..write(obj.completedSteps);
   }
 
   @override
