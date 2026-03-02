@@ -21,6 +21,12 @@ class _EditorScreenState extends State<EditorScreen> {
     _nameController = TextEditingController(text: _node.name);
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
   void _addChild() {
     setState(() {
       _node.children.add(Node.leaf('Новый элемент'));
@@ -37,9 +43,7 @@ class _EditorScreenState extends State<EditorScreen> {
     final child = _node.children[index];
     final updated = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => EditorScreen(node: child),
-      ),
+      MaterialPageRoute(builder: (context) => EditorScreen(node: child)),
     );
     if (updated != null) {
       setState(() {
@@ -67,6 +71,7 @@ class _EditorScreenState extends State<EditorScreen> {
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () {
+              // Применяем изменения: обновляем имя из контроллера (оно уже синхронизировано через onChanged)
               Navigator.pop(context, _node);
             },
           ),
@@ -106,7 +111,10 @@ class _EditorScreenState extends State<EditorScreen> {
                 final child = _node.children[index];
                 return Card(
                   key: ValueKey(child),
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: ListTile(
                     leading: ReorderableDragStartListener(
                       index: index,
@@ -119,11 +127,10 @@ class _EditorScreenState extends State<EditorScreen> {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (child.children.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () => _editChild(index),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _editChild(index),
+                        ),
                         IconButton(
                           icon: const Icon(Icons.delete),
                           onPressed: () => _deleteChild(index),

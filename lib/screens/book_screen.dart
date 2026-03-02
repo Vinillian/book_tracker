@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
+import 'editor_screen.dart';
 
 class BookScreen extends StatefulWidget {
   final Node node;
@@ -38,6 +39,41 @@ class _BookScreenState extends State<BookScreen> {
     widget.onNodeUpdated();
   }
 
+  // Открыть редактор для указанного узла
+  Future<void> _openEditor(Node targetNode) async {
+    final updatedNode = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => EditorScreen(node: targetNode)),
+    );
+    if (updatedNode != null) {
+      // Если редактировали корневой узел книги
+      if (targetNode == _node) {
+        _node.name = updatedNode.name;
+        _node.children = updatedNode.children;
+      } else {
+        // Если редактировали внутренний узел, нужно найти его и обновить
+        _updateNodeInTree(_node, targetNode, updatedNode);
+      }
+      widget.onNodeUpdated();
+      setState(() {});
+    }
+  }
+
+  // Рекурсивно обновить узел в дереве
+  bool _updateNodeInTree(Node currentNode, Node oldNode, Node newNode) {
+    if (currentNode == oldNode) {
+      currentNode.name = newNode.name;
+      currentNode.children = newNode.children;
+      return true;
+    }
+    for (int i = 0; i < currentNode.children.length; i++) {
+      if (_updateNodeInTree(currentNode.children[i], oldNode, newNode)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Widget _buildNodeTile(Node node, int depth) {
     final bool isLeaf = node.children.isEmpty;
     final icon = isLeaf
@@ -54,6 +90,9 @@ class _BookScreenState extends State<BookScreen> {
         onTap: isLeaf
             ? () => _toggleCompleted(node)
             : () => _toggleExpanded(node),
+        onLongPress: isLeaf
+            ? null
+            : () => _openEditor(node), // долгое нажатие на папку
         child: Padding(
           padding: EdgeInsets.only(left: depth * 16.0),
           child: ListTile(
@@ -71,7 +110,6 @@ class _BookScreenState extends State<BookScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (!isLeaf) ...[
-                  // Микростатистика для папок
                   Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: Text(
@@ -121,7 +159,15 @@ class _BookScreenState extends State<BookScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_node.name)),
+      appBar: AppBar(
+        title: Text(_node.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _openEditor(_node), // редактировать всю книгу
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Card(
