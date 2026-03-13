@@ -20,7 +20,6 @@ class StatisticsScreen extends StatelessWidget {
             );
           }
 
-          // Вычисляем общую статистику
           int totalBooks = box.length;
           int totalLeaves = 0;
           int completedLeaves = 0;
@@ -48,7 +47,6 @@ class StatisticsScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Общая статистика
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -84,7 +82,6 @@ class StatisticsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Статистика по книгам
               const Text(
                 'Прогресс по книгам',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -128,7 +125,7 @@ class StatisticsScreen extends StatelessWidget {
                     ),
                   ),
                 );
-              }).toList(),
+              }), // удалён .toList()
             ],
           );
         },

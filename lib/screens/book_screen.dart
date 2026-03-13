@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
-import 'item_card_screen.dart';
-import 'editor_screen.dart';
+import '../widgets/node_tile.dart';
+import 'view_item_screen.dart';
 
 class BookScreen extends StatefulWidget {
   final Node node;
@@ -26,166 +26,46 @@ class _BookScreenState extends State<BookScreen> {
     _node = widget.node;
   }
 
-  void _toggleExpanded(Node node) {
-    setState(() {
-      node.isExpanded = !node.isExpanded;
-    });
-  }
+  void _toggleExpanded(Node node) =>
+      setState(() => node.isExpanded = !node.isExpanded);
 
-  void _openItemCard(Node node) async {
-    final result = await Navigator.push(
+  void _openViewScreen(Node node) async {
+    if (node.children.isNotEmpty) {
+      _toggleExpanded(node);
+      return;
+    }
+    await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ItemCardScreen(node: node, isNew: false),
-      ),
-    );
-    if (result != null) {
-      _updateNodeInTree(_node, node, result);
-      widget.onNodeUpdated();
-      setState(() {});
-    }
-  }
-
-  bool _updateNodeInTree(Node currentNode, Node oldNode, Node newNode) {
-    if (currentNode == oldNode) {
-      currentNode.name = newNode.name;
-      currentNode.children = newNode.children;
-      currentNode.stepType = newNode.stepType;
-      currentNode.totalSteps = newNode.totalSteps;
-      currentNode.completedSteps = newNode.completedSteps;
-      currentNode.completed = newNode.completed;
-      return true;
-    }
-    for (int i = 0; i < currentNode.children.length; i++) {
-      if (_updateNodeInTree(currentNode.children[i], oldNode, newNode)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  Widget _buildNodeTile(Node node, int depth) {
-    final bool isLeaf = node.children.isEmpty;
-    final bool isSingle = node.stepType == 'single';
-    final icon = isLeaf
-        ? (isSingle
-              ? (node.completed
-                    ? const Icon(Icons.check_circle, color: Colors.green)
-                    : const Icon(
-                        Icons.radio_button_unchecked,
-                        color: Colors.grey,
-                      ))
-              : const Icon(Icons.list, color: Colors.blue))
-        : (node.isExpanded
-              ? const Icon(Icons.folder_open)
-              : const Icon(Icons.folder));
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      child: Padding(
-        padding: EdgeInsets.only(left: depth * 16.0),
-        child: isLeaf && isSingle
-            ? Row(
-                children: [
-                  // Чекбокс
-                  Checkbox(
-                    value: node.completed,
-                    onChanged: (value) {
-                      setState(() {
-                        node.completed = value!;
-                      });
-                      widget.onNodeUpdated();
-                    },
-                  ),
-                  // Тело элемента (открывает карточку)
-                  Expanded(
-                    child: ListTile(
-                      title: Text(
-                        node.name,
-                        style: const TextStyle(fontWeight: FontWeight.normal),
-                      ),
-                      onTap: () => _openItemCard(node),
-                    ),
-                  ),
-                ],
-              )
-            : ListTile(
-                leading: icon,
-                title: Text(
-                  node.name,
-                  style: TextStyle(
-                    fontWeight: isLeaf ? FontWeight.normal : FontWeight.bold,
-                    decoration: isLeaf && isSingle && node.completed
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.none,
-                  ),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!isLeaf) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Text(
-                          '${node.completedLeaves}/${node.totalLeaves}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          value: node.totalLeaves > 0
-                              ? node.completedLeaves / node.totalLeaves
-                              : 0,
-                          strokeWidth: 2,
-                          backgroundColor: Colors.grey[300],
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            node.completedLeaves == node.totalLeaves
-                                ? Colors.green
-                                : Colors.blue,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(
-                          node.isExpanded
-                              ? Icons.expand_less
-                              : Icons.expand_more,
-                        ),
-                        onPressed: () => _toggleExpanded(node),
-                      ),
-                    ] else if (node.stepType == 'stepByStep') ...[
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Text(
-                          '${node.completedSteps}/${node.totalSteps}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                onTap: isLeaf && isSingle
-                    ? null // тело уже обработано через Expanded + ListTile, но здесь можно оставить на случай пустой области справа
-                    : () => _openItemCard(node),
-              ),
+        builder: (context) => ViewItemScreen(
+          node: node,
+          onNodeUpdated: () {
+            widget.onNodeUpdated();
+            setState(() {});
+          },
+        ),
       ),
     );
   }
 
   List<Widget> _buildChildren(Node node, int depth) {
-    final List<Widget> widgets = [];
-    for (int i = 0; i < node.children.length; i++) {
-      final child = node.children[i];
-      widgets.add(_buildNodeTile(child, depth));
+    List<Widget> widgets = [];
+    for (var child in node.children) {
+      widgets.add(
+        NodeTile(
+          node: child,
+          depth: depth,
+          onCheckboxChanged: () {
+            child.toggle();
+            widget.onNodeUpdated();
+            setState(() {});
+          },
+          onTap: () => _openViewScreen(child),
+          onExpandToggle: child.children.isNotEmpty
+              ? () => _toggleExpanded(child)
+              : null,
+        ),
+      );
       if (child.isExpanded && child.children.isNotEmpty) {
         widgets.addAll(_buildChildren(child, depth + 1));
       }

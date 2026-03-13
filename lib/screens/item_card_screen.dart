@@ -13,7 +13,7 @@ class ItemCardScreen extends StatefulWidget {
 }
 
 class _ItemCardScreenState extends State<ItemCardScreen> {
-  late Node _node;
+  late Node _workingCopy;
   late TextEditingController _nameController;
   late TextEditingController _totalStepsController;
   late String _stepType;
@@ -23,11 +23,11 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   @override
   void initState() {
     super.initState();
-    _node = widget.node;
-    _nameController = TextEditingController(text: _node.name);
-    _stepType = _node.stepType;
-    _totalSteps = _node.totalSteps;
-    _completedSteps = _node.completedSteps;
+    _workingCopy = widget.isNew ? widget.node : widget.node.deepCopy();
+    _nameController = TextEditingController(text: _workingCopy.name);
+    _stepType = _workingCopy.stepType;
+    _totalSteps = _workingCopy.totalSteps;
+    _completedSteps = _workingCopy.completedSteps;
     _totalStepsController = TextEditingController(text: _totalSteps.toString());
   }
 
@@ -39,30 +39,32 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   }
 
   void _save() {
-    _node.name = _nameController.text;
-    _node.stepType = _stepType;
-    _node.totalSteps = _totalSteps;
+    _workingCopy.name = _nameController.text;
+    _workingCopy.stepType = _stepType;
+    _workingCopy.totalSteps = _totalSteps;
     if (_stepType == 'single') {
-      _node.completed = _completedSteps > 0;
-      _node.completedSteps = 0;
+      _workingCopy.completed = _completedSteps > 0;
+      _workingCopy.completedSteps = 0;
     } else {
-      _node.completedSteps = _completedSteps.clamp(0, _totalSteps);
-      _node.completed = false;
+      _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
+      _workingCopy.completed = false;
     }
-    Navigator.pop(context, _node);
+    Navigator.pop(context, _workingCopy);
   }
 
   void _openStructureEditor() async {
     final updated = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => EditorScreen(node: _node)),
+      MaterialPageRoute(
+        builder: (context) => EditorScreen(node: _workingCopy.deepCopy()),
+      ),
     );
     if (updated != null) {
       setState(() {
-        _node = updated;
-        _nameController.text = _node.name;
-        _totalSteps = _node.totalSteps;
-        _completedSteps = _node.completedSteps;
+        _workingCopy = updated;
+        _nameController.text = _workingCopy.name;
+        _totalSteps = _workingCopy.totalSteps;
+        _completedSteps = _workingCopy.completedSteps;
         _totalStepsController.text = _totalSteps.toString();
       });
     }
@@ -82,7 +84,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isLeaf = _node.children.isEmpty;
+    final bool isLeaf = _workingCopy.children.isEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -117,6 +119,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 'Тип прогресса:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
+              // Игнорируем предупреждения об устаревших groupValue и onChanged
+              // ignore: deprecated_member_use
               RadioListTile<String>(
                 title: const Text('Одиночный чекбокс'),
                 value: 'single',
@@ -130,6 +134,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                   });
                 },
               ),
+              // ignore: deprecated_member_use
               RadioListTile<String>(
                 title: const Text('Пошаговый'),
                 value: 'stepByStep',

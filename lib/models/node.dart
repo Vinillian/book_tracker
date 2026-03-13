@@ -50,6 +50,20 @@ class Node {
        isExpanded = false,
        completed = false;
 
+  /// Создаёт глубокую копию узла (рекурсивно)
+  Node deepCopy() {
+    return Node(
+      name: name,
+      children: children.map((c) => c.deepCopy()).toList(),
+      isExpanded: isExpanded,
+      plannedDate: plannedDate,
+      completed: completed,
+      stepType: stepType,
+      totalSteps: totalSteps,
+      completedSteps: completedSteps,
+    );
+  }
+
   // Общее количество "единиц" прогресса
   int get totalLeaves {
     if (children.isEmpty) {

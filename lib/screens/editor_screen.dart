@@ -3,7 +3,7 @@ import '../models/node.dart';
 import 'item_card_screen.dart';
 
 class EditorScreen extends StatefulWidget {
-  final Node node;
+  final Node node; // исходный узел (будет скопирован)
 
   const EditorScreen({super.key, required this.node});
 
@@ -12,14 +12,14 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> {
-  late Node _node;
+  late Node _workingCopy; // копия, с которой работаем
   late TextEditingController _nameController;
 
   @override
   void initState() {
     super.initState();
-    _node = widget.node;
-    _nameController = TextEditingController(text: _node.name);
+    _workingCopy = widget.node.deepCopy();
+    _nameController = TextEditingController(text: _workingCopy.name);
   }
 
   @override
@@ -38,28 +38,30 @@ class _EditorScreenState extends State<EditorScreen> {
     );
     if (result != null && result is Node) {
       setState(() {
-        _node.children.add(result);
+        _workingCopy.children.add(result);
       });
     }
   }
 
   void _deleteChild(int index) {
     setState(() {
-      _node.children.removeAt(index);
+      _workingCopy.children.removeAt(index);
     });
   }
 
   void _editChild(int index) async {
-    final child = _node.children[index];
+    final child = _workingCopy.children[index];
+    // Передаём копию дочернего узла для редактирования
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ItemCardScreen(node: child, isNew: false),
+        builder: (context) =>
+            ItemCardScreen(node: child.deepCopy(), isNew: false),
       ),
     );
     if (result != null && result is Node) {
       setState(() {
-        _node.children[index] = result;
+        _workingCopy.children[index] = result;
       });
     }
   }
@@ -76,14 +78,14 @@ class _EditorScreenState extends State<EditorScreen> {
           ),
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           onChanged: (value) {
-            _node.name = value;
+            _workingCopy.name = value;
           },
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () {
-              Navigator.pop(context, _node);
+              Navigator.pop(context, _workingCopy);
             },
           ),
         ],
@@ -99,7 +101,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Тип: ${_node.children.isEmpty ? "Лист (задача)" : "Папка (раздел)"}',
+                        'Тип: ${_workingCopy.children.isEmpty ? "Лист (задача)" : "Папка (раздел)"}',
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
@@ -107,7 +109,7 @@ class _EditorScreenState extends State<EditorScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Всего единиц: ${_node.totalLeaves}',
+                        'Всего единиц: ${_workingCopy.totalLeaves}',
                         style: const TextStyle(fontSize: 16),
                       ),
                     ],
@@ -122,23 +124,23 @@ class _EditorScreenState extends State<EditorScreen> {
             ),
           ),
           Expanded(
-            child: _node.children.isEmpty
+            child: _workingCopy.children.isEmpty
                 ? const Center(
                     child: Text(
                       'Нет дочерних элементов. Нажмите "Добавить", чтобы создать.',
                     ),
                   )
                 : ReorderableListView.builder(
-                    itemCount: _node.children.length,
+                    itemCount: _workingCopy.children.length,
                     onReorder: (oldIndex, newIndex) {
                       setState(() {
                         if (newIndex > oldIndex) newIndex--;
-                        final item = _node.children.removeAt(oldIndex);
-                        _node.children.insert(newIndex, item);
+                        final item = _workingCopy.children.removeAt(oldIndex);
+                        _workingCopy.children.insert(newIndex, item);
                       });
                     },
                     itemBuilder: (context, index) {
-                      final child = _node.children[index];
+                      final child = _workingCopy.children[index];
                       return Card(
                         key: ValueKey(child),
                         margin: const EdgeInsets.symmetric(
