@@ -22,6 +22,24 @@ class FileUtils {
     }
   }
 
+  /// Экспортирует все книги в один JSON-файл (массив)
+  static Future<void> exportAllTemplates(List<Node> templates) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName =
+          'all_books_${DateTime.now().millisecondsSinceEpoch}.json';
+      final file = File('${directory.path}/$fileName');
+
+      final jsonArray = templates.map((t) => t.toJson()).toList();
+      final jsonString = jsonEncode(jsonArray);
+      await file.writeAsString(jsonString);
+
+      debugPrint('Все книги сохранены: ${file.path}');
+    } catch (e) {
+      throw Exception('Ошибка экспорта всех книг: $e');
+    }
+  }
+
   static Future<Node?> importTemplate() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(

@@ -5,6 +5,7 @@ import 'editor_screen.dart';
 import 'book_screen.dart';
 import '../utils/file_utils.dart';
 import '../widgets/book_card.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,13 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    print('HomeScreen.initState()');
-    try {
-      templatesBox = Hive.box<Node>('templates');
-      print('HomeScreen: templatesBox получен');
-    } catch (e) {
-      print('❌ Ошибка получения templatesBox: $e');
-    }
+    templatesBox = Hive.box<Node>('templates');
   }
 
   void _addTemplate() {
@@ -50,6 +45,33 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Ошибка импорта: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportAllTemplates() async {
+    final templates = templatesBox.values.toList();
+    if (templates.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Нет книг для экспорта')));
+      return;
+    }
+    try {
+      await FileUtils.exportAllTemplates(templates);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Все книги экспортированы')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка экспорта: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -93,18 +115,44 @@ class _HomeScreenState extends State<HomeScreen> {
     templatesBox.delete(key);
   }
 
+  void _openSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SettingsScreen(
+          currentThemeMode:
+              'system', // Заглушка, позже можно реализовать сохранение темы
+          onThemeChanged: null, // Пока не используется
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    print('HomeScreen.build()');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Мои книги'),
         actions: [
-          IconButton(icon: const Icon(Icons.add), onPressed: _addTemplate),
           IconButton(
-            icon: const Icon(Icons.upload),
+            icon: const Icon(Icons.settings),
+            onPressed: _openSettings,
+            tooltip: 'Настройки',
+          ),
+          IconButton(
+            icon: const Icon(Icons.download), // Стрелка вниз — импорт
             onPressed: _importTemplate,
             tooltip: 'Импорт из JSON',
+          ),
+          IconButton(
+            icon: const Icon(Icons.upload), // Стрелка вверх — экспорт всех
+            onPressed: _exportAllTemplates,
+            tooltip: 'Экспорт всех книг',
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _addTemplate,
+            tooltip: 'Новая книга',
           ),
         ],
       ),
@@ -126,7 +174,6 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ValueListenableBuilder(
               valueListenable: templatesBox.listenable(),
               builder: (context, Box<Node> box, _) {
-                print('ValueListenableBuilder: box.length = ${box.length}');
                 if (box.isEmpty) {
                   return const Center(
                     child: Text('Нет книг. Нажмите + для создания.'),
