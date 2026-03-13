@@ -20,7 +20,7 @@ class Node {
   bool completed; // для single-задач
 
   @HiveField(5)
-  String stepType; // 'single' или 'stepByStep'
+  String stepType; // 'single', 'stepByStep', или 'folder'
 
   @HiveField(6)
   int totalSteps; // общее количество шагов (для stepByStep)
@@ -39,7 +39,7 @@ class Node {
     this.completedSteps = 0,
   });
 
-  // Конструктор для листа (по умолчанию single)
+  // Конструктор для листа (задача) – по умолчанию single
   Node.leaf(
     this.name, {
     this.plannedDate,
@@ -66,22 +66,27 @@ class Node {
 
   // Общее количество "единиц" прогресса
   int get totalLeaves {
-    if (children.isEmpty) {
-      return stepType == 'single' ? 1 : totalSteps;
+    // Для папок и узлов с детьми – только дети
+    if (children.isNotEmpty) {
+      return children.fold(0, (sum, child) => sum + child.totalLeaves);
     }
-    return children.fold(0, (sum, child) => sum + child.totalLeaves);
+    // Для листьев (без детей)
+    if (stepType == 'single') return 1;
+    if (stepType == 'stepByStep') return totalSteps;
+    return 0; // для папок без детей (пустых) – 0
   }
 
   // Количество выполненных "единиц" прогресса
   int get completedLeaves {
-    if (children.isEmpty) {
-      if (stepType == 'single') return completed ? 1 : 0;
-      return completedSteps;
+    if (children.isNotEmpty) {
+      return children.fold(0, (sum, child) => sum + child.completedLeaves);
     }
-    return children.fold(0, (sum, child) => sum + child.completedLeaves);
+    if (stepType == 'single') return completed ? 1 : 0;
+    if (stepType == 'stepByStep') return completedSteps;
+    return 0;
   }
 
-  // Переключение для single-задач
+  // Переключение для single-задач (только для листьев)
   void toggle() {
     if (children.isNotEmpty) return;
     if (stepType == 'single') {

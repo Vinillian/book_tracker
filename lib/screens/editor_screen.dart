@@ -28,7 +28,37 @@ class _EditorScreenState extends State<EditorScreen> {
     super.dispose();
   }
 
-  void _addChild() async {
+  void _showAddChildDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Добавить элемент'),
+        content: const Text('Выберите тип нового элемента:'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _addLeaf();
+            },
+            child: const Text('Лист'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _addFolder();
+            },
+            child: const Text('Папка'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addLeaf() async {
     final newNode = Node.leaf('Новый элемент');
     final result = await Navigator.push(
       context,
@@ -43,6 +73,17 @@ class _EditorScreenState extends State<EditorScreen> {
     }
   }
 
+  void _addFolder() {
+    final newNode = Node(
+      name: 'Новая папка',
+      children: [],
+      stepType: 'folder', // явно указываем тип "папка"
+    );
+    setState(() {
+      _workingCopy.children.add(newNode);
+    });
+  }
+
   void _deleteChild(int index) {
     setState(() {
       _workingCopy.children.removeAt(index);
@@ -51,7 +92,6 @@ class _EditorScreenState extends State<EditorScreen> {
 
   void _editChild(int index) async {
     final child = _workingCopy.children[index];
-    // Передаём копию дочернего узла для редактирования
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -116,7 +156,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: _addChild,
+                  onPressed: _showAddChildDialog,
                   icon: const Icon(Icons.add),
                   label: const Text('Добавить'),
                 ),
@@ -159,7 +199,9 @@ class _EditorScreenState extends State<EditorScreen> {
                                     ? Text(
                                         '${child.completedSteps}/${child.totalSteps}',
                                       )
-                                    : null),
+                                    : child.stepType == 'single'
+                                    ? Text('Одиночный чекбокс')
+                                    : Text('Папка')),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [

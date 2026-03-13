@@ -19,20 +19,25 @@ class NodeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isLeaf = node.children.isEmpty;
+    final bool isLeaf = node.children.isEmpty && node.stepType != 'folder';
+    final bool isFolder = node.stepType == 'folder' || node.children.isNotEmpty;
     final bool isSingle = node.stepType == 'single';
-    final icon = isLeaf
-        ? (isSingle
-              ? (node.completed
-                    ? const Icon(Icons.check_circle, color: Colors.green)
-                    : const Icon(
-                        Icons.radio_button_unchecked,
-                        color: Colors.grey,
-                      ))
-              : const Icon(Icons.list, color: Colors.blue))
-        : (node.isExpanded
-              ? const Icon(Icons.folder_open)
-              : const Icon(Icons.folder));
+
+    Widget leadingIcon;
+    if (isFolder) {
+      leadingIcon = node.isExpanded
+          ? const Icon(Icons.folder_open)
+          : const Icon(Icons.folder);
+    } else {
+      // лист
+      if (isSingle) {
+        leadingIcon = node.completed
+            ? const Icon(Icons.check_circle, color: Colors.green)
+            : const Icon(Icons.radio_button_unchecked, color: Colors.grey);
+      } else {
+        leadingIcon = const Icon(Icons.list, color: Colors.blue);
+      }
+    }
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
@@ -57,11 +62,11 @@ class NodeTile extends StatelessWidget {
                 ],
               )
             : ListTile(
-                leading: icon,
+                leading: leadingIcon,
                 title: Text(
                   node.name,
                   style: TextStyle(
-                    fontWeight: isLeaf ? FontWeight.normal : FontWeight.bold,
+                    fontWeight: isFolder ? FontWeight.bold : FontWeight.normal,
                     decoration: isLeaf && isSingle && node.completed
                         ? TextDecoration.lineThrough
                         : TextDecoration.none,
@@ -75,7 +80,7 @@ class NodeTile extends StatelessWidget {
   }
 
   Widget _buildTrailing() {
-    if (node.children.isNotEmpty) {
+    if (node.children.isNotEmpty || node.stepType == 'folder') {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [

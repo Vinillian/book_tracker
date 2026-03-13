@@ -45,9 +45,11 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     if (_stepType == 'single') {
       _workingCopy.completed = _completedSteps > 0;
       _workingCopy.completedSteps = 0;
-    } else {
+    } else if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
       _workingCopy.completed = false;
+    } else {
+      // для папок ничего не меняем
     }
     Navigator.pop(context, _workingCopy);
   }
@@ -63,6 +65,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
       setState(() {
         _workingCopy = updated;
         _nameController.text = _workingCopy.name;
+        _stepType = _workingCopy.stepType;
         _totalSteps = _workingCopy.totalSteps;
         _completedSteps = _workingCopy.completedSteps;
         _totalStepsController.text = _totalSteps.toString();
@@ -82,9 +85,65 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     }
   }
 
+  void _onStepTypeChanged(String? newType) {
+    if (newType == null || newType == _stepType) return;
+    // Если узел имеет детей и мы пытаемся сменить тип на лист
+    if (_workingCopy.children.isNotEmpty && newType != 'folder') {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Подтверждение'),
+          content: const Text(
+            'Изменение типа на лист приведёт к удалению всех вложенных элементов. Продолжить?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() {
+                  _stepType = newType;
+                  _workingCopy.children.clear(); // удаляем детей
+                  if (newType == 'single') {
+                    _totalSteps = 1;
+                    _completedSteps = 0;
+                  } else if (newType == 'stepByStep') {
+                    _totalSteps = 3;
+                    _completedSteps = 0;
+                  }
+                  _totalStepsController.text = _totalSteps.toString();
+                });
+              },
+              child: const Text('Продолжить'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      setState(() {
+        _stepType = newType;
+        if (newType == 'single') {
+          _totalSteps = 1;
+          _completedSteps = 0;
+        } else if (newType == 'stepByStep') {
+          _totalSteps = 3;
+          _completedSteps = 0;
+        } else if (newType == 'folder') {
+          // при переходе в папку сбрасываем прогресс и шаги
+          _totalSteps = 1;
+          _completedSteps = 0;
+        }
+        _totalStepsController.text = _totalSteps.toString();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool isLeaf = _workingCopy.children.isEmpty;
+    final bool isFolder = _stepType == 'folder';
 
     return Scaffold(
       appBar: AppBar(
@@ -104,7 +163,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            if (!isLeaf) ...[
+            // Кнопка редактирования структуры для папок
+            if (isFolder) ...[
               const Text('Тип: Папка', style: TextStyle(fontSize: 16)),
               const SizedBox(height: 16),
               Center(
@@ -115,38 +175,24 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 ),
               ),
             ] else ...[
+              // Выбор типа прогресса для листов
               const Text(
                 'Тип прогресса:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              // Игнорируем предупреждения об устаревших groupValue и onChanged
               // ignore: deprecated_member_use
               RadioListTile<String>(
                 title: const Text('Одиночный чекбокс'),
                 value: 'single',
                 groupValue: _stepType,
-                onChanged: (value) {
-                  setState(() {
-                    _stepType = value!;
-                    _totalSteps = 1;
-                    _completedSteps = 0;
-                    _totalStepsController.text = _totalSteps.toString();
-                  });
-                },
+                onChanged: _onStepTypeChanged,
               ),
               // ignore: deprecated_member_use
               RadioListTile<String>(
                 title: const Text('Пошаговый'),
                 value: 'stepByStep',
                 groupValue: _stepType,
-                onChanged: (value) {
-                  setState(() {
-                    _stepType = value!;
-                    _totalSteps = 3;
-                    _completedSteps = 0;
-                    _totalStepsController.text = _totalSteps.toString();
-                  });
-                },
+                onChanged: _onStepTypeChanged,
               ),
               if (_stepType == 'stepByStep') ...[
                 const SizedBox(height: 16),
