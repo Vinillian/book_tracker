@@ -22,7 +22,6 @@ class FileUtils {
     }
   }
 
-  /// Экспортирует все книги в один JSON-файл (массив)
   static Future<void> exportAllTemplates(List<Node> templates) async {
     try {
       final directory = await getApplicationDocumentsDirectory();

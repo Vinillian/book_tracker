@@ -1,35 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/node.dart';
+import 'models/settings.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   Hive.registerAdapter(NodeAdapter());
+  Hive.registerAdapter(AppSettingsAdapter());
 
+  // Открываем бокс для книг
   try {
     await Hive.openBox<Node>('templates');
-    print('✅ Бокс "templates" открыт успешно');
   } catch (e) {
-    print('❌ Ошибка при открытии бокса: $e');
-    print('🔄 Удаляем старый бокс...');
-    try {
-      await Hive.deleteBoxFromDisk('templates');
-      print('✅ Старый бокс удалён');
-    } catch (deleteError) {
-      print('⚠️ Не удалось удалить бокс (возможно, файла нет): $deleteError');
-    }
-    // Создаём новый чистый бокс
+    print('Ошибка открытия templates, удаляем и создаём новый');
+    await Hive.deleteBoxFromDisk('templates');
     await Hive.openBox<Node>('templates');
-    print('✅ Новый бокс создан и открыт');
   }
+
+  // Открываем бокс для настроек
+  await Hive.openBox<AppSettings>('settings');
 
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late Box<AppSettings> settingsBox;
+  String _themeMode = 'system'; // по умолчанию
+
+  @override
+  void initState() {
+    super.initState();
+    settingsBox = Hive.box<AppSettings>('settings');
+    _loadTheme();
+  }
+
+  void _loadTheme() {
+    final settings = settingsBox.get('appSettings');
+    if (settings != null) {
+      _themeMode = settings.themeMode;
+    } else {
+      // создаём настройки по умолчанию
+      settingsBox.put('appSettings', AppSettings(themeMode: 'system'));
+    }
+  }
+
+  void _updateTheme(String mode) {
+    setState(() {
+      _themeMode = mode;
+    });
+    final settings = settingsBox.get('appSettings');
+    if (settings != null) {
+      settings.themeMode = mode;
+      settingsBox.put('appSettings', settings);
+    } else {
+      settingsBox.put('appSettings', AppSettings(themeMode: mode));
+    }
+  }
+
+  ThemeMode _getThemeMode() {
+    switch (_themeMode) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +91,11 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
       ),
-      themeMode: ThemeMode.system,
-      home: const HomeScreen(),
+      themeMode: _getThemeMode(),
+      home: HomeScreen(
+        onThemeChanged: _updateTheme,
+        currentThemeMode: _themeMode,
+      ),
       debugShowCheckedModeBanner: false,
     );
   }

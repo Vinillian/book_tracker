@@ -8,7 +8,14 @@ import '../widgets/book_card.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Function(String) onThemeChanged;
+  final String currentThemeMode;
+
+  const HomeScreen({
+    super.key,
+    required this.onThemeChanged,
+    required this.currentThemeMode,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -119,10 +126,12 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const SettingsScreen(
-          currentThemeMode:
-              'system', // Заглушка, позже можно реализовать сохранение темы
-          onThemeChanged: null, // Пока не используется
+        builder: (context) => SettingsScreen(
+          currentThemeMode: widget.currentThemeMode,
+          onThemeChanged: (mode) {
+            widget.onThemeChanged(mode);
+            Navigator.pop(context);
+          },
         ),
       ),
     );
@@ -140,12 +149,12 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Настройки',
           ),
           IconButton(
-            icon: const Icon(Icons.download), // Стрелка вниз — импорт
+            icon: const Icon(Icons.download),
             onPressed: _importTemplate,
             tooltip: 'Импорт из JSON',
           ),
           IconButton(
-            icon: const Icon(Icons.upload), // Стрелка вверх — экспорт всех
+            icon: const Icon(Icons.upload),
             onPressed: _exportAllTemplates,
             tooltip: 'Экспорт всех книг',
           ),

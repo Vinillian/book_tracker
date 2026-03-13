@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class SettingsScreen extends StatelessWidget {
   final String currentThemeMode;
-  final Function(String)? onThemeChanged;
+  final Function(String) onThemeChanged;
 
   const SettingsScreen({
     super.key,
@@ -30,17 +30,13 @@ class SettingsScreen extends StatelessWidget {
               value: 'system',
               groupValue: currentThemeMode,
               onChanged: (value) {
-                if (value != null && onThemeChanged != null) {
-                  onThemeChanged!(value);
-                  Navigator.pop(context);
+                if (value != null) {
+                  onThemeChanged(value);
                 }
               },
             ),
             onTap: () {
-              if (onThemeChanged != null) {
-                onThemeChanged!('system');
-                Navigator.pop(context);
-              }
+              onThemeChanged('system');
             },
           ),
           ListTile(
@@ -49,17 +45,13 @@ class SettingsScreen extends StatelessWidget {
               value: 'light',
               groupValue: currentThemeMode,
               onChanged: (value) {
-                if (value != null && onThemeChanged != null) {
-                  onThemeChanged!(value);
-                  Navigator.pop(context);
+                if (value != null) {
+                  onThemeChanged(value);
                 }
               },
             ),
             onTap: () {
-              if (onThemeChanged != null) {
-                onThemeChanged!('light');
-                Navigator.pop(context);
-              }
+              onThemeChanged('light');
             },
           ),
           ListTile(
@@ -68,17 +60,13 @@ class SettingsScreen extends StatelessWidget {
               value: 'dark',
               groupValue: currentThemeMode,
               onChanged: (value) {
-                if (value != null && onThemeChanged != null) {
-                  onThemeChanged!(value);
-                  Navigator.pop(context);
+                if (value != null) {
+                  onThemeChanged(value);
                 }
               },
             ),
             onTap: () {
-              if (onThemeChanged != null) {
-                onThemeChanged!('dark');
-                Navigator.pop(context);
-              }
+              onThemeChanged('dark');
             },
           ),
         ],
