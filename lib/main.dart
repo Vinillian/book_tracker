@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/node.dart';
 import 'models/settings.dart';
+import 'models/history_entry.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -9,6 +10,7 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(NodeAdapter());
   Hive.registerAdapter(AppSettingsAdapter());
+  Hive.registerAdapter(HistoryEntryAdapter());
 
   // Открываем бокс для книг
   try {
@@ -22,6 +24,9 @@ void main() async {
   // Открываем бокс для настроек
   await Hive.openBox<AppSettings>('settings');
 
+  // Открываем бокс для истории
+  await Hive.openBox<HistoryEntry>('history');
+
   runApp(const MyApp());
 }
 
@@ -34,7 +39,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late Box<AppSettings> settingsBox;
-  String _themeMode = 'system'; // по умолчанию
+  String _themeMode = 'system';
 
   @override
   void initState() {
@@ -48,7 +53,6 @@ class _MyAppState extends State<MyApp> {
     if (settings != null) {
       _themeMode = settings.themeMode;
     } else {
-      // создаём настройки по умолчанию
       settingsBox.put('appSettings', AppSettings(themeMode: 'system'));
     }
   }

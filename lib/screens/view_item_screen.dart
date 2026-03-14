@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
+import '../utils/history_service.dart';
 
 class ViewItemScreen extends StatefulWidget {
+  final String bookId;
   final Node node;
   final VoidCallback onNodeUpdated;
 
   const ViewItemScreen({
     super.key,
+    required this.bookId,
     required this.node,
     required this.onNodeUpdated,
   });
@@ -22,6 +25,33 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   void initState() {
     super.initState();
     _node = widget.node;
+  }
+
+  void _onToggle(bool? value) {
+    setState(() {
+      _node.completed = value!;
+    });
+    HistoryService.recordToggle(
+      bookId: widget.bookId,
+      node: _node,
+      newValue: _node.completed,
+    );
+    widget.onNodeUpdated();
+  }
+
+  void _onSliderChanged(double value) {
+    setState(() {
+      _node.completedSteps = value.round();
+    });
+  }
+
+  void _onSliderChangeEnd(double value) {
+    HistoryService.recordStepChange(
+      bookId: widget.bookId,
+      node: _node,
+      newSteps: _node.completedSteps,
+    );
+    widget.onNodeUpdated();
   }
 
   @override
@@ -64,12 +94,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
               CheckboxListTile(
                 title: const Text('Выполнено'),
                 value: _node.completed,
-                onChanged: (value) {
-                  setState(() {
-                    _node.completed = value!;
-                  });
-                  widget.onNodeUpdated();
-                },
+                onChanged: _onToggle,
               ),
             ] else if (isLeaf && !isSingle) ...[
               const Text(
@@ -86,12 +111,8 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                       min: 0,
                       max: _node.totalSteps.toDouble(),
                       divisions: _node.totalSteps,
-                      onChanged: (value) {
-                        setState(() {
-                          _node.completedSteps = value.round();
-                        });
-                        widget.onNodeUpdated();
-                      },
+                      onChanged: _onSliderChanged,
+                      onChangeEnd: _onSliderChangeEnd,
                     ),
                   ),
                   Text('${_node.completedSteps}/${_node.totalSteps}'),

@@ -6,6 +6,8 @@ import 'book_screen.dart';
 import '../utils/file_utils.dart';
 import '../widgets/book_card.dart';
 import 'settings_screen.dart';
+import 'statistics_screen.dart';
+import 'calendar_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(String) onThemeChanged;
@@ -22,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
   late Box<Node> templatesBox;
   String _searchQuery = '';
 
@@ -140,105 +143,152 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Мои книги'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: _openSettings,
-            tooltip: 'Настройки',
-          ),
-          IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: _importTemplate,
-            tooltip: 'Импорт из JSON',
-          ),
-          IconButton(
-            icon: const Icon(Icons.upload),
-            onPressed: _exportAllTemplates,
-            tooltip: 'Экспорт всех книг',
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _addTemplate,
-            tooltip: 'Новая книга',
-          ),
-        ],
-      ),
-      body: Column(
+      appBar: AppBar(title: _getTitle(), actions: _getActions()),
+      body: IndexedStack(
+        index: _selectedIndex,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SearchBar(
-              hintText: 'Поиск книг...',
-              leading: const Icon(Icons.search),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-            ),
+          _buildBooksTab(),
+          const CalendarScreen(),
+          const StatisticsScreen(),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Книги'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Календарь',
           ),
-          Expanded(
-            child: ValueListenableBuilder(
-              valueListenable: templatesBox.listenable(),
-              builder: (context, Box<Node> box, _) {
-                if (box.isEmpty) {
-                  return const Center(
-                    child: Text('Нет книг. Нажмите + для создания.'),
-                  );
-                }
-
-                final entries = box.toMap().entries.toList();
-                final filteredEntries = _searchQuery.isEmpty
-                    ? entries
-                    : entries
-                          .where(
-                            (entry) => entry.value.name.toLowerCase().contains(
-                              _searchQuery.toLowerCase(),
-                            ),
-                          )
-                          .toList();
-
-                if (filteredEntries.isEmpty) {
-                  return const Center(
-                    child: Text('Нет книг, соответствующих запросу.'),
-                  );
-                }
-
-                return ListView.builder(
-                  itemCount: filteredEntries.length,
-                  itemBuilder: (context, index) {
-                    final entry = filteredEntries[index];
-                    final key = entry.key;
-                    final template = entry.value;
-
-                    return BookCard(
-                      book: template,
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BookScreen(
-                              node: template,
-                              onNodeUpdated: () {
-                                templatesBox.put(key, template);
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                      onEdit: () => _editTemplate(key, template),
-                      onDelete: () => _deleteTemplate(key),
-                      onExport: () => _exportTemplate(template),
-                    );
-                  },
-                );
-              },
-            ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Статистика',
           ),
         ],
       ),
+    );
+  }
+
+  Widget _getTitle() {
+    switch (_selectedIndex) {
+      case 0:
+        return const Text('Мои книги');
+      case 1:
+        return const Text('Календарь');
+      case 2:
+        return const Text('Статистика');
+      default:
+        return const Text('Book Planner');
+    }
+  }
+
+  List<Widget>? _getActions() {
+    if (_selectedIndex == 0) {
+      return [
+        IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: _openSettings,
+          tooltip: 'Настройки',
+        ),
+        IconButton(
+          icon: const Icon(Icons.download),
+          onPressed: _importTemplate,
+          tooltip: 'Импорт из JSON',
+        ),
+        IconButton(
+          icon: const Icon(Icons.upload),
+          onPressed: _exportAllTemplates,
+          tooltip: 'Экспорт всех книг',
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: _addTemplate,
+          tooltip: 'Новая книга',
+        ),
+      ];
+    }
+    return null; // для других вкладок actions не нужны
+  }
+
+  Widget _buildBooksTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SearchBar(
+            hintText: 'Поиск книг...',
+            leading: const Icon(Icons.search),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+        ),
+        Expanded(
+          child: ValueListenableBuilder(
+            valueListenable: templatesBox.listenable(),
+            builder: (context, Box<Node> box, _) {
+              if (box.isEmpty) {
+                return const Center(
+                  child: Text('Нет книг. Нажмите + для создания.'),
+                );
+              }
+
+              final entries = box.toMap().entries.toList();
+              final filteredEntries = _searchQuery.isEmpty
+                  ? entries
+                  : entries
+                        .where(
+                          (entry) => entry.value.name.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          ),
+                        )
+                        .toList();
+
+              if (filteredEntries.isEmpty) {
+                return const Center(
+                  child: Text('Нет книг, соответствующих запросу.'),
+                );
+              }
+
+              return ListView.builder(
+                itemCount: filteredEntries.length,
+                itemBuilder: (context, index) {
+                  final entry = filteredEntries[index];
+                  final key = entry.key;
+                  final template = entry.value;
+
+                  return BookCard(
+                    book: template,
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BookScreen(
+                            node: template,
+                            onNodeUpdated: () {
+                              templatesBox.put(key, template);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    onEdit: () => _editTemplate(key, template),
+                    onDelete: () => _deleteTemplate(key),
+                    onExport: () => _exportTemplate(template),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

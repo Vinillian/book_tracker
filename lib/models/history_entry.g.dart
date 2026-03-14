@@ -1,56 +1,53 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'node.dart';
+part of 'history_entry.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class NodeAdapter extends TypeAdapter<Node> {
+class HistoryEntryAdapter extends TypeAdapter<HistoryEntry> {
   @override
-  final int typeId = 0;
+  final int typeId = 2;
 
   @override
-  Node read(BinaryReader reader) {
+  HistoryEntry read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Node(
-      name: fields[0] as String,
-      children: (fields[1] as List).cast<Node>(),
-      isExpanded: fields[2] as bool,
-      plannedDate: fields[3] as DateTime?,
-      completed: fields[4] as bool,
+    return HistoryEntry(
+      id: fields[0] as String?,
+      bookId: fields[1] as String,
+      nodeId: fields[2] as String,
+      date: fields[3] as DateTime,
+      nodeName: fields[4] as String,
       stepType: fields[5] as String,
-      totalSteps: fields[6] as int,
-      completedSteps: fields[7] as int,
-      id: fields[8] as String?,
+      completed: fields[6] as bool?,
+      completedSteps: fields[7] as int?,
     );
   }
 
   @override
-  void write(BinaryWriter writer, Node obj) {
+  void write(BinaryWriter writer, HistoryEntry obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(8)
       ..writeByte(0)
-      ..write(obj.name)
+      ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.children)
+      ..write(obj.bookId)
       ..writeByte(2)
-      ..write(obj.isExpanded)
+      ..write(obj.nodeId)
       ..writeByte(3)
-      ..write(obj.plannedDate)
+      ..write(obj.date)
       ..writeByte(4)
-      ..write(obj.completed)
+      ..write(obj.nodeName)
       ..writeByte(5)
       ..write(obj.stepType)
       ..writeByte(6)
-      ..write(obj.totalSteps)
+      ..write(obj.completed)
       ..writeByte(7)
-      ..write(obj.completedSteps)
-      ..writeByte(8)
-      ..write(obj.id);
+      ..write(obj.completedSteps);
   }
 
   @override
@@ -59,7 +56,7 @@ class NodeAdapter extends TypeAdapter<Node> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is NodeAdapter &&
+      other is HistoryEntryAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

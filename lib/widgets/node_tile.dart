@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
+import '../utils/history_service.dart';
 
 class NodeTile extends StatelessWidget {
   final Node node;
   final int depth;
+  final String bookId; // ID книги для истории
   final VoidCallback? onCheckboxChanged;
   final VoidCallback onTap;
   final VoidCallback? onExpandToggle;
@@ -12,6 +14,7 @@ class NodeTile extends StatelessWidget {
     super.key,
     required this.node,
     required this.depth,
+    required this.bookId,
     this.onCheckboxChanged,
     required this.onTap,
     this.onExpandToggle,
@@ -29,7 +32,6 @@ class NodeTile extends StatelessWidget {
           ? const Icon(Icons.folder_open)
           : const Icon(Icons.folder);
     } else {
-      // лист
       if (isSingle) {
         leadingIcon = node.completed
             ? const Icon(Icons.check_circle, color: Colors.green)
@@ -48,7 +50,15 @@ class NodeTile extends StatelessWidget {
                 children: [
                   Checkbox(
                     value: node.completed,
-                    onChanged: (_) => onCheckboxChanged?.call(),
+                    onChanged: (_) {
+                      // Запись истории перед изменением
+                      HistoryService.recordToggle(
+                        bookId: bookId,
+                        node: node,
+                        newValue: !node.completed,
+                      );
+                      onCheckboxChanged?.call();
+                    },
                   ),
                   Expanded(
                     child: ListTile(

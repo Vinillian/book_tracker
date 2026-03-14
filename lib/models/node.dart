@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 part 'node.g.dart';
 
@@ -28,6 +29,9 @@ class Node {
   @HiveField(7)
   int completedSteps; // выполнено шагов (для stepByStep)
 
+  @HiveField(8)
+  String id; // уникальный идентификатор узла
+
   Node({
     required this.name,
     required this.children,
@@ -37,20 +41,23 @@ class Node {
     this.stepType = 'single',
     this.totalSteps = 1,
     this.completedSteps = 0,
-  });
+    String? id,
+  }) : id = id ?? const Uuid().v4();
 
   // Конструктор для листа (задача) – по умолчанию single
   Node.leaf(
-    this.name, {
-    this.plannedDate,
-    this.stepType = 'single',
-    this.totalSteps = 1,
-    this.completedSteps = 0,
-  }) : children = [],
-       isExpanded = false,
-       completed = false;
+      this.name, {
+        this.plannedDate,
+        this.stepType = 'single',
+        this.totalSteps = 1,
+        this.completedSteps = 0,
+        String? id,
+      })  : children = [],
+        isExpanded = false,
+        completed = false,
+        id = id ?? const Uuid().v4();
 
-  /// Создаёт глубокую копию узла (рекурсивно)
+  /// Создаёт глубокую копию узла (рекурсивно) с сохранением ID
   Node deepCopy() {
     return Node(
       name: name,
@@ -61,19 +68,18 @@ class Node {
       stepType: stepType,
       totalSteps: totalSteps,
       completedSteps: completedSteps,
+      id: id, // сохраняем тот же ID
     );
   }
 
   // Общее количество "единиц" прогресса
   int get totalLeaves {
-    // Для папок и узлов с детьми – только дети
     if (children.isNotEmpty) {
       return children.fold(0, (sum, child) => sum + child.totalLeaves);
     }
-    // Для листьев (без детей)
     if (stepType == 'single') return 1;
     if (stepType == 'stepByStep') return totalSteps;
-    return 0; // для папок без детей (пустых) – 0
+    return 0;
   }
 
   // Количество выполненных "единиц" прогресса
@@ -103,6 +109,7 @@ class Node {
       'stepType': stepType,
       'totalSteps': totalSteps,
       'completedSteps': completedSteps,
+      'id': id,
     };
   }
 
@@ -119,6 +126,7 @@ class Node {
       stepType: json['stepType'] ?? 'single',
       totalSteps: json['totalSteps'] ?? 1,
       completedSteps: json['completedSteps'] ?? 0,
+      id: json['id'], // может быть null, тогда сгенерируется новый
     );
   }
 }

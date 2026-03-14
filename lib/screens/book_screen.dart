@@ -38,6 +38,7 @@ class _BookScreenState extends State<BookScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ViewItemScreen(
+          bookId: _node.id, // передаём ID книги
           node: node,
           onNodeUpdated: () {
             widget.onNodeUpdated();
@@ -55,6 +56,7 @@ class _BookScreenState extends State<BookScreen> {
         NodeTile(
           node: child,
           depth: depth,
+          bookId: _node.id, // передаём ID книги для записи истории
           onCheckboxChanged: () {
             child.toggle();
             widget.onNodeUpdated();

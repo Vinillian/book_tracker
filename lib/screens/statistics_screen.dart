@@ -125,7 +125,7 @@ class StatisticsScreen extends StatelessWidget {
                     ),
                   ),
                 );
-              }), // удалён .toList()
+              }),
             ],
           );
         },
