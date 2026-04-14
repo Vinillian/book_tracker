@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/node.dart';
 
 class FileUtils {
+  /// Экспортирует один шаблон в файл JSON с кодировкой UTF-8 с BOM.
   static Future<void> exportTemplate(Node template) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -14,7 +15,9 @@ class FileUtils {
       final file = File('${directory.path}/$fileName');
 
       final jsonString = jsonEncode(template.toJson());
-      await file.writeAsString(jsonString);
+      // Добавляем BOM (Byte Order Mark) для правильного определения UTF-8
+      final bytes = utf8.encode('\uFEFF$jsonString');
+      await file.writeAsBytes(bytes);
 
       debugPrint('Шаблон сохранён: ${file.path}');
     } catch (e) {
@@ -22,6 +25,7 @@ class FileUtils {
     }
   }
 
+  /// Экспортирует все книги в один файл JSON с кодировкой UTF-8 с BOM.
   static Future<void> exportAllTemplates(List<Node> templates) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -31,7 +35,8 @@ class FileUtils {
 
       final jsonArray = templates.map((t) => t.toJson()).toList();
       final jsonString = jsonEncode(jsonArray);
-      await file.writeAsString(jsonString);
+      final bytes = utf8.encode('\uFEFF$jsonString');
+      await file.writeAsBytes(bytes);
 
       debugPrint('Все книги сохранены: ${file.path}');
     } catch (e) {
@@ -39,6 +44,7 @@ class FileUtils {
     }
   }
 
+  /// Импорт шаблона из JSON-файла, выбранного пользователем.
   static Future<Node?> importTemplate() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -50,14 +56,15 @@ class FileUtils {
         final fileBytes = result.files.first.bytes;
 
         if (fileBytes != null) {
-          final jsonString = utf8.decode(fileBytes);
+          final jsonString = _decodeWithBom(fileBytes);
           final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
           return Node.fromJson(jsonMap);
         } else {
           final filePath = result.files.first.path;
           if (filePath != null) {
             final file = File(filePath);
-            final jsonString = await file.readAsString();
+            final fileBytes = await file.readAsBytes();
+            final jsonString = _decodeWithBom(fileBytes);
             final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
             return Node.fromJson(jsonMap);
           } else {
@@ -69,5 +76,17 @@ class FileUtils {
       throw Exception('Ошибка импорта: $e');
     }
     return null;
+  }
+
+  /// Декодирует UTF-8, удаляя BOM, если он присутствует.
+  static String _decodeWithBom(List<int> bytes) {
+    if (bytes.length >= 3 &&
+        bytes[0] == 0xEF &&
+        bytes[1] == 0xBB &&
+        bytes[2] == 0xBF) {
+      // Есть BOM – удаляем первые 3 байта
+      return utf8.decode(bytes.sublist(3));
+    }
+    return utf8.decode(bytes);
   }
 }
