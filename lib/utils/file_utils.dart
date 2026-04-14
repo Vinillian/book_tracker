@@ -3,13 +3,63 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/node.dart';
 
 class FileUtils {
+  /// Проверяет и запрашивает разрешение на запись во внешнее хранилище.
+  /// Возвращает true, если доступ разрешён.
+  static Future<bool> _requestStoragePermission() async {
+    // На Android 11+ (API 30+) разрешение не требуется для доступа к
+    // общедоступным папкам через Scoped Storage, но мы оставляем проверку
+    // для старых версий.
+    if (Platform.isAndroid) {
+      final status = await Permission.storage.status;
+      if (status.isGranted) return true;
+      final result = await Permission.storage.request();
+      return result.isGranted;
+    }
+    // На iOS и других платформах разрешение не требуется
+    return true;
+  }
+
+  /// Возвращает путь к папке "Documents/Book Planner".
+  /// Создаёт папку, если её нет.
+  static Future<Directory> _getExportDirectory() async {
+    Directory directory;
+
+    if (Platform.isAndroid) {
+      // getExternalStorageDirectory() на Android возвращает путь к
+      // /storage/emulated/0/Android/data/com.example.book_tracker/files
+      // Но нам нужна публичная папка Documents.
+      // Используем getExternalStoragePublicDirectory (deprecated, но работает).
+      // Альтернатива: использовать path_provider + ручной путь.
+      final storage = await getExternalStorageDirectory();
+      // Поднимаемся на уровень выше, к корню внешнего хранилища
+      final root = Directory(storage!.path.split('Android')[0]);
+      directory = Directory('${root.path}Documents/Book Planner');
+    } else {
+      // Для iOS/Windows/macOS/Linux используем папку документов приложения
+      final docs = await getApplicationDocumentsDirectory();
+      directory = Directory('${docs.path}/Book Planner');
+    }
+
+    if (!await directory.exists()) {
+      await directory.create(recursive: true);
+    }
+    return directory;
+  }
+
   /// Экспортирует один шаблон в файл JSON с кодировкой UTF-8 с BOM.
   static Future<void> exportTemplate(Node template) async {
+    // Проверяем разрешение
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) {
+      throw Exception('Нет разрешения на запись во внешнее хранилище');
+    }
+
     try {
-      final directory = await getApplicationDocumentsDirectory();
+      final directory = await _getExportDirectory();
       final fileName =
           '${template.name}_${DateTime.now().millisecondsSinceEpoch}.json';
       final file = File('${directory.path}/$fileName');
@@ -27,8 +77,13 @@ class FileUtils {
 
   /// Экспортирует все книги в один файл JSON с кодировкой UTF-8 с BOM.
   static Future<void> exportAllTemplates(List<Node> templates) async {
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) {
+      throw Exception('Нет разрешения на запись во внешнее хранилище');
+    }
+
     try {
-      final directory = await getApplicationDocumentsDirectory();
+      final directory = await _getExportDirectory();
       final fileName =
           'all_books_${DateTime.now().millisecondsSinceEpoch}.json';
       final file = File('${directory.path}/$fileName');
