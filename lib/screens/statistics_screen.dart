@@ -14,29 +14,35 @@ class StatisticsScreen extends StatelessWidget {
       body: ValueListenableBuilder(
         valueListenable: templatesBox.listenable(),
         builder: (context, Box<Node> box, _) {
-          if (box.isEmpty) {
+          // Фильтруем только книги и планы (без шаблонов)
+          final nodes = box.values
+              .where((n) => n.category == 'book' || n.category == 'planner')
+              .toList();
+
+          if (nodes.isEmpty) {
             return const Center(
-              child: Text('Нет книг для отображения статистики.'),
+              child: Text('Нет данных для отображения статистики.'),
             );
           }
 
-          int totalBooks = box.length;
+          int totalBooks = nodes.where((n) => n.category == 'book').length;
+          int totalPlans = nodes.where((n) => n.category == 'planner').length;
           int totalLeaves = 0;
           int completedLeaves = 0;
 
-          final List<Map<String, dynamic>> booksStats = [];
+          final List<Map<String, dynamic>> itemsStats = [];
 
-          for (var key in box.keys) {
-            final book = box.get(key)!;
-            final bookTotal = book.totalLeaves;
-            final bookCompleted = book.completedLeaves;
-            totalLeaves += bookTotal;
-            completedLeaves += bookCompleted;
+          for (var node in nodes) {
+            final total = node.totalLeaves;
+            final completed = node.completedLeaves;
+            totalLeaves += total;
+            completedLeaves += completed;
 
-            booksStats.add({
-              'name': book.name,
-              'total': bookTotal,
-              'completed': bookCompleted,
+            itemsStats.add({
+              'name': node.name,
+              'total': total,
+              'completed': completed,
+              'category': node.category,
             });
           }
 
@@ -62,6 +68,7 @@ class StatisticsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       _buildStatRow('Книг:', '$totalBooks'),
+                      _buildStatRow('Планов (дней):', '$totalPlans'),
                       _buildStatRow('Всего задач:', '$totalLeaves'),
                       _buildStatRow('Выполнено:', '$completedLeaves'),
                       const SizedBox(height: 8),
@@ -83,14 +90,15 @@ class StatisticsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Прогресс по книгам',
+                'Прогресс по элементам',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              ...booksStats.map((stat) {
+              ...itemsStats.map((stat) {
                 final progress = stat['total'] > 0
                     ? stat['completed'] / stat['total']
                     : 0.0;
+                final category = stat['category'] == 'book' ? 'Книга' : 'План';
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: Padding(
@@ -98,12 +106,39 @@ class StatisticsScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          stat['name'],
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                stat['name'],
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: stat['category'] == 'book'
+                                    ? Colors.blue.shade100
+                                    : Colors.green.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                category,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: stat['category'] == 'book'
+                                      ? Colors.blue.shade800
+                                      : Colors.green.shade800,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Row(
@@ -117,7 +152,9 @@ class StatisticsScreen extends StatelessWidget {
                         LinearProgressIndicator(
                           value: progress,
                           backgroundColor: Colors.grey[300],
-                          color: Colors.green,
+                          color: stat['category'] == 'book'
+                              ? Colors.blue
+                              : Colors.green,
                           minHeight: 8,
                           borderRadius: BorderRadius.circular(4),
                         ),
