@@ -9,6 +9,7 @@ import '../widgets/book_card.dart';
 import 'settings_screen.dart';
 import 'statistics_screen.dart';
 import 'calendar_screen.dart';
+import 'template_manager_screen.dart'; // <-- добавлен импорт
 
 class HomeScreen extends StatefulWidget {
   final Function(String) onThemeChanged;
@@ -109,7 +110,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ========== Планы ==========
-  /// Диалог создания нового дня
+  void _openTemplateManager({bool selectionMode = false}) async {
+    if (selectionMode) {
+      final selected = await Navigator.push<Node>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const TemplateManagerScreen(selectionMode: true),
+        ),
+      );
+      if (selected != null && mounted) {
+        _createDayFromTemplate(selected);
+      }
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const TemplateManagerScreen(selectionMode: false),
+        ),
+      );
+    }
+  }
+
   void _showNewDayDialog() {
     showDialog(
       context: context,
@@ -127,8 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // TODO Этап 3: выбор шаблона
-              _addEmptyDay(); // временно
+              _openTemplateManager(selectionMode: true);
             },
             child: const Text('Из шаблона'),
           ),
@@ -160,6 +180,43 @@ class _HomeScreenState extends State<HomeScreen> {
       stepType: 'folder',
     );
     templatesBox.add(newDay);
+  }
+
+  void _createDayFromTemplate(Node template) {
+    final today = DateFormat('dd.MM.yyyy').format(DateTime.now());
+    final existing = templatesBox.values.firstWhere(
+      (n) => n.name == today && n.category == 'planner',
+      orElse: () => Node(name: '', children: []),
+    );
+    if (existing.name.isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('День "$today" уже существует')));
+      return;
+    }
+
+    // Глубокая копия и сброс прогресса
+    Node copyAndReset(Node node) {
+      final copy = node.deepCopy();
+      if (copy.children.isEmpty) {
+        copy.completed = false;
+        copy.completedSteps = 0;
+      } else {
+        copy.children = copy.children.map((c) => copyAndReset(c)).toList();
+      }
+      return copy;
+    }
+
+    final newDay = copyAndReset(template);
+    newDay.name = today;
+    newDay.category = 'planner';
+
+    templatesBox.add(newDay);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('День "$today" создан из шаблона "${template.name}"'),
+      ),
+    );
   }
 
   Future<void> _importPlanner() async {
@@ -298,6 +355,11 @@ class _HomeScreenState extends State<HomeScreen> {
       // Планы
       return [
         ...common,
+        IconButton(
+          icon: const Icon(Icons.folder),
+          onPressed: () => _openTemplateManager(selectionMode: false),
+          tooltip: 'Управление шаблонами',
+        ),
         IconButton(
           icon: const Icon(Icons.download),
           onPressed: _importPlanner,
