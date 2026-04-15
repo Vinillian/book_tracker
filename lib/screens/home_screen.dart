@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 import '../models/node.dart';
 import 'editor_screen.dart';
 import 'book_screen.dart';
@@ -34,15 +35,18 @@ class _HomeScreenState extends State<HomeScreen> {
     templatesBox = Hive.box<Node>('templates');
   }
 
-  void _addTemplate() {
-    final newTemplate = Node(name: 'Новая книга', children: []);
-    templatesBox.add(newTemplate);
+  // ========== Книги ==========
+  void _addBook() {
+    final newBook = Node(name: 'Новая книга', children: [], category: 'book');
+    templatesBox.add(newBook);
   }
 
-  Future<void> _importTemplate() async {
+  Future<void> _importBook() async {
     try {
       final imported = await FileUtils.importTemplate();
       if (imported != null) {
+        // При импорте можно оставить категорию из JSON или принудительно задать 'book'
+        imported.category ??= 'book';
         templatesBox.add(imported);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -62,16 +66,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _exportAllTemplates() async {
-    final templates = templatesBox.values.toList();
-    if (templates.isEmpty) {
+  Future<void> _exportAllBooks() async {
+    final books = templatesBox.values
+        .where((n) => n.category == 'book')
+        .toList();
+    if (books.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Нет книг для экспорта')));
       return;
     }
     try {
-      await FileUtils.exportAllTemplates(templates);
+      await FileUtils.exportAllTemplates(books);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Все книги экспортированы')),
@@ -89,40 +95,41 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _editTemplate(dynamic key, Node template) async {
+  void _deleteBook(dynamic key) {
+    templatesBox.delete(key);
+  }
+
+  Future<void> _editBook(dynamic key, Node book) async {
     final updated = await Navigator.push<Node>(
       context,
-      MaterialPageRoute(
-        builder: (_) => EditorScreen(node: template.deepCopy()),
-      ),
+      MaterialPageRoute(builder: (_) => EditorScreen(node: book.deepCopy())),
     );
     if (updated != null && mounted) {
       templatesBox.put(key, updated);
     }
   }
 
-  Future<void> _exportTemplate(Node template) async {
-    try {
-      await FileUtils.exportTemplate(template);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Книга "${template.name}" экспортирована')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка экспорта: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  // ========== Планы ==========
+  void _addEmptyDay() {
+    final today = DateFormat('dd.MM.yyyy').format(DateTime.now());
+    // Проверим, нет ли уже папки с такой датой
+    final existing = templatesBox.values.firstWhere(
+      (n) => n.name == today && n.category == 'planner',
+      orElse: () => Node(name: '', children: []),
+    );
+    if (existing.name.isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('День "$today" уже существует')));
+      return;
     }
-  }
-
-  void _deleteTemplate(dynamic key) {
-    templatesBox.delete(key);
+    final newDay = Node(
+      name: today,
+      children: [],
+      category: 'planner',
+      stepType: 'folder',
+    );
+    templatesBox.add(newDay);
   }
 
   void _openSettings() {
@@ -140,56 +147,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openCalendar() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CalendarScreen()),
+    );
+  }
+
+  void _openStatistics() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const StatisticsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: _getTitle(), actions: _getActions()),
+      appBar: AppBar(
+        title: _selectedIndex == 0 ? const Text('Книги') : const Text('Планы'),
+        actions: _buildAppBarActions(),
+      ),
       body: IndexedStack(
         index: _selectedIndex,
-        children: [
-          _buildBooksTab(),
-          const CalendarScreen(),
-          const StatisticsScreen(),
-        ],
+        children: [_buildBooksTab(), _buildPlannerTab()],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onTap: (index) => setState(() => _selectedIndex = index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Книги'),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today),
-            label: 'Календарь',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Статистика',
+            label: 'Планы',
           ),
         ],
       ),
     );
   }
 
-  Widget _getTitle() {
-    switch (_selectedIndex) {
-      case 0:
-        return const Text('Мои книги');
-      case 1:
-        return const Text('Календарь');
-      case 2:
-        return const Text('Статистика');
-      default:
-        return const Text('Book Planner');
-    }
-  }
-
-  List<Widget>? _getActions() {
+  List<Widget> _buildAppBarActions() {
     if (_selectedIndex == 0) {
+      // Книги
       return [
+        IconButton(
+          icon: const Icon(Icons.calendar_month),
+          onPressed: _openCalendar,
+          tooltip: 'Календарь',
+        ),
+        IconButton(
+          icon: const Icon(Icons.bar_chart),
+          onPressed: _openStatistics,
+          tooltip: 'Статистика',
+        ),
         IconButton(
           icon: const Icon(Icons.settings),
           onPressed: _openSettings,
@@ -197,22 +207,40 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.download),
-          onPressed: _importTemplate,
-          tooltip: 'Импорт из JSON',
+          onPressed: _importBook,
+          tooltip: 'Импорт книги',
         ),
         IconButton(
           icon: const Icon(Icons.upload),
-          onPressed: _exportAllTemplates,
+          onPressed: _exportAllBooks,
           tooltip: 'Экспорт всех книг',
         ),
         IconButton(
           icon: const Icon(Icons.add),
-          onPressed: _addTemplate,
+          onPressed: _addBook,
           tooltip: 'Новая книга',
         ),
       ];
+    } else {
+      // Планы
+      return [
+        IconButton(
+          icon: const Icon(Icons.calendar_month),
+          onPressed: _openCalendar,
+          tooltip: 'Календарь',
+        ),
+        IconButton(
+          icon: const Icon(Icons.bar_chart),
+          onPressed: _openStatistics,
+          tooltip: 'Статистика',
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: _addEmptyDay,
+          tooltip: 'Новый день',
+        ),
+      ];
     }
-    return null; // для других вкладок actions не нужны
   }
 
   Widget _buildBooksTab() {
@@ -223,65 +251,59 @@ class _HomeScreenState extends State<HomeScreen> {
           child: SearchBar(
             hintText: 'Поиск книг...',
             leading: const Icon(Icons.search),
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
+            onChanged: (value) => setState(() => _searchQuery = value),
           ),
         ),
         Expanded(
           child: ValueListenableBuilder(
             valueListenable: templatesBox.listenable(),
             builder: (context, Box<Node> box, _) {
-              if (box.isEmpty) {
+              final books = box.values
+                  .where((n) => n.category == 'book')
+                  .toList();
+
+              if (books.isEmpty) {
                 return const Center(
                   child: Text('Нет книг. Нажмите + для создания.'),
                 );
               }
 
-              final entries = box.toMap().entries.toList();
-              final filteredEntries = _searchQuery.isEmpty
-                  ? entries
-                  : entries
+              final filtered = _searchQuery.isEmpty
+                  ? books
+                  : books
                         .where(
-                          (entry) => entry.value.name.toLowerCase().contains(
+                          (b) => b.name.toLowerCase().contains(
                             _searchQuery.toLowerCase(),
                           ),
                         )
                         .toList();
 
-              if (filteredEntries.isEmpty) {
-                return const Center(
-                  child: Text('Нет книг, соответствующих запросу.'),
-                );
+              if (filtered.isEmpty) {
+                return const Center(child: Text('Ничего не найдено'));
               }
 
               return ListView.builder(
-                itemCount: filteredEntries.length,
+                itemCount: filtered.length,
                 itemBuilder: (context, index) {
-                  final entry = filteredEntries[index];
-                  final key = entry.key;
-                  final template = entry.value;
+                  final book = filtered[index];
+                  final key = box.keys.firstWhere((k) => box.get(k) == book);
 
                   return BookCard(
-                    book: template,
+                    book: book,
                     onTap: () async {
                       await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => BookScreen(
-                            node: template,
-                            onNodeUpdated: () {
-                              templatesBox.put(key, template);
-                            },
+                            node: book,
+                            onNodeUpdated: () => box.put(key, book),
                           ),
                         ),
                       );
                     },
-                    onEdit: () => _editTemplate(key, template),
-                    onDelete: () => _deleteTemplate(key),
-                    onExport: () => _exportTemplate(template),
+                    onEdit: () => _editBook(key, book),
+                    onDelete: () => _deleteBook(key),
+                    onExport: () => FileUtils.exportTemplate(book),
                   );
                 },
               );
@@ -289,6 +311,60 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPlannerTab() {
+    return ValueListenableBuilder(
+      valueListenable: templatesBox.listenable(),
+      builder: (context, Box<Node> box, _) {
+        final plans = box.values.where((n) => n.category == 'planner').toList();
+
+        if (plans.isEmpty) {
+          return const Center(
+            child: Text('Нет планов. Нажмите + для создания дня.'),
+          );
+        }
+
+        // Сортируем по дате (новые сверху)
+        plans.sort((a, b) {
+          try {
+            final dateA = DateFormat('dd.MM.yyyy').parse(a.name);
+            final dateB = DateFormat('dd.MM.yyyy').parse(b.name);
+            return dateB.compareTo(dateA);
+          } catch (_) {
+            return b.name.compareTo(a.name);
+          }
+        });
+
+        return ListView.builder(
+          itemCount: plans.length,
+          itemBuilder: (context, index) {
+            final plan = plans[index];
+            final key = box.keys.firstWhere((k) => box.get(k) == plan);
+
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: ListTile(
+                title: Text(plan.name),
+                subtitle: Text('Задач: ${plan.totalLeaves}'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BookScreen(
+                        node: plan,
+                        onNodeUpdated: () => box.put(key, plan),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

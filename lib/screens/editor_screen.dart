@@ -12,14 +12,16 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> {
-  late Node _workingCopy; // копия, с которой работаем
+  late Node _workingCopy;
   late TextEditingController _nameController;
+  String? _category;
 
   @override
   void initState() {
     super.initState();
     _workingCopy = widget.node.deepCopy();
     _nameController = TextEditingController(text: _workingCopy.name);
+    _category = _workingCopy.category;
   }
 
   @override
@@ -74,11 +76,7 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   void _addFolder() {
-    final newNode = Node(
-      name: 'Новая папка',
-      children: [],
-      stepType: 'folder', // явно указываем тип "папка"
-    );
+    final newNode = Node(name: 'Новая папка', children: [], stepType: 'folder');
     setState(() {
       _workingCopy.children.add(newNode);
     });
@@ -108,6 +106,8 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isRoot = widget.node.category != null; // Корень имеет категорию
+
     return Scaffold(
       appBar: AppBar(
         title: TextField(
@@ -117,14 +117,13 @@ class _EditorScreenState extends State<EditorScreen> {
             border: InputBorder.none,
           ),
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          onChanged: (value) {
-            _workingCopy.name = value;
-          },
+          onChanged: (value) => _workingCopy.name = value,
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () {
+              _workingCopy.category = _category;
               Navigator.pop(context, _workingCopy);
             },
           ),
@@ -132,6 +131,25 @@ class _EditorScreenState extends State<EditorScreen> {
       ),
       body: Column(
         children: [
+          if (isRoot) ...[
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: DropdownButtonFormField<String>(
+                value: _category,
+                decoration: const InputDecoration(
+                  labelText: 'Категория',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'book', child: Text('Книга')),
+                  DropdownMenuItem(value: 'planner', child: Text('План')),
+                  DropdownMenuItem(value: 'template', child: Text('Шаблон')),
+                ],
+                onChanged: (value) => setState(() => _category = value),
+              ),
+            ),
+            const Divider(),
+          ],
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -200,8 +218,8 @@ class _EditorScreenState extends State<EditorScreen> {
                                         '${child.completedSteps}/${child.totalSteps}',
                                       )
                                     : child.stepType == 'single'
-                                    ? Text('Одиночный чекбокс')
-                                    : Text('Папка')),
+                                    ? const Text('Одиночный чекбокс')
+                                    : const Text('Папка')),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
