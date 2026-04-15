@@ -1,0 +1,253 @@
+{
+  "name": "Современный учебник JavaScript",
+  "children": [
+    {
+      "name": "Введение",
+      "children": [
+        { "name": "Что такое JavaScript?", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "intro-1" },
+        { "name": "Руководства и справочники", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "intro-2" },
+        { "name": "Редакторы кода", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "intro-3" },
+        { "name": "Консоль разработчика", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "intro-4" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "intro"
+    },
+    {
+      "name": "Основы JavaScript",
+      "children": [
+        { "name": "Привет, мир!", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-1" },
+        { "name": "Структура кода", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-2" },
+        { "name": "Строгий режим", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-3" },
+        { "name": "Переменные", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-4" },
+        { "name": "Типы данных", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-5" },
+        { "name": "Взаимодействие: alert, prompt, confirm", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-6" },
+        { "name": "Преобразование типов", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-7" },
+        { "name": "Базовые операторы, математика", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-8" },
+        { "name": "Операторы сравнения", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-9" },
+        { "name": "Условные операторы: if, '?'", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-10" },
+        { "name": "Логические операторы", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-11" },
+        { "name": "Циклы while и for", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-12" },
+        { "name": "Конструкция switch", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-13" },
+        { "name": "Функции", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-14" },
+        { "name": "Function Expression", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-15" },
+        { "name": "Стрелочные функции", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-16" },
+        { "name": "Особенности JavaScript", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "basics-17" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "basics"
+    },
+    {
+      "name": "Качество кода",
+      "children": [
+        { "name": "Отладка в браузере", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "quality-1" },
+        { "name": "Советы по стилю кода", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "quality-2" },
+        { "name": "Комментарии", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "quality-3" },
+        { "name": "Автоматические тесты", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "quality-4" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "quality"
+    },
+    {
+      "name": "Объекты: основы",
+      "children": [
+        { "name": "Объекты", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "obj-1" },
+        { "name": "Копирование объектов", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "obj-2" },
+        { "name": "Сборка мусора", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "obj-3" },
+        { "name": "Методы объекта, this", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "obj-4" },
+        { "name": "Конструктор, оператор new", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "obj-5" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "objects"
+    },
+    {
+      "name": "Типы данных",
+      "children": [
+        { "name": "Числа", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-1" },
+        { "name": "Строки", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-2" },
+        { "name": "Массивы", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-3" },
+        { "name": "Перебираемые объекты", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-4" },
+        { "name": "Map и Set", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-5" },
+        { "name": "WeakMap и WeakSet", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-6" },
+        { "name": "Object.keys, values, entries", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-7" },
+        { "name": "Деструктурирующее присваивание", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-8" },
+        { "name": "Дата и время", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-9" },
+        { "name": "Формат JSON", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "types-10" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "types"
+    },
+    {
+      "name": "Продвинутая работа с функциями",
+      "children": [
+        { "name": "Рекурсия и стек", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "adv-func-1" },
+        { "name": "Замыкания", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "adv-func-2" },
+        { "name": "Объект функции, NFE", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "adv-func-3" },
+        { "name": "Планирование: setTimeout и setInterval", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "adv-func-4" },
+        { "name": "Декораторы и переадресация вызова", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "adv-func-5" },
+        { "name": "Привязка контекста к функции", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "adv-func-6" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "adv-func"
+    },
+    {
+      "name": "Свойства объекта, их конфигурация",
+      "children": [
+        { "name": "Флаги и дескрипторы свойств", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "props-1" },
+        { "name": "Геттеры и сеттеры", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "props-2" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "props"
+    },
+    {
+      "name": "Прототипы, наследование",
+      "children": [
+        { "name": "Прототипное наследование", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "proto-1" },
+        { "name": "F.prototype", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "proto-2" },
+        { "name": "Встроенные прототипы", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "proto-3" },
+        { "name": "Методы прототипов", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "proto-4" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "proto"
+    },
+    {
+      "name": "Классы",
+      "children": [
+        { "name": "Класс: базовый синтаксис", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "class-1" },
+        { "name": "Наследование классов", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "class-2" },
+        { "name": "Статические свойства и методы", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "class-3" },
+        { "name": "Приватные, защищённые свойства", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "class-4" },
+        { "name": "Расширение встроенных классов", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "class-5" },
+        { "name": "instanceof", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "class-6" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "class"
+    },
+    {
+      "name": "Обработка ошибок",
+      "children": [
+        { "name": "try..catch", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "err-1" },
+        { "name": "Проброс ошибок", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "err-2" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "errors"
+    },
+    {
+      "name": "Промисы, async/await",
+      "children": [
+        { "name": "Введение: колбэки", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "promise-1" },
+        { "name": "Промисы", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "promise-2" },
+        { "name": "Цепочка промисов", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "promise-3" },
+        { "name": "Промисы: обработка ошибок", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "promise-4" },
+        { "name": "Promise API", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "promise-5" },
+        { "name": "Промисификация", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "promise-6" },
+        { "name": "Async/await", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "promise-7" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "promises"
+    },
+    {
+      "name": "Генераторы, продвинутая итерация",
+      "children": [
+        { "name": "Генераторы", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "gen-1" },
+        { "name": "Async итераторы", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "gen-2" },
+        { "name": "Async генераторы", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "gen-3" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "generators"
+    },
+    {
+      "name": "Модули",
+      "children": [
+        { "name": "Модули, введение", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "mod-1" },
+        { "name": "Экспорт и импорт", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "mod-2" },
+        { "name": "Динамические импорты", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "mod-3" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "modules"
+    },
+    {
+      "name": "Браузер: документ, события, интерфейсы",
+      "children": [
+        { "name": "Браузерное окружение", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-1" },
+        { "name": "DOM-дерево", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-2" },
+        { "name": "Навигация по DOM", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-3" },
+        { "name": "Поиск элементов", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-4" },
+        { "name": "Свойства узлов", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-5" },
+        { "name": "Атрибуты и свойства", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-6" },
+        { "name": "Изменение документа", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-7" },
+        { "name": "Стили и классы", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-8" },
+        { "name": "Размеры и прокрутка", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-9" },
+        { "name": "Введение в события", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-10" },
+        { "name": "Всплытие и погружение", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-11" },
+        { "name": "Делегирование событий", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-12" },
+        { "name": "Действия браузера по умолчанию", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-13" },
+        { "name": "Генерация событий", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "dom-14" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "dom"
+    }
+  ],
+  "plannedDate": null,
+  "completed": false,
+  "stepType": "single",
+  "totalSteps": 1,
+  "completedSteps": 0,
+  "id": "js-book-full",
+  "category": "book"
+}

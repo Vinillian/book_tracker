@@ -24,13 +24,16 @@ class Node {
   String stepType; // 'single', 'stepByStep', или 'folder'
 
   @HiveField(6)
-  int totalSteps; // общее количество шагов (для stepByStep)
+  int totalSteps;
 
   @HiveField(7)
-  int completedSteps; // выполнено шагов (для stepByStep)
+  int completedSteps;
 
   @HiveField(8)
-  String id; // уникальный идентификатор узла
+  String id;
+
+  @HiveField(9)
+  String? category; // 'book', 'planner', 'template'
 
   Node({
     required this.name,
@@ -42,9 +45,9 @@ class Node {
     this.totalSteps = 1,
     this.completedSteps = 0,
     String? id,
+    this.category,
   }) : id = id ?? const Uuid().v4();
 
-  // Конструктор для листа (задача) – по умолчанию single
   Node.leaf(
       this.name, {
         this.plannedDate,
@@ -52,12 +55,12 @@ class Node {
         this.totalSteps = 1,
         this.completedSteps = 0,
         String? id,
+        this.category,
       })  : children = [],
         isExpanded = false,
         completed = false,
         id = id ?? const Uuid().v4();
 
-  /// Создаёт глубокую копию узла (рекурсивно) с сохранением ID
   Node deepCopy() {
     return Node(
       name: name,
@@ -68,11 +71,11 @@ class Node {
       stepType: stepType,
       totalSteps: totalSteps,
       completedSteps: completedSteps,
-      id: id, // сохраняем тот же ID
+      id: id,
+      category: category,
     );
   }
 
-  // Общее количество "единиц" прогресса
   int get totalLeaves {
     if (children.isNotEmpty) {
       return children.fold(0, (sum, child) => sum + child.totalLeaves);
@@ -82,7 +85,6 @@ class Node {
     return 0;
   }
 
-  // Количество выполненных "единиц" прогресса
   int get completedLeaves {
     if (children.isNotEmpty) {
       return children.fold(0, (sum, child) => sum + child.completedLeaves);
@@ -92,7 +94,6 @@ class Node {
     return 0;
   }
 
-  // Переключение для single-задач (только для листьев)
   void toggle() {
     if (children.isNotEmpty) return;
     if (stepType == 'single') {
@@ -110,6 +111,7 @@ class Node {
       'totalSteps': totalSteps,
       'completedSteps': completedSteps,
       'id': id,
+      'category': category,
     };
   }
 
@@ -126,7 +128,8 @@ class Node {
       stepType: json['stepType'] ?? 'single',
       totalSteps: json['totalSteps'] ?? 1,
       completedSteps: json['completedSteps'] ?? 0,
-      id: json['id'], // может быть null, тогда сгенерируется новый
+      id: json['id'],
+      category: json['category'],
     );
   }
 }

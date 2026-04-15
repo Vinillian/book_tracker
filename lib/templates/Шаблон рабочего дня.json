@@ -1,0 +1,57 @@
+{
+  "name": "Рабочий день",
+  "children": [
+    {
+      "name": "Утро",
+      "children": [
+        { "name": "Зарядка", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-m-1" },
+        { "name": "Душ", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-m-2" },
+        { "name": "Завтрак", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-m-3" },
+        { "name": "Планирование дня", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-m-4" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "tpl-morning"
+    },
+    {
+      "name": "Работа",
+      "children": [
+        { "name": "Проверить почту", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-w-1" },
+        { "name": "Совещание в 10:00", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-w-2" },
+        { "name": "Написать отчёт", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-w-3" },
+        { "name": "Обед", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-w-4" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "tpl-work"
+    },
+    {
+      "name": "Вечер",
+      "children": [
+        { "name": "Ужин", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-e-1" },
+        { "name": "Прогулка", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-e-2" },
+        { "name": "Чтение", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-e-3" },
+        { "name": "Подготовка ко сну", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-e-4" }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "tpl-evening"
+    }
+  ],
+  "plannedDate": null,
+  "completed": false,
+  "stepType": "single",
+  "totalSteps": 1,
+  "completedSteps": 0,
+  "id": "template-workday",
+  "category": "template"
+}

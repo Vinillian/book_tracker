@@ -26,13 +26,14 @@ class NodeAdapter extends TypeAdapter<Node> {
       totalSteps: fields[6] as int,
       completedSteps: fields[7] as int,
       id: fields[8] as String?,
+      category: fields[9] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Node obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class NodeAdapter extends TypeAdapter<Node> {
       ..writeByte(7)
       ..write(obj.completedSteps)
       ..writeByte(8)
-      ..write(obj.id);
+      ..write(obj.id)
+      ..writeByte(9)
+      ..write(obj.category);
   }
 
   @override
