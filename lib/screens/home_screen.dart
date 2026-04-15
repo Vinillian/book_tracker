@@ -45,7 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final imported = await FileUtils.importTemplate();
       if (imported != null) {
-        // При импорте можно оставить категорию из JSON или принудительно задать 'book'
         imported.category ??= 'book';
         templatesBox.add(imported);
         if (mounted) {
@@ -110,9 +109,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ========== Планы ==========
+  /// Диалог создания нового дня
+  void _showNewDayDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Новый день'),
+        content: const Text('Выберите способ создания:'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _addEmptyDay();
+            },
+            child: const Text('Пустой день'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              // TODO Этап 3: выбор шаблона
+              _addEmptyDay(); // временно
+            },
+            child: const Text('Из шаблона'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _addEmptyDay() {
     final today = DateFormat('dd.MM.yyyy').format(DateTime.now());
-    // Проверим, нет ли уже папки с такой датой
     final existing = templatesBox.values.firstWhere(
       (n) => n.name == today && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
@@ -132,6 +162,45 @@ class _HomeScreenState extends State<HomeScreen> {
     templatesBox.add(newDay);
   }
 
+  Future<void> _importPlanner() async {
+    try {
+      final imported = await FileUtils.importTemplate();
+      if (imported != null) {
+        imported.category ??= 'planner';
+        templatesBox.add(imported);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('План "${imported.name}" импортирован')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка импорта: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _editPlannerDay(dynamic key, Node day) async {
+    final updated = await Navigator.push<Node>(
+      context,
+      MaterialPageRoute(builder: (_) => EditorScreen(node: day.deepCopy())),
+    );
+    if (updated != null && mounted) {
+      templatesBox.put(key, updated);
+    }
+  }
+
+  void _deletePlannerDay(dynamic key) {
+    templatesBox.delete(key);
+  }
+
+  // ========== Общие ==========
   void _openSettings() {
     Navigator.push(
       context,
@@ -187,24 +256,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _buildAppBarActions() {
+    final common = [
+      IconButton(
+        icon: const Icon(Icons.calendar_month),
+        onPressed: _openCalendar,
+        tooltip: 'Календарь',
+      ),
+      IconButton(
+        icon: const Icon(Icons.bar_chart),
+        onPressed: _openStatistics,
+        tooltip: 'Статистика',
+      ),
+      IconButton(
+        icon: const Icon(Icons.settings),
+        onPressed: _openSettings,
+        tooltip: 'Настройки',
+      ),
+    ];
+
     if (_selectedIndex == 0) {
       // Книги
       return [
-        IconButton(
-          icon: const Icon(Icons.calendar_month),
-          onPressed: _openCalendar,
-          tooltip: 'Календарь',
-        ),
-        IconButton(
-          icon: const Icon(Icons.bar_chart),
-          onPressed: _openStatistics,
-          tooltip: 'Статистика',
-        ),
-        IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: _openSettings,
-          tooltip: 'Настройки',
-        ),
+        ...common,
         IconButton(
           icon: const Icon(Icons.download),
           onPressed: _importBook,
@@ -224,19 +297,15 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       // Планы
       return [
+        ...common,
         IconButton(
-          icon: const Icon(Icons.calendar_month),
-          onPressed: _openCalendar,
-          tooltip: 'Календарь',
-        ),
-        IconButton(
-          icon: const Icon(Icons.bar_chart),
-          onPressed: _openStatistics,
-          tooltip: 'Статистика',
+          icon: const Icon(Icons.download),
+          onPressed: _importPlanner,
+          tooltip: 'Импорт плана',
         ),
         IconButton(
           icon: const Icon(Icons.add),
-          onPressed: _addEmptyDay,
+          onPressed: _showNewDayDialog,
           tooltip: 'Новый день',
         ),
       ];
@@ -326,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        // Сортируем по дате (новые сверху)
+        // Сортировка по дате (новые сверху)
         plans.sort((a, b) {
           try {
             final dateA = DateFormat('dd.MM.yyyy').parse(a.name);
@@ -348,7 +417,19 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListTile(
                 title: Text(plan.name),
                 subtitle: Text('Задач: ${plan.totalLeaves}'),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () => _editPlannerDay(key, plan),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => _deletePlannerDay(key),
+                    ),
+                  ],
+                ),
                 onTap: () async {
                   await Navigator.push(
                     context,
