@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import 'models/node.dart';
 import 'models/settings.dart';
 import 'models/history_entry.dart';
@@ -8,24 +10,92 @@ import 'screens/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
+
+  // Регистрируем адаптеры
   Hive.registerAdapter(NodeAdapter());
   Hive.registerAdapter(AppSettingsAdapter());
   Hive.registerAdapter(HistoryEntryAdapter());
 
-  // Открываем бокс для книг
+  // Открываем бокс для книг и планов
   try {
     await Hive.openBox<Node>('templates');
   } catch (e) {
-    print('Ошибка открытия templates, удаляем и создаём новый');
-    await Hive.deleteBoxFromDisk('templates');
+    // Если бокс повреждён (старая версия без category), удаляем его полностью
+    debugPrint('Ошибка открытия templates: $e');
+    debugPrint('Удаляем повреждённый бокс...');
+
+    // Закрываем Hive
+    await Hive.close();
+
+    // Получаем путь к директории Hive
+    final appDir = await getApplicationDocumentsDirectory();
+    final hiveDir = Directory('${appDir.path}/app_flutter');
+
+    // Удаляем файлы бокса вручную
+    final filesToDelete = [
+      '${hiveDir.path}/templates.hive',
+      '${hiveDir.path}/templates.lock',
+    ];
+
+    for (final filePath in filesToDelete) {
+      try {
+        final file = File(filePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+    }
+
+    // Пробуем открыть заново
     await Hive.openBox<Node>('templates');
+    debugPrint('Создан новый пустой бокс templates');
   }
 
   // Открываем бокс для настроек
-  await Hive.openBox<AppSettings>('settings');
+  try {
+    await Hive.openBox<AppSettings>('settings');
+  } catch (e) {
+    debugPrint('Ошибка открытия settings: $e');
+    await Hive.close();
+    final appDir = await getApplicationDocumentsDirectory();
+    final hiveDir = Directory('${appDir.path}/app_flutter');
+    final filesToDelete = [
+      '${hiveDir.path}/settings.hive',
+      '${hiveDir.path}/settings.lock',
+    ];
+    for (final filePath in filesToDelete) {
+      try {
+        final file = File(filePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+    }
+    await Hive.openBox<AppSettings>('settings');
+  }
 
   // Открываем бокс для истории
-  await Hive.openBox<HistoryEntry>('history');
+  try {
+    await Hive.openBox<HistoryEntry>('history');
+  } catch (e) {
+    debugPrint('Ошибка открытия history: $e');
+    await Hive.close();
+    final appDir = await getApplicationDocumentsDirectory();
+    final hiveDir = Directory('${appDir.path}/app_flutter');
+    final filesToDelete = [
+      '${hiveDir.path}/history.hive',
+      '${hiveDir.path}/history.lock',
+    ];
+    for (final filePath in filesToDelete) {
+      try {
+        final file = File(filePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+    }
+    await Hive.openBox<HistoryEntry>('history');
+  }
 
   runApp(const MyApp());
 }
