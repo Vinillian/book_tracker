@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 import '../models/history_entry.dart';
 import '../models/node.dart';
 import '../utils/history_service.dart';
+import 'book_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -44,8 +46,71 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return book.name;
   }
 
+  Node? _existingPlanForDay(DateTime day) {
+    final dateStr = DateFormat('dd.MM.yyyy').format(day);
+    try {
+      return _templatesBox.values.firstWhere(
+        (n) => n.name == dateStr && n.category == 'planner',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _createOrOpenPlan(DateTime day) async {
+    final dateStr = DateFormat('dd.MM.yyyy').format(day);
+    final existing = _existingPlanForDay(day);
+
+    if (existing != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookScreen(
+            node: existing,
+            onNodeUpdated: () {
+              final key = _templatesBox.keys.firstWhere(
+                (k) => _templatesBox.get(k) == existing,
+              );
+              _templatesBox.put(key, existing);
+              setState(() {});
+            },
+          ),
+        ),
+      );
+    } else {
+      final newPlan = Node(
+        name: dateStr,
+        children: [],
+        category: 'planner',
+        stepType: 'folder',
+      );
+      await _templatesBox.add(newPlan);
+      setState(() {});
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookScreen(
+              node: newPlan,
+              onNodeUpdated: () {
+                final key = _templatesBox.keys.last;
+                _templatesBox.put(key, newPlan);
+                setState(() {});
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final existingPlan = _selectedDay != null
+        ? _existingPlanForDay(_selectedDay!)
+        : null;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Календарь прогресса')),
       body: Column(
@@ -71,6 +136,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(child: _buildEventList()),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton.icon(
+              onPressed: _selectedDay == null
+                  ? null
+                  : () => _createOrOpenPlan(_selectedDay!),
+              icon: Icon(existingPlan != null ? Icons.edit : Icons.add),
+              label: Text(
+                existingPlan != null ? 'Открыть план' : 'Создать план',
+              ),
+            ),
+          ),
         ],
       ),
     );

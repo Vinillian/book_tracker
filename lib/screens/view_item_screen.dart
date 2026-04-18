@@ -31,11 +31,13 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     setState(() {
       _node.completed = value!;
     });
-    HistoryService.recordToggle(
-      bookId: widget.bookId,
-      node: _node,
-      newValue: _node.completed,
-    );
+    if (!_node.excludeFromHistory) {
+      HistoryService.recordToggle(
+        bookId: widget.bookId,
+        node: _node,
+        newValue: _node.completed,
+      );
+    }
     widget.onNodeUpdated();
   }
 
@@ -46,11 +48,13 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   }
 
   void _onSliderChangeEnd(double value) {
-    HistoryService.recordStepChange(
-      bookId: widget.bookId,
-      node: _node,
-      newSteps: _node.completedSteps,
-    );
+    if (!_node.excludeFromHistory) {
+      HistoryService.recordStepChange(
+        bookId: widget.bookId,
+        node: _node,
+        newSteps: _node.completedSteps,
+      );
+    }
     widget.onNodeUpdated();
   }
 
@@ -81,6 +85,11 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                       'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : 'Пошаговый') : 'Папка'}',
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
+                    if (_node.excludeFromHistory)
+                      const Text(
+                        ' (не учитывается в прогрессе)',
+                        style: TextStyle(fontSize: 14, color: Colors.orange),
+                      ),
                   ],
                 ),
               ),

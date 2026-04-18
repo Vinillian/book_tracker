@@ -18,10 +18,10 @@ class Node {
   DateTime? plannedDate;
 
   @HiveField(4)
-  bool completed; // для single-задач
+  bool completed;
 
   @HiveField(5)
-  String stepType; // 'single', 'stepByStep', или 'folder'
+  String stepType;
 
   @HiveField(6)
   int totalSteps;
@@ -33,7 +33,10 @@ class Node {
   String id;
 
   @HiveField(9)
-  String? category; // 'book', 'planner', 'template'
+  String? category;
+
+  @HiveField(10)
+  bool excludeFromHistory; // новое поле
 
   Node({
     required this.name,
@@ -46,6 +49,7 @@ class Node {
     this.completedSteps = 0,
     String? id,
     this.category,
+    this.excludeFromHistory = false,
   }) : id = id ?? const Uuid().v4();
 
   Node.leaf(
@@ -56,7 +60,8 @@ class Node {
         this.completedSteps = 0,
         String? id,
         this.category,
-      })  : children = [],
+        this.excludeFromHistory = false,
+      }) : children = [],
         isExpanded = false,
         completed = false,
         id = id ?? const Uuid().v4();
@@ -73,6 +78,7 @@ class Node {
       completedSteps: completedSteps,
       id: id,
       category: category,
+      excludeFromHistory: excludeFromHistory,
     );
   }
 
@@ -112,6 +118,7 @@ class Node {
       'completedSteps': completedSteps,
       'id': id,
       'category': category,
+      'excludeFromHistory': excludeFromHistory,
     };
   }
 
@@ -130,6 +137,7 @@ class Node {
       completedSteps: json['completedSteps'] ?? 0,
       id: json['id'],
       category: json['category'],
+      excludeFromHistory: json['excludeFromHistory'] ?? false,
     );
   }
 }

@@ -5,7 +5,7 @@ import '../utils/history_service.dart';
 class NodeTile extends StatelessWidget {
   final Node node;
   final int depth;
-  final String bookId; // ID книги для истории
+  final String bookId;
   final VoidCallback? onCheckboxChanged;
   final VoidCallback onTap;
   final VoidCallback? onExpandToggle;
@@ -47,44 +47,45 @@ class NodeTile extends StatelessWidget {
         padding: EdgeInsets.only(left: depth * 16.0),
         child: isLeaf && isSingle
             ? Row(
-                children: [
-                  Checkbox(
-                    value: node.completed,
-                    onChanged: (_) {
-                      // Запись истории перед изменением
-                      HistoryService.recordToggle(
-                        bookId: bookId,
-                        node: node,
-                        newValue: !node.completed,
-                      );
-                      onCheckboxChanged?.call();
-                    },
-                  ),
-                  Expanded(
-                    child: ListTile(
-                      title: Text(
-                        node.name,
-                        style: const TextStyle(fontWeight: FontWeight.normal),
-                      ),
-                      onTap: onTap,
-                    ),
-                  ),
-                ],
-              )
-            : ListTile(
-                leading: leadingIcon,
+          children: [
+            Checkbox(
+              value: node.completed,
+              onChanged: (_) {
+                if (!node.excludeFromHistory) {
+                  HistoryService.recordToggle(
+                    bookId: bookId,
+                    node: node,
+                    newValue: !node.completed,
+                  );
+                }
+                onCheckboxChanged?.call();
+              },
+            ),
+            Expanded(
+              child: ListTile(
                 title: Text(
                   node.name,
-                  style: TextStyle(
-                    fontWeight: isFolder ? FontWeight.bold : FontWeight.normal,
-                    decoration: isLeaf && isSingle && node.completed
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.none,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.normal),
                 ),
-                trailing: _buildTrailing(),
                 onTap: onTap,
               ),
+            ),
+          ],
+        )
+            : ListTile(
+          leading: leadingIcon,
+          title: Text(
+            node.name,
+            style: TextStyle(
+              fontWeight: isFolder ? FontWeight.bold : FontWeight.normal,
+              decoration: isLeaf && isSingle && node.completed
+                  ? TextDecoration.lineThrough
+                  : TextDecoration.none,
+            ),
+          ),
+          trailing: _buildTrailing(),
+          onTap: onTap,
+        ),
       ),
     );
   }

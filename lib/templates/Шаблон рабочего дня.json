@@ -1,50 +1,50 @@
-{
+﻿{
   "name": "Рабочий день",
   "children": [
     {
       "name": "Утро",
       "children": [
-        { "name": "Зарядка", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-m-1" },
-        { "name": "Душ", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-m-2" },
-        { "name": "Завтрак", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-m-3" },
-        { "name": "Планирование дня", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-m-4" }
+        { "name": "Подъём, вода", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "wd-m-1", "excludeFromHistory": true },
+        { "name": "Тайчи", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "wd-m-2", "excludeFromHistory": false },
+        { "name": "Махамантра 4 круга", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 4, "completedSteps": 0, "id": "wd-m-3", "excludeFromHistory": false },
+        { "name": "Завтрак", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "wd-m-4", "excludeFromHistory": true }
       ],
       "plannedDate": null,
       "completed": false,
       "stepType": "folder",
       "totalSteps": 1,
       "completedSteps": 0,
-      "id": "tpl-morning"
+      "id": "wd-morning"
     },
     {
-      "name": "Работа",
+      "name": "Работа / Учёба",
       "children": [
-        { "name": "Проверить почту", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-w-1" },
-        { "name": "Совещание в 10:00", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-w-2" },
-        { "name": "Написать отчёт", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-w-3" },
-        { "name": "Обед", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-w-4" }
+        { "name": "Чтение JavaScript (2 сессии)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "wd-w-1", "excludeFromHistory": false },
+        { "name": "Codewars (1 задача)", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "wd-w-2", "excludeFromHistory": false },
+        { "name": "Чтение философии (1 сессия)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 1, "completedSteps": 0, "id": "wd-w-3", "excludeFromHistory": false },
+        { "name": "Перекус", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "wd-w-4", "excludeFromHistory": true },
+        { "name": "Обед", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "wd-w-5", "excludeFromHistory": true }
       ],
       "plannedDate": null,
       "completed": false,
       "stepType": "folder",
       "totalSteps": 1,
       "completedSteps": 0,
-      "id": "tpl-work"
+      "id": "wd-work"
     },
     {
       "name": "Вечер",
       "children": [
-        { "name": "Ужин", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-e-1" },
-        { "name": "Прогулка", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-e-2" },
-        { "name": "Чтение", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-e-3" },
-        { "name": "Подготовка ко сну", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "tpl-e-4" }
+        { "name": "Ужин", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "wd-e-1", "excludeFromHistory": true },
+        { "name": "Прогулка / отдых", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "wd-e-2", "excludeFromHistory": false },
+        { "name": "Подготовка ко сну", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "wd-e-3", "excludeFromHistory": true }
       ],
       "plannedDate": null,
       "completed": false,
       "stepType": "folder",
       "totalSteps": 1,
       "completedSteps": 0,
-      "id": "tpl-evening"
+      "id": "wd-evening"
     }
   ],
   "plannedDate": null,
