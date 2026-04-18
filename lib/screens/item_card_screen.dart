@@ -19,6 +19,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   late String _stepType;
   late int _totalSteps;
   late int _completedSteps;
+  late bool _excludeFromHistory;
 
   @override
   void initState() {
@@ -28,6 +29,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _stepType = _workingCopy.stepType;
     _totalSteps = _workingCopy.totalSteps;
     _completedSteps = _workingCopy.completedSteps;
+    _excludeFromHistory = _workingCopy.excludeFromHistory;
     _totalStepsController = TextEditingController(text: _totalSteps.toString());
   }
 
@@ -42,14 +44,13 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.name = _nameController.text;
     _workingCopy.stepType = _stepType;
     _workingCopy.totalSteps = _totalSteps;
+    _workingCopy.excludeFromHistory = _excludeFromHistory;
     if (_stepType == 'single') {
       _workingCopy.completed = _completedSteps > 0;
       _workingCopy.completedSteps = 0;
     } else if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
       _workingCopy.completed = false;
-    } else {
-      // для папок ничего не меняем
     }
     Navigator.pop(context, _workingCopy);
   }
@@ -68,6 +69,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
         _stepType = _workingCopy.stepType;
         _totalSteps = _workingCopy.totalSteps;
         _completedSteps = _workingCopy.completedSteps;
+        _excludeFromHistory = _workingCopy.excludeFromHistory;
         _totalStepsController.text = _totalSteps.toString();
       });
     }
@@ -87,7 +89,6 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
 
   void _onStepTypeChanged(String? newType) {
     if (newType == null || newType == _stepType) return;
-    // Если узел имеет детей и мы пытаемся сменить тип на лист
     if (_workingCopy.children.isNotEmpty && newType != 'folder') {
       showDialog(
         context: context,
@@ -106,7 +107,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 Navigator.pop(ctx);
                 setState(() {
                   _stepType = newType;
-                  _workingCopy.children.clear(); // удаляем детей
+                  _workingCopy.children.clear();
                   if (newType == 'single') {
                     _totalSteps = 1;
                     _completedSteps = 0;
@@ -132,7 +133,6 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
           _totalSteps = 3;
           _completedSteps = 0;
         } else if (newType == 'folder') {
-          // при переходе в папку сбрасываем прогресс и шаги
           _totalSteps = 1;
           _completedSteps = 0;
         }
@@ -163,7 +163,6 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // Кнопка редактирования структуры для папок
             if (isFolder) ...[
               const Text('Тип: Папка', style: TextStyle(fontSize: 16)),
               const SizedBox(height: 16),
@@ -175,19 +174,16 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 ),
               ),
             ] else ...[
-              // Выбор типа прогресса для листов
               const Text(
                 'Тип прогресса:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              // ignore: deprecated_member_use
               RadioListTile<String>(
                 title: const Text('Одиночный чекбокс'),
                 value: 'single',
                 groupValue: _stepType,
                 onChanged: _onStepTypeChanged,
               ),
-              // ignore: deprecated_member_use
               RadioListTile<String>(
                 title: const Text('Пошаговый'),
                 value: 'stepByStep',
@@ -233,6 +229,16 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                   ],
                 ),
               ],
+              const SizedBox(height: 16),
+              CheckboxListTile(
+                title: const Text('Не учитывать в прогрессе (рутина)'),
+                value: _excludeFromHistory,
+                onChanged: (value) {
+                  setState(() {
+                    _excludeFromHistory = value ?? false;
+                  });
+                },
+              ),
             ],
           ],
         ),

@@ -1,0 +1,60 @@
+﻿{
+  "name": "Выходной день",
+  "children": [
+    {
+      "name": "Утро",
+      "children": [
+        { "name": "Подъём, вода", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-m-1", "excludeFromHistory": true },
+        { "name": "Тайчи", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-m-2", "excludeFromHistory": false },
+        { "name": "Махамантра 4 круга", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 4, "completedSteps": 0, "id": "rd-m-3", "excludeFromHistory": false },
+        { "name": "Чтение молитв", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-m-4", "excludeFromHistory": false },
+        { "name": "Завтрак", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-m-5", "excludeFromHistory": true },
+        { "name": "Прогулка 09:00", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-m-6", "excludeFromHistory": false }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "rd-morning"
+    },
+    {
+      "name": "День",
+      "children": [
+        { "name": "Чтение JavaScript (2 сессии)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "rd-d-1", "excludeFromHistory": false },
+        { "name": "Чтение философии (2 сессии)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "rd-d-2", "excludeFromHistory": false },
+        { "name": "Заучивание молитв (2 сессии)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "rd-d-3", "excludeFromHistory": false },
+        { "name": "Codewars (5 задач)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 5, "completedSteps": 0, "id": "rd-d-4", "excludeFromHistory": false },
+        { "name": "Обед", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-d-5", "excludeFromHistory": true }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "rd-day"
+    },
+    {
+      "name": "Вечер",
+      "children": [
+        { "name": "Ужин", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-e-1", "excludeFromHistory": true },
+        { "name": "Прогулка 18:00", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-e-2", "excludeFromHistory": false },
+        { "name": "Тайчи (вечер)", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-e-3", "excludeFromHistory": false },
+        { "name": "Расслабление", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "rd-e-4", "excludeFromHistory": true }
+      ],
+      "plannedDate": null,
+      "completed": false,
+      "stepType": "folder",
+      "totalSteps": 1,
+      "completedSteps": 0,
+      "id": "rd-evening"
+    }
+  ],
+  "plannedDate": null,
+  "completed": false,
+  "stepType": "single",
+  "totalSteps": 1,
+  "completedSteps": 0,
+  "id": "template-restday",
+  "category": "template"
+}
