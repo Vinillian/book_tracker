@@ -10,6 +10,7 @@ import 'settings_screen.dart';
 import 'statistics_screen.dart';
 import 'calendar_screen.dart';
 import 'template_manager_screen.dart';
+import 'notes_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(String) onThemeChanged;
@@ -41,59 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _addBook() {
     final newBook = Node(name: 'Новая книга', children: [], category: 'book');
     templatesBox.add(newBook);
-  }
-
-  Future<void> _importBook() async {
-    try {
-      final imported = await FileUtils.importTemplate();
-      if (imported != null) {
-        imported.category ??= 'book';
-        templatesBox.add(imported);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Книга "${imported.name}" импортирована')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка импорта: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _exportAllBooks() async {
-    final books = templatesBox.values
-        .where((n) => n.category == 'book')
-        .toList();
-    if (books.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Нет книг для экспорта')));
-      return;
-    }
-    try {
-      await FileUtils.exportAllTemplates(books);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Все книги экспортированы')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка экспорта: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   void _deleteBook(dynamic key) {
@@ -256,30 +204,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _importPlanner() async {
-    try {
-      final imported = await FileUtils.importTemplate();
-      if (imported != null) {
-        imported.category ??= 'planner';
-        templatesBox.add(imported);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('План "${imported.name}" импортирован')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка импорта: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _editPlannerDay(dynamic key, Node day) async {
     final updated = await Navigator.push<Node>(
       context,
@@ -306,6 +230,13 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const StatisticsScreen()),
+    );
+  }
+
+  void _openNotes() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotesScreen()),
     );
   }
 
@@ -371,24 +302,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Настройки'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsScreen(
-                    currentThemeMode: widget.currentThemeMode,
-                    onThemeChanged: (mode) {
-                      widget.onThemeChanged(mode);
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.calendar_month),
             title: const Text('Календарь'),
             onTap: () {
@@ -404,6 +317,14 @@ class _HomeScreenState extends State<HomeScreen> {
               _openStatistics();
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.note),
+            title: const Text('Заметки'),
+            onTap: () {
+              Navigator.pop(context);
+              _openNotes();
+            },
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.folder),
@@ -415,27 +336,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.download),
-            title: const Text('Импорт книги'),
+            leading: const Icon(Icons.settings),
+            title: const Text('Настройки'),
             onTap: () {
               Navigator.pop(context);
-              _importBook();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.upload),
-            title: const Text('Экспорт всех книг'),
-            onTap: () {
-              Navigator.pop(context);
-              _exportAllBooks();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.download),
-            title: const Text('Импорт плана'),
-            onTap: () {
-              Navigator.pop(context);
-              _importPlanner();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(
+                    currentThemeMode: widget.currentThemeMode,
+                    onThemeChanged: (mode) {
+                      widget.onThemeChanged(mode);
+                    },
+                  ),
+                ),
+              );
             },
           ),
         ],

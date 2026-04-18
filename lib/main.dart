@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'models/node.dart';
 import 'models/settings.dart';
 import 'models/history_entry.dart';
+import 'models/note.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -14,7 +15,9 @@ void main() async {
   Hive.registerAdapter(NodeAdapter());
   Hive.registerAdapter(AppSettingsAdapter());
   Hive.registerAdapter(HistoryEntryAdapter());
+  Hive.registerAdapter(NoteAdapter());
 
+  // Открываем бокс для книг и планов
   try {
     await Hive.openBox<Node>('templates');
   } catch (e) {
@@ -73,6 +76,26 @@ void main() async {
       } catch (_) {}
     }
     await Hive.openBox<HistoryEntry>('history');
+  }
+
+  try {
+    await Hive.openBox<Note>('notes');
+  } catch (e) {
+    debugPrint('Ошибка открытия notes: $e');
+    await Hive.close();
+    final appDir = await getApplicationDocumentsDirectory();
+    final hiveDir = Directory('${appDir.path}/app_flutter');
+    final filesToDelete = [
+      '${hiveDir.path}/notes.hive',
+      '${hiveDir.path}/notes.lock',
+    ];
+    for (final filePath in filesToDelete) {
+      try {
+        final file = File(filePath);
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+    }
+    await Hive.openBox<Note>('notes');
   }
 
   runApp(const MyApp());

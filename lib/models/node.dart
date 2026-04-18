@@ -53,18 +53,18 @@ class Node {
   }) : id = id ?? const Uuid().v4();
 
   Node.leaf(
-      this.name, {
-        this.plannedDate,
-        this.stepType = 'single',
-        this.totalSteps = 1,
-        this.completedSteps = 0,
-        String? id,
-        this.category,
-        this.excludeFromHistory = false,
-      }) : children = [],
-        isExpanded = false,
-        completed = false,
-        id = id ?? const Uuid().v4();
+    this.name, {
+    this.plannedDate,
+    this.stepType = 'single',
+    this.totalSteps = 1,
+    this.completedSteps = 0,
+    String? id,
+    this.category,
+    this.excludeFromHistory = false,
+  }) : children = [],
+       isExpanded = false,
+       completed = false,
+       id = id ?? const Uuid().v4();
 
   Node deepCopy() {
     return Node(
