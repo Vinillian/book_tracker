@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   late Box<Node> templatesBox;
   String _searchQuery = '';
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -294,21 +295,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ========== Общие ==========
-  void _openSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SettingsScreen(
-          currentThemeMode: widget.currentThemeMode,
-          onThemeChanged: (mode) {
-            widget.onThemeChanged(mode);
-            Navigator.pop(context);
-          },
-        ),
-      ),
-    );
-  }
-
   void _openCalendar() {
     Navigator.push(
       context,
@@ -323,13 +309,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openEndDrawer();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: _selectedIndex == 0 ? const Text('Книги') : const Text('Планы'),
-        actions: _buildAppBarActions(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: _openDrawer,
+            tooltip: 'Меню',
+          ),
+        ],
       ),
+      endDrawer: _buildDrawer(),
       body: IndexedStack(
         index: _selectedIndex,
         children: [_buildBooksTab(), _buildPlannerTab()],
@@ -348,64 +346,101 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  List<Widget> _buildAppBarActions() {
-    final common = [
-      IconButton(
-        icon: const Icon(Icons.calendar_month),
-        onPressed: _openCalendar,
-        tooltip: 'Календарь',
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(Icons.menu_book, size: 40, color: Colors.white),
+                SizedBox(height: 8),
+                Text(
+                  'Book Planner',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Настройки'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(
+                    currentThemeMode: widget.currentThemeMode,
+                    onThemeChanged: (mode) {
+                      widget.onThemeChanged(mode);
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.calendar_month),
+            title: const Text('Календарь'),
+            onTap: () {
+              Navigator.pop(context);
+              _openCalendar();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bar_chart),
+            title: const Text('Статистика'),
+            onTap: () {
+              Navigator.pop(context);
+              _openStatistics();
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.folder),
+            title: const Text('Управление шаблонами'),
+            onTap: () {
+              Navigator.pop(context);
+              _openTemplateManager(selectionMode: false);
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.download),
+            title: const Text('Импорт книги'),
+            onTap: () {
+              Navigator.pop(context);
+              _importBook();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.upload),
+            title: const Text('Экспорт всех книг'),
+            onTap: () {
+              Navigator.pop(context);
+              _exportAllBooks();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.download),
+            title: const Text('Импорт плана'),
+            onTap: () {
+              Navigator.pop(context);
+              _importPlanner();
+            },
+          ),
+        ],
       ),
-      IconButton(
-        icon: const Icon(Icons.bar_chart),
-        onPressed: _openStatistics,
-        tooltip: 'Статистика',
-      ),
-      IconButton(
-        icon: const Icon(Icons.settings),
-        onPressed: _openSettings,
-        tooltip: 'Настройки',
-      ),
-    ];
-
-    if (_selectedIndex == 0) {
-      return [
-        ...common,
-        IconButton(
-          icon: const Icon(Icons.download),
-          onPressed: _importBook,
-          tooltip: 'Импорт книги',
-        ),
-        IconButton(
-          icon: const Icon(Icons.upload),
-          onPressed: _exportAllBooks,
-          tooltip: 'Экспорт всех книг',
-        ),
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: _addBook,
-          tooltip: 'Новая книга',
-        ),
-      ];
-    } else {
-      return [
-        ...common,
-        IconButton(
-          icon: const Icon(Icons.folder),
-          onPressed: () => _openTemplateManager(selectionMode: false),
-          tooltip: 'Управление шаблонами',
-        ),
-        IconButton(
-          icon: const Icon(Icons.download),
-          onPressed: _importPlanner,
-          tooltip: 'Импорт плана',
-        ),
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: _showNewDayDialog,
-          tooltip: 'Новый день',
-        ),
-      ];
-    }
+    );
   }
 
   Widget _buildBooksTab() {
@@ -428,8 +463,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   .toList();
 
               if (books.isEmpty) {
-                return const Center(
-                  child: Text('Нет книг. Нажмите + для создания.'),
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Нет книг.'),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: _addBook,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Создать книгу'),
+                      ),
+                    ],
+                  ),
                 );
               }
 
@@ -486,8 +532,19 @@ class _HomeScreenState extends State<HomeScreen> {
         final plans = box.values.where((n) => n.category == 'planner').toList();
 
         if (plans.isEmpty) {
-          return const Center(
-            child: Text('Нет планов. Нажмите + для создания дня.'),
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Нет планов.'),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: _showNewDayDialog,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Создать день'),
+                ),
+              ],
+            ),
           );
         }
 
