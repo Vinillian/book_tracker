@@ -11,47 +11,30 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
 
-  // Регистрируем адаптеры
   Hive.registerAdapter(NodeAdapter());
   Hive.registerAdapter(AppSettingsAdapter());
   Hive.registerAdapter(HistoryEntryAdapter());
 
-  // Открываем бокс для книг и планов
   try {
     await Hive.openBox<Node>('templates');
   } catch (e) {
-    // Если бокс повреждён (старая версия без category), удаляем его полностью
     debugPrint('Ошибка открытия templates: $e');
-    debugPrint('Удаляем повреждённый бокс...');
-
-    // Закрываем Hive
     await Hive.close();
-
-    // Получаем путь к директории Hive
     final appDir = await getApplicationDocumentsDirectory();
     final hiveDir = Directory('${appDir.path}/app_flutter');
-
-    // Удаляем файлы бокса вручную
     final filesToDelete = [
       '${hiveDir.path}/templates.hive',
       '${hiveDir.path}/templates.lock',
     ];
-
     for (final filePath in filesToDelete) {
       try {
         final file = File(filePath);
-        if (await file.exists()) {
-          await file.delete();
-        }
+        if (await file.exists()) await file.delete();
       } catch (_) {}
     }
-
-    // Пробуем открыть заново
     await Hive.openBox<Node>('templates');
-    debugPrint('Создан новый пустой бокс templates');
   }
 
-  // Открываем бокс для настроек
   try {
     await Hive.openBox<AppSettings>('settings');
   } catch (e) {
@@ -66,15 +49,12 @@ void main() async {
     for (final filePath in filesToDelete) {
       try {
         final file = File(filePath);
-        if (await file.exists()) {
-          await file.delete();
-        }
+        if (await file.exists()) await file.delete();
       } catch (_) {}
     }
     await Hive.openBox<AppSettings>('settings');
   }
 
-  // Открываем бокс для истории
   try {
     await Hive.openBox<HistoryEntry>('history');
   } catch (e) {
@@ -89,9 +69,7 @@ void main() async {
     for (final filePath in filesToDelete) {
       try {
         final file = File(filePath);
-        if (await file.exists()) {
-          await file.delete();
-        }
+        if (await file.exists()) await file.delete();
       } catch (_) {}
     }
     await Hive.openBox<HistoryEntry>('history');
@@ -128,9 +106,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _updateTheme(String mode) {
-    setState(() {
-      _themeMode = mode;
-    });
+    setState(() => _themeMode = mode);
     final settings = settingsBox.get('appSettings');
     if (settings != null) {
       settings.themeMode = mode;

@@ -9,7 +9,7 @@ import '../widgets/book_card.dart';
 import 'settings_screen.dart';
 import 'statistics_screen.dart';
 import 'calendar_screen.dart';
-import 'template_manager_screen.dart'; // <-- добавлен импорт
+import 'template_manager_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(String) onThemeChanged;
@@ -110,7 +110,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ========== Планы ==========
-  void _openTemplateManager({bool selectionMode = false}) async {
+  void _openTemplateManager({
+    bool selectionMode = false,
+    DateTime? forDate,
+  }) async {
     if (selectionMode) {
       final selected = await Navigator.push<Node>(
         context,
@@ -119,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
       if (selected != null && mounted) {
-        _createDayFromTemplate(selected);
+        _createDayFromTemplate(selected, forDate ?? DateTime.now());
       }
     } else {
       Navigator.push(
@@ -132,49 +135,83 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showNewDayDialog() {
+    DateTime selectedDate = DateTime.now();
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Новый день'),
-        content: const Text('Выберите способ создания:'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _addEmptyDay();
-            },
-            child: const Text('Пустой день'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _openTemplateManager(selectionMode: true);
-            },
-            child: const Text('Из шаблона'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('Новый день'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: Text(
+                    'Дата: ${DateFormat('dd.MM.yyyy').format(selectedDate)}',
+                  ),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (picked != null) {
+                      setStateDialog(() {
+                        selectedDate = picked;
+                      });
+                    }
+                  },
+                ),
+                const Divider(),
+                const Text('Выберите способ создания:'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _addEmptyDay(selectedDate);
+                },
+                child: const Text('Пустой день'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _openTemplateManager(
+                    selectionMode: true,
+                    forDate: selectedDate,
+                  );
+                },
+                child: const Text('Из шаблона'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Отмена'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  void _addEmptyDay() {
-    final today = DateFormat('dd.MM.yyyy').format(DateTime.now());
+  void _addEmptyDay(DateTime date) {
+    final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-      (n) => n.name == today && n.category == 'planner',
+      (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('День "$today" уже существует')));
+      ).showSnackBar(SnackBar(content: Text('День "$dateStr" уже существует')));
       return;
     }
     final newDay = Node(
-      name: today,
+      name: dateStr,
       children: [],
       category: 'planner',
       stepType: 'folder',
@@ -182,20 +219,19 @@ class _HomeScreenState extends State<HomeScreen> {
     templatesBox.add(newDay);
   }
 
-  void _createDayFromTemplate(Node template) {
-    final today = DateFormat('dd.MM.yyyy').format(DateTime.now());
+  void _createDayFromTemplate(Node template, DateTime date) {
+    final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-      (n) => n.name == today && n.category == 'planner',
+      (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('День "$today" уже существует')));
+      ).showSnackBar(SnackBar(content: Text('День "$dateStr" уже существует')));
       return;
     }
 
-    // Глубокая копия и сброс прогресса
     Node copyAndReset(Node node) {
       final copy = node.deepCopy();
       if (copy.children.isEmpty) {
@@ -208,13 +244,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final newDay = copyAndReset(template);
-    newDay.name = today;
+    newDay.name = dateStr;
     newDay.category = 'planner';
 
     templatesBox.add(newDay);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('День "$today" создан из шаблона "${template.name}"'),
+        content: Text('День "$dateStr" создан из шаблона "${template.name}"'),
       ),
     );
   }
@@ -332,7 +368,6 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     if (_selectedIndex == 0) {
-      // Книги
       return [
         ...common,
         IconButton(
@@ -352,7 +387,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ];
     } else {
-      // Планы
       return [
         ...common,
         IconButton(
@@ -457,7 +491,6 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        // Сортировка по дате (новые сверху)
         plans.sort((a, b) {
           try {
             final dateA = DateFormat('dd.MM.yyyy').parse(a.name);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import '../models/history_entry.dart';
 
 class ActivityCalendar extends StatelessWidget {
@@ -12,22 +13,31 @@ class ActivityCalendar extends StatelessWidget {
 
   Map<DateTime, int> _buildActivityMap(Box<HistoryEntry> historyBox) {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final start = DateTime(now.year - 1, now.month, now.day);
     final map = <DateTime, int>{};
 
-    for (var d = start; !d.isAfter(now); d = d.add(const Duration(days: 1))) {
+    for (var d = start; !d.isAfter(today); d = d.add(const Duration(days: 1))) {
       map[DateTime(d.year, d.month, d.day)] = 0;
     }
-
-    if (historyBox.isEmpty) return map;
 
     for (final entry in historyBox.values) {
       final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
       if (map.containsKey(date)) {
-        map[date] = map[date]! + 1;
+        map[date] = (map[date] ?? 0) + 1;
       }
     }
     return map;
+  }
+
+  List<HistoryEntry> _getEntriesForDay(Box<HistoryEntry> box, DateTime day) {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start
+        .add(const Duration(days: 1))
+        .subtract(const Duration(milliseconds: 1));
+    return box.values
+        .where((e) => e.date.isAfter(start) && e.date.isBefore(end))
+        .toList();
   }
 
   Color _colorForCount(int count) {
@@ -110,21 +120,8 @@ class ActivityCalendar extends StatelessWidget {
     return Row(children: headers);
   }
 
-  double _calculateScrollPosition(List<List<DateTime>> weeks) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    for (int i = 0; i < weeks.length; i++) {
-      for (int j = 0; j < weeks[i].length; j++) {
-        final date = weeks[i][j];
-        if (date.year == today.year &&
-            date.month == today.month &&
-            date.day == today.day) {
-          return (i * _columnWidth) - 100;
-        }
-      }
-    }
-    return weeks.length * _columnWidth - 300;
+  double _calculateMaxScrollExtent(List<List<DateTime>> weeks) {
+    return (weeks.length * _columnWidth) - 300;
   }
 
   bool _isToday(DateTime date) {
@@ -188,6 +185,105 @@ class ActivityCalendar extends StatelessWidget {
     ),
   );
 
+  void _showDayDetails(
+    BuildContext context,
+    DateTime day,
+    Box<HistoryEntry> historyBox,
+  ) {
+    initializeDateFormatting('ru');
+    final entries = _getEntriesForDay(historyBox, day);
+    final dateStr = DateFormat('dd MMMM yyyy', 'ru').format(day);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[850],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                dateStr,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Всего действий: ${entries.length}',
+                style: const TextStyle(color: Colors.white70),
+              ),
+              const Divider(color: Colors.white24),
+              if (entries.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(
+                    child: Text(
+                      'Нет действий за этот день',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: entries.length,
+                    itemBuilder: (context, index) {
+                      final entry = entries[index];
+                      String action;
+                      IconData icon;
+                      if (entry.stepType == 'single') {
+                        action = entry.completed == true
+                            ? 'Выполнено'
+                            : 'Снято';
+                        icon = entry.completed == true
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked;
+                      } else {
+                        action = 'Шагов: ${entry.completedSteps}';
+                        icon = Icons.list;
+                      }
+                      return ListTile(
+                        leading: Icon(icon, color: Colors.white70, size: 20),
+                        title: Text(
+                          entry.nodeName,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        trailing: Text(
+                          action,
+                          style: const TextStyle(color: Colors.white54),
+                        ),
+                        dense: true,
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'Закрыть',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final historyBox = Hive.box<HistoryEntry>('history');
@@ -207,10 +303,16 @@ class ActivityCalendar extends StatelessWidget {
           );
         }
 
-        final scrollPosition = _calculateScrollPosition(weeks);
+        final maxScrollExtent = _calculateMaxScrollExtent(weeks);
         final scrollController = ScrollController(
-          initialScrollOffset: scrollPosition,
+          initialScrollOffset: maxScrollExtent,
         );
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (scrollController.hasClients) {
+            scrollController.jumpTo(maxScrollExtent);
+          }
+        });
 
         return Card(
           color: Colors.grey[850],
@@ -229,71 +331,69 @@ class ActivityCalendar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Scrollbar(
+                SingleChildScrollView(
                   controller: scrollController,
-                  thumbVisibility: true,
-                  thickness: 6,
-                  radius: const Radius.circular(3),
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Column(
-                          children: [
-                            const SizedBox(height: 18),
-                            for (final day in [
-                              'Пн',
-                              '',
-                              'Ср',
-                              '',
-                              'Пт',
-                              '',
-                              'Вс',
-                            ])
-                              SizedBox(
-                                height: _cellSize + _cellMargin * 2,
-                                width: 24,
-                                child: Center(
-                                  child: Text(
-                                    day,
-                                    style: const TextStyle(
-                                      fontSize: 9,
-                                      color: Colors.white70,
-                                    ),
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Column(
+                        children: [
+                          const SizedBox(height: 18),
+                          for (final day in [
+                            'Пн',
+                            '',
+                            'Ср',
+                            '',
+                            'Пт',
+                            '',
+                            'Вс',
+                          ])
+                            SizedBox(
+                              height: _cellSize + _cellMargin * 2,
+                              width: 24,
+                              child: Center(
+                                child: Text(
+                                  day,
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.white70,
                                   ),
                                 ),
                               ),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _monthHeaders(weeks),
-                            const SizedBox(height: 4),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: weeks.map((week) {
-                                return SizedBox(
-                                  width: _columnWidth,
-                                  child: Column(
-                                    children: List.generate(7, (i) {
-                                      if (i >= week.length)
-                                        return const SizedBox();
-                                      final date = week[i];
-                                      final count =
-                                          activity[DateTime(
-                                            date.year,
-                                            date.month,
-                                            date.day,
-                                          )] ??
-                                          0;
-                                      final color = _colorForCount(count);
-                                      final isToday = _isToday(date);
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _monthHeaders(weeks),
+                          const SizedBox(height: 4),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: weeks.map((week) {
+                              return SizedBox(
+                                width: _columnWidth,
+                                child: Column(
+                                  children: List.generate(7, (i) {
+                                    if (i >= week.length)
+                                      return const SizedBox();
+                                    final date = week[i];
+                                    final count =
+                                        activity[DateTime(
+                                          date.year,
+                                          date.month,
+                                          date.day,
+                                        )] ??
+                                        0;
+                                    final color = _colorForCount(count);
+                                    final isToday = _isToday(date);
 
-                                      return Container(
+                                    return GestureDetector(
+                                      onTap: () =>
+                                          _showDayDetails(context, date, box),
+                                      child: Container(
                                         width: _cellSize,
                                         height: _cellSize,
                                         margin: const EdgeInsets.all(
@@ -306,7 +406,9 @@ class ActivityCalendar extends StatelessWidget {
                                           ),
                                           border: Border.all(
                                             color: isToday
-                                                ? Colors.blue.withOpacity(0.8)
+                                                ? Colors.blue.withValues(
+                                                    alpha: 0.8,
+                                                  )
                                                 : const Color(0x33FFFFFF),
                                             width: isToday ? 1.5 : 1,
                                           ),
@@ -316,16 +418,16 @@ class ActivityCalendar extends StatelessWidget {
                                               '${DateFormat('dd MMM yyyy').format(date)}\n$count действий${isToday ? ' (сегодня)' : ''}',
                                           child: const SizedBox.expand(),
                                         ),
-                                      );
-                                    }),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),

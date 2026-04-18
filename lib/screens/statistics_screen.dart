@@ -15,7 +15,6 @@ class StatisticsScreen extends StatelessWidget {
       body: ValueListenableBuilder(
         valueListenable: templatesBox.listenable(),
         builder: (context, Box<Node> box, _) {
-          // Фильтруем только книги и планы (без шаблонов)
           final nodes = box.values
               .where((n) => n.category == 'book' || n.category == 'planner')
               .toList();
