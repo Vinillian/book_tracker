@@ -44,6 +44,37 @@ class _HomeScreenState extends State<HomeScreen> {
     templatesBox.add(newBook);
   }
 
+  Future<void> _importBook() async {
+    try {
+      final imported = await FileUtils.importTemplate(addHistory: true);
+      if (imported != null) {
+        imported.category ??= 'book';
+        final existingKey = templatesBox.keys.firstWhere(
+          (k) => templatesBox.get(k)?.id == imported.id,
+          orElse: () => null,
+        );
+        if (existingKey != null) {
+          await templatesBox.delete(existingKey);
+        }
+        await templatesBox.add(imported);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Книга "${imported.name}" импортирована')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка импорта: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _deleteBook(dynamic key) {
     templatesBox.delete(key);
   }
@@ -332,6 +363,14 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () {
               Navigator.pop(context);
               _openTemplateManager(selectionMode: false);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.download),
+            title: const Text('Импорт книги'),
+            onTap: () {
+              Navigator.pop(context);
+              _importBook();
             },
           ),
           const Divider(),
