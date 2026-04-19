@@ -36,7 +36,7 @@ class Node {
   String? category;
 
   @HiveField(10)
-  bool excludeFromHistory; // новое поле
+  bool excludeFromHistory;
 
   Node({
     required this.name,

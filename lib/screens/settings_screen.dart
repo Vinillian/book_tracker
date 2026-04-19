@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/node.dart';
-import '../models/history_entry.dart';
 import '../utils/file_utils.dart';
 import '../utils/history_service.dart';
 
