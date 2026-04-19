@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/node.dart';
+import '../models/note.dart';
+import '../utils/backup_service.dart';
 import 'editor_screen.dart';
 import 'book_screen.dart';
 import '../utils/file_utils.dart';
@@ -297,6 +299,10 @@ class _HomeScreenState extends State<HomeScreen> {
       stepType: 'folder',
     );
     templatesBox.add(newDay);
+
+    final notesBox = Hive.box<Note>('notes');
+    final dayNote = Note(content: '', linkedNodeId: newDay.id);
+    notesBox.put(dayNote.id, dayNote);
   }
 
   void _createDayFromTemplate(Node template, DateTime date) {
@@ -328,6 +334,11 @@ class _HomeScreenState extends State<HomeScreen> {
     newDay.category = 'planner';
 
     templatesBox.add(newDay);
+
+    final notesBox = Hive.box<Note>('notes');
+    final dayNote = Note(content: '', linkedNodeId: newDay.id);
+    notesBox.put(dayNote.id, dayNote);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('День "$dateStr" создан из шаблона "${template.name}"'),
@@ -345,7 +356,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _deletePlannerDay(dynamic key) {
+  void _deletePlannerDay(dynamic key) async {
+    final day = templatesBox.get(key);
+    if (day != null) {
+      final notesBox = Hive.box<Note>('notes');
+      final linkedNote = notesBox.values.firstWhere(
+        (n) => n.linkedNodeId == day.id,
+        orElse: () => Note(content: ''),
+      );
+      if (linkedNote.id.isNotEmpty) {
+        await notesBox.delete(linkedNote.id);
+      }
+    }
     templatesBox.delete(key);
   }
 
@@ -373,6 +395,167 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openDrawer() {
     _scaffoldKey.currentState?.openEndDrawer();
+  }
+
+  void _showBackupDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Резервное копирование'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.save_alt),
+                title: const Text('Экспорт полного бэкапа'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await BackupService.exportFullBackup();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          path != null
+                              ? 'Бэкап сохранён в $path'
+                              : 'Ошибка экспорта',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.upload_file),
+                title: const Text('Импорт из полного бэкапа'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (c) => AlertDialog(
+                      title: const Text('Восстановление'),
+                      content: const Text(
+                        'Все текущие данные будут заменены. Продолжить?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(c, false),
+                          child: const Text('Отмена'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(c, true),
+                          child: const Text('Заменить'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed != true) return;
+                  final result = await BackupService.importFullBackup(
+                    clearExisting: true,
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          result != null ? 'Восстановлено' : 'Ошибка импорта',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.book),
+                title: const Text('Экспорт книг'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await BackupService.exportBooks();
+                  if (mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          path != null ? 'Книги экспортированы' : 'Нет книг',
+                        ),
+                      ),
+                    );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_today),
+                title: const Text('Экспорт планов'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await BackupService.exportPlans();
+                  if (mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          path != null ? 'Планы экспортированы' : 'Нет планов',
+                        ),
+                      ),
+                    );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.folder),
+                title: const Text('Экспорт шаблонов'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await BackupService.exportTemplates();
+                  if (mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          path != null
+                              ? 'Шаблоны экспортированы'
+                              : 'Нет шаблонов',
+                        ),
+                      ),
+                    );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.note),
+                title: const Text('Экспорт заметок'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await BackupService.exportNotes();
+                  if (mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          path != null
+                              ? 'Заметки экспортированы'
+                              : 'Нет заметок',
+                        ),
+                      ),
+                    );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('Экспорт истории'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await BackupService.exportHistory();
+                  if (mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          path != null
+                              ? 'История экспортирована'
+                              : 'Нет истории',
+                        ),
+                      ),
+                    );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -504,6 +687,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.backup),
+            title: const Text('Резервное копирование'),
+            onTap: () {
+              Navigator.pop(context);
+              _showBackupDialog();
+            },
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Настройки'),
             onTap: () {
@@ -513,9 +705,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(
                   builder: (context) => SettingsScreen(
                     currentThemeMode: widget.currentThemeMode,
-                    onThemeChanged: (mode) {
-                      widget.onThemeChanged(mode);
-                    },
+                    onThemeChanged: (mode) => widget.onThemeChanged(mode),
                   ),
                 ),
               );

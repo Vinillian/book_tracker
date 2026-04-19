@@ -20,13 +20,18 @@ class Note {
   @HiveField(4)
   DateTime updatedAt;
 
+  @HiveField(5)
+  String? linkedNodeId; // ID связанного узла (дня)
+
   Note({
     String? id,
-    required this.title,
+    String? title,
     required this.content,
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.linkedNodeId,
   }) : id = id ?? const Uuid().v4(),
+       title = title ?? '',
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
@@ -37,6 +42,7 @@ class Note {
       'content': content,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'linkedNodeId': linkedNodeId,
     };
   }
 
@@ -44,13 +50,14 @@ class Note {
     return Note(
       id: json['id'],
       title: json['title'],
-      content: json['content'],
+      content: json['content'] ?? '',
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : null,
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : null,
+      linkedNodeId: json['linkedNodeId'],
     );
   }
 }
