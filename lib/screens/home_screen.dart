@@ -39,13 +39,44 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ========== Книги ==========
-  void _addBook() {
-    final newBook = Node(
-      name: 'Новая книга',
-      children: [],
-      category: 'book',
+  void _showAddBookDialog() {
+    final TextEditingController nameController = TextEditingController(
+      text: 'Новая книга',
     );
-    templatesBox.add(newBook);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Новая книга'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Название книги',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final newBook = Node(
+                name: name.isEmpty ? 'Новая книга' : name,
+                children: [],
+                category: 'book',
+              );
+              templatesBox.add(newBook);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Создать'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _deleteBook(dynamic key) {
@@ -55,9 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _editBook(dynamic key, Node book) async {
     final updated = await Navigator.push<Node>(
       context,
-      MaterialPageRoute(
-        builder: (_) => EditorScreen(node: book.deepCopy()),
-      ),
+      MaterialPageRoute(builder: (_) => EditorScreen(node: book.deepCopy())),
     );
     if (updated != null && mounted) {
       templatesBox.put(key, updated);
@@ -156,13 +185,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void _addEmptyDay(DateTime date) {
     final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-          (n) => n.name == dateStr && n.category == 'planner',
+      (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('День "$dateStr" уже существует')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('День "$dateStr" уже существует')));
       return;
     }
     final newDay = Node(
@@ -177,13 +206,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void _createDayFromTemplate(Node template, DateTime date) {
     final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-          (n) => n.name == dateStr && n.category == 'planner',
+      (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('День "$dateStr" уже существует')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('День "$dateStr" уже существует')));
       return;
     }
 
@@ -213,9 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _editPlannerDay(dynamic key, Node day) async {
     final updated = await Navigator.push<Node>(
       context,
-      MaterialPageRoute(
-        builder: (_) => EditorScreen(node: day.deepCopy()),
-      ),
+      MaterialPageRoute(builder: (_) => EditorScreen(node: day.deepCopy())),
     );
     if (updated != null && mounted) {
       templatesBox.put(key, updated);
@@ -263,10 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
       endDrawer: _buildDrawer(),
       body: IndexedStack(
         index: _selectedIndex,
-        children: [
-          _buildBooksTab(),
-          _buildPlannerTab(),
-        ],
+        children: [_buildBooksTab(), _buildPlannerTab()],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -297,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ...common,
         IconButton(
           icon: const Icon(Icons.add),
-          onPressed: _addBook,
+          onPressed: _showAddBookDialog, // <-- изменено
           tooltip: 'Новая книга',
         ),
       ];
@@ -325,9 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-            ),
+            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
@@ -430,10 +452,12 @@ class _HomeScreenState extends State<HomeScreen> {
               final filtered = _searchQuery.isEmpty
                   ? books
                   : books
-                  .where((b) => b.name.toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ))
-                  .toList();
+                        .where(
+                          (b) => b.name.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          ),
+                        )
+                        .toList();
 
               if (filtered.isEmpty) {
                 return const Center(child: Text('Ничего не найдено'));
@@ -475,9 +499,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return ValueListenableBuilder(
       valueListenable: templatesBox.listenable(),
       builder: (context, Box<Node> box, _) {
-        final plans = box.values
-            .where((n) => n.category == 'planner')
-            .toList();
+        final plans = box.values.where((n) => n.category == 'planner').toList();
 
         if (plans.isEmpty) {
           return const Center(
