@@ -40,7 +40,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ========== Книги ==========
   void _addBook() {
-    final newBook = Node(name: 'Новая книга', children: [], category: 'book');
+    final newBook = Node(
+      name: 'Новая книга',
+      children: [],
+      category: 'book',
+    );
     templatesBox.add(newBook);
   }
 
@@ -51,7 +55,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _editBook(dynamic key, Node book) async {
     final updated = await Navigator.push<Node>(
       context,
-      MaterialPageRoute(builder: (_) => EditorScreen(node: book.deepCopy())),
+      MaterialPageRoute(
+        builder: (_) => EditorScreen(node: book.deepCopy()),
+      ),
     );
     if (updated != null && mounted) {
       templatesBox.put(key, updated);
@@ -150,13 +156,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void _addEmptyDay(DateTime date) {
     final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-      (n) => n.name == dateStr && n.category == 'planner',
+          (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('День "$dateStr" уже существует')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('День "$dateStr" уже существует')),
+      );
       return;
     }
     final newDay = Node(
@@ -171,13 +177,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void _createDayFromTemplate(Node template, DateTime date) {
     final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-      (n) => n.name == dateStr && n.category == 'planner',
+          (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('День "$dateStr" уже существует')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('День "$dateStr" уже существует')),
+      );
       return;
     }
 
@@ -207,7 +213,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _editPlannerDay(dynamic key, Node day) async {
     final updated = await Navigator.push<Node>(
       context,
-      MaterialPageRoute(builder: (_) => EditorScreen(node: day.deepCopy())),
+      MaterialPageRoute(
+        builder: (_) => EditorScreen(node: day.deepCopy()),
+      ),
     );
     if (updated != null && mounted) {
       templatesBox.put(key, updated);
@@ -250,18 +258,15 @@ class _HomeScreenState extends State<HomeScreen> {
       key: _scaffoldKey,
       appBar: AppBar(
         title: _selectedIndex == 0 ? const Text('Книги') : const Text('Планы'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: _openDrawer,
-            tooltip: 'Меню',
-          ),
-        ],
+        actions: _buildAppBarActions(),
       ),
       endDrawer: _buildDrawer(),
       body: IndexedStack(
         index: _selectedIndex,
-        children: [_buildBooksTab(), _buildPlannerTab()],
+        children: [
+          _buildBooksTab(),
+          _buildPlannerTab(),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -277,13 +282,52 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  List<Widget> _buildAppBarActions() {
+    final common = [
+      IconButton(
+        icon: const Icon(Icons.menu),
+        onPressed: _openDrawer,
+        tooltip: 'Меню',
+      ),
+    ];
+
+    if (_selectedIndex == 0) {
+      // Книги
+      return [
+        ...common,
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: _addBook,
+          tooltip: 'Новая книга',
+        ),
+      ];
+    } else {
+      // Планы
+      return [
+        ...common,
+        IconButton(
+          icon: const Icon(Icons.folder),
+          onPressed: () => _openTemplateManager(selectionMode: false),
+          tooltip: 'Управление шаблонами',
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: _showNewDayDialog,
+          tooltip: 'Новый день',
+        ),
+      ];
+    }
+  }
+
   Widget _buildDrawer() {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+            ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
@@ -378,31 +422,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   .toList();
 
               if (books.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Нет книг.'),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: _addBook,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Создать книгу'),
-                      ),
-                    ],
-                  ),
+                return const Center(
+                  child: Text('Нет книг. Нажмите "+" в шапке, чтобы создать.'),
                 );
               }
 
               final filtered = _searchQuery.isEmpty
                   ? books
                   : books
-                        .where(
-                          (b) => b.name.toLowerCase().contains(
-                            _searchQuery.toLowerCase(),
-                          ),
-                        )
-                        .toList();
+                  .where((b) => b.name.toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ))
+                  .toList();
 
               if (filtered.isEmpty) {
                 return const Center(child: Text('Ничего не найдено'));
@@ -444,22 +475,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return ValueListenableBuilder(
       valueListenable: templatesBox.listenable(),
       builder: (context, Box<Node> box, _) {
-        final plans = box.values.where((n) => n.category == 'planner').toList();
+        final plans = box.values
+            .where((n) => n.category == 'planner')
+            .toList();
 
         if (plans.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Нет планов.'),
-                const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  onPressed: _showNewDayDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Создать день'),
-                ),
-              ],
-            ),
+          return const Center(
+            child: Text('Нет планов. Нажмите "+" в шапке, чтобы создать день.'),
           );
         }
 
