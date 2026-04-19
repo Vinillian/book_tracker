@@ -39,9 +39,44 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ========== Книги ==========
-  void _addBook() {
-    final newBook = Node(name: 'Новая книга', children: [], category: 'book');
-    templatesBox.add(newBook);
+  void _showAddBookDialog() {
+    final TextEditingController nameController = TextEditingController(
+      text: 'Новая книга',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Новая книга'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Название книги',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final newBook = Node(
+                name: name.isEmpty ? 'Новая книга' : name,
+                children: [],
+                category: 'book',
+              );
+              templatesBox.add(newBook);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Создать'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _importBook() async {
@@ -281,13 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
       key: _scaffoldKey,
       appBar: AppBar(
         title: _selectedIndex == 0 ? const Text('Книги') : const Text('Планы'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: _openDrawer,
-            tooltip: 'Меню',
-          ),
-        ],
+        actions: _buildAppBarActions(),
       ),
       endDrawer: _buildDrawer(),
       body: IndexedStack(
@@ -306,6 +335,43 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildAppBarActions() {
+    final common = [
+      IconButton(
+        icon: const Icon(Icons.menu),
+        onPressed: _openDrawer,
+        tooltip: 'Меню',
+      ),
+    ];
+
+    if (_selectedIndex == 0) {
+      // Книги
+      return [
+        ...common,
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: _showAddBookDialog, // <-- изменено
+          tooltip: 'Новая книга',
+        ),
+      ];
+    } else {
+      // Планы
+      return [
+        ...common,
+        IconButton(
+          icon: const Icon(Icons.folder),
+          onPressed: () => _openTemplateManager(selectionMode: false),
+          tooltip: 'Управление шаблонами',
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: _showNewDayDialog,
+          tooltip: 'Новый день',
+        ),
+      ];
+    }
   }
 
   Widget _buildDrawer() {
@@ -417,19 +483,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   .toList();
 
               if (books.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Нет книг.'),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: _addBook,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Создать книгу'),
-                      ),
-                    ],
-                  ),
+                return const Center(
+                  child: Text('Нет книг. Нажмите "+" в шапке, чтобы создать.'),
                 );
               }
 
@@ -486,19 +541,8 @@ class _HomeScreenState extends State<HomeScreen> {
         final plans = box.values.where((n) => n.category == 'planner').toList();
 
         if (plans.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Нет планов.'),
-                const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  onPressed: _showNewDayDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Создать день'),
-                ),
-              ],
-            ),
+          return const Center(
+            child: Text('Нет планов. Нажмите "+" в шапке, чтобы создать день.'),
           );
         }
 
