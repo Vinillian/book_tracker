@@ -5,9 +5,14 @@ import 'editor_screen.dart';
 import '../utils/file_utils.dart';
 
 class TemplateManagerScreen extends StatefulWidget {
-  final bool selectionMode; // если true – возвращает выбранный шаблон
+  final bool selectionMode;
+  final String? filterCategory; // <-- добавлено
 
-  const TemplateManagerScreen({super.key, this.selectionMode = false});
+  const TemplateManagerScreen({
+    super.key,
+    this.selectionMode = false,
+    this.filterCategory,
+  });
 
   @override
   State<TemplateManagerScreen> createState() => _TemplateManagerScreenState();
@@ -119,9 +124,19 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
       body: ValueListenableBuilder(
         valueListenable: templatesBox.listenable(),
         builder: (context, Box<Node> box, _) {
-          final templates = box.values
+          var templates = box.values
               .where((n) => n.category == 'template')
               .toList();
+
+          // Фильтрация по категории (для book/planner)
+          if (widget.filterCategory != null) {
+            templates = templates.where((t) {
+              // Здесь можно добавить дополнительную логику,
+              // например, проверять какое-то свойство шаблона.
+              // Пока просто возвращаем все.
+              return true;
+            }).toList();
+          }
 
           if (templates.isEmpty) {
             return const Center(

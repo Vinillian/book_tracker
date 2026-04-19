@@ -40,6 +40,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ========== Книги ==========
   void _showAddBookDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Новая книга'),
+        content: const Text('Выберите способ создания:'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _createEmptyBookWithName();
+            },
+            child: const Text('Пустая книга'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _openTemplateManagerForBook();
+            },
+            child: const Text('Из шаблона'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _createEmptyBookWithName() {
     final TextEditingController nameController = TextEditingController(
       text: 'Новая книга',
     );
@@ -47,12 +77,12 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Новая книга'),
+        title: const Text('Название книги'),
         content: TextField(
           controller: nameController,
           autofocus: true,
           decoration: const InputDecoration(
-            labelText: 'Название книги',
+            labelText: 'Название',
             border: OutlineInputBorder(),
           ),
         ),
@@ -77,6 +107,38 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  void _openTemplateManagerForBook() async {
+    final selected = await Navigator.push<Node>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const TemplateManagerScreen(
+          selectionMode: true,
+          filterCategory: 'book',
+        ),
+      ),
+    );
+    if (selected != null && mounted) {
+      Node copyAndReset(Node node) {
+        final copy = node.deepCopy();
+        copy.category = 'book';
+        if (copy.children.isEmpty) {
+          copy.completed = false;
+          copy.completedSteps = 0;
+        } else {
+          copy.children = copy.children.map((c) => copyAndReset(c)).toList();
+        }
+        return copy;
+      }
+
+      final newBook = copyAndReset(selected);
+      if (newBook.name.isEmpty) newBook.name = selected.name;
+      templatesBox.add(newBook);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Книга "${newBook.name}" создана из шаблона')),
+      );
+    }
   }
 
   Future<void> _importBook() async {
@@ -133,7 +195,10 @@ class _HomeScreenState extends State<HomeScreen> {
       final selected = await Navigator.push<Node>(
         context,
         MaterialPageRoute(
-          builder: (_) => const TemplateManagerScreen(selectionMode: true),
+          builder: (_) => const TemplateManagerScreen(
+            selectionMode: true,
+            filterCategory: 'planner',
+          ),
         ),
       );
       if (selected != null && mounted) {
@@ -347,17 +412,15 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     if (_selectedIndex == 0) {
-      // Книги
       return [
         ...common,
         IconButton(
           icon: const Icon(Icons.add),
-          onPressed: _showAddBookDialog, // <-- изменено
+          onPressed: _showAddBookDialog,
           tooltip: 'Новая книга',
         ),
       ];
     } else {
-      // Планы
       return [
         ...common,
         IconButton(
@@ -416,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.note),
-            title: const Text('Заметки'),
+            title: const Text('Inbox'),
             onTap: () {
               Navigator.pop(context);
               _openNotes();

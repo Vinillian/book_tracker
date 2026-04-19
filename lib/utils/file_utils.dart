@@ -2,44 +2,31 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/node.dart';
+import '../models/history_entry.dart';
 
 class FileUtils {
-  /// Проверяет и запрашивает разрешение на запись во внешнее хранилище.
-  /// Возвращает true, если доступ разрешён.
   static Future<bool> _requestStoragePermission() async {
-    // На Android 11+ (API 30+) разрешение не требуется для доступа к
-    // общедоступным папкам через Scoped Storage, но мы оставляем проверку
-    // для старых версий.
     if (Platform.isAndroid) {
       final status = await Permission.storage.status;
       if (status.isGranted) return true;
       final result = await Permission.storage.request();
       return result.isGranted;
     }
-    // На iOS и других платформах разрешение не требуется
     return true;
   }
 
-  /// Возвращает путь к папке "Documents/Book Planner".
-  /// Создаёт папку, если её нет.
   static Future<Directory> _getExportDirectory() async {
     Directory directory;
 
     if (Platform.isAndroid) {
-      // getExternalStorageDirectory() на Android возвращает путь к
-      // /storage/emulated/0/Android/data/com.example.book_tracker/files
-      // Но нам нужна публичная папка Documents.
-      // Используем getExternalStoragePublicDirectory (deprecated, но работает).
-      // Альтернатива: использовать path_provider + ручной путь.
       final storage = await getExternalStorageDirectory();
-      // Поднимаемся на уровень выше, к корню внешнего хранилища
       final root = Directory(storage!.path.split('Android')[0]);
       directory = Directory('${root.path}Documents/Book Planner');
     } else {
-      // Для iOS/Windows/macOS/Linux используем папку документов приложения
       final docs = await getApplicationDocumentsDirectory();
       directory = Directory('${docs.path}/Book Planner');
     }
@@ -50,9 +37,7 @@ class FileUtils {
     return directory;
   }
 
-  /// Экспортирует один шаблон в файл JSON с кодировкой UTF-8 с BOM.
   static Future<void> exportTemplate(Node template) async {
-    // Проверяем разрешение
     final hasPermission = await _requestStoragePermission();
     if (!hasPermission) {
       throw Exception('Нет разрешения на запись во внешнее хранилище');
@@ -65,7 +50,6 @@ class FileUtils {
       final file = File('${directory.path}/$fileName');
 
       final jsonString = jsonEncode(template.toJson());
-      // Добавляем BOM (Byte Order Mark) для правильного определения UTF-8
       final bytes = utf8.encode('\uFEFF$jsonString');
       await file.writeAsBytes(bytes);
 
@@ -75,7 +59,6 @@ class FileUtils {
     }
   }
 
-  /// Экспортирует все книги в один файл JSON с кодировкой UTF-8 с BOM.
   static Future<void> exportAllTemplates(List<Node> templates) async {
     final hasPermission = await _requestStoragePermission();
     if (!hasPermission) {
@@ -99,8 +82,8 @@ class FileUtils {
     }
   }
 
-  /// Импорт шаблона из JSON-файла, выбранного пользователем.
-  static Future<Node?> importTemplate() async {
+  /// Импорт с возможностью добавления записей в историю
+  static Future<Node?> importTemplate({bool addHistory = false}) async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -110,22 +93,28 @@ class FileUtils {
       if (result != null) {
         final fileBytes = result.files.first.bytes;
 
+        String jsonString;
         if (fileBytes != null) {
-          final jsonString = _decodeWithBom(fileBytes);
-          final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
-          return Node.fromJson(jsonMap);
+          jsonString = _decodeWithBom(fileBytes);
         } else {
           final filePath = result.files.first.path;
           if (filePath != null) {
             final file = File(filePath);
-            final fileBytes = await file.readAsBytes();
-            final jsonString = _decodeWithBom(fileBytes);
-            final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
-            return Node.fromJson(jsonMap);
+            final bytes = await file.readAsBytes();
+            jsonString = _decodeWithBom(bytes);
           } else {
             throw Exception('Не удалось прочитать файл: нет ни bytes, ни path');
           }
         }
+
+        final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
+        final importedNode = Node.fromJson(jsonMap);
+
+        if (addHistory) {
+          await _generateHistoryFromNode(importedNode, importedNode.id);
+        }
+
+        return importedNode;
       }
     } catch (e) {
       throw Exception('Ошибка импорта: $e');
@@ -133,15 +122,46 @@ class FileUtils {
     return null;
   }
 
-  /// Декодирует UTF-8, удаляя BOM, если он присутствует.
   static String _decodeWithBom(List<int> bytes) {
     if (bytes.length >= 3 &&
         bytes[0] == 0xEF &&
         bytes[1] == 0xBB &&
         bytes[2] == 0xBF) {
-      // Есть BOM – удаляем первые 3 байта
       return utf8.decode(bytes.sublist(3));
     }
     return utf8.decode(bytes);
+  }
+
+  static Future<void> _generateHistoryFromNode(Node node, String bookId) async {
+    final historyBox = Hive.box<HistoryEntry>('history');
+
+    void traverse(Node n) {
+      if (n.children.isEmpty && n.completed && !n.excludeFromHistory) {
+        if (n.stepType == 'single') {
+          final entry = HistoryEntry.forSingle(
+            bookId: bookId,
+            nodeId: n.id,
+            nodeName: n.name,
+            completed: true,
+            date: n.plannedDate ?? DateTime.now(),
+          );
+          historyBox.add(entry);
+        } else if (n.stepType == 'stepByStep' && n.completedSteps > 0) {
+          final entry = HistoryEntry.forStep(
+            bookId: bookId,
+            nodeId: n.id,
+            nodeName: n.name,
+            completedSteps: n.completedSteps,
+            date: n.plannedDate ?? DateTime.now(),
+          );
+          historyBox.add(entry);
+        }
+      }
+      for (final child in n.children) {
+        traverse(child);
+      }
+    }
+
+    traverse(node);
   }
 }
