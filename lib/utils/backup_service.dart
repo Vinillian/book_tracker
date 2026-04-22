@@ -63,12 +63,38 @@ class BackupService {
 
   static Future<String?> exportPlans() async {
     final box = Hive.box<Node>('templates');
+    final notesBox = Hive.box<Note>('notes');
     final plans = box.values.where((n) => n.category == 'planner').toList();
     if (plans.isEmpty) return null;
-    final jsonList = plans.map((p) => p.toJson()).toList();
-    final bytes = _encodeJsonList(jsonList);
+
+    final planIds = plans.map((p) => p.id).toSet();
+    final linkedNotes = notesBox.values
+        .where(
+          (n) => n.linkedNodeId != null && planIds.contains(n.linkedNodeId),
+        )
+        .toList();
+
+    final archive = Archive();
+    archive.addFile(
+      ArchiveFile(
+        'plans.json',
+        plans.length,
+        _encodeJsonList(plans.map((p) => p.toJson()).toList()),
+      ),
+    );
+    if (linkedNotes.isNotEmpty) {
+      archive.addFile(
+        ArchiveFile(
+          'plan_notes.json',
+          linkedNotes.length,
+          _encodeJsonList(linkedNotes.map((n) => n.toJson()).toList()),
+        ),
+      );
+    }
+
+    final zipData = ZipEncoder().encode(archive);
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    return _saveFile('plans_$timestamp.json', bytes);
+    return _saveFile('plans_$timestamp.zip', zipData!);
   }
 
   static Future<String?> exportTemplates() async {
@@ -85,7 +111,7 @@ class BackupService {
 
   static Future<String?> exportNotes() async {
     final box = Hive.box<Note>('notes');
-    final notes = box.values.toList();
+    final notes = box.values.where((n) => n.linkedNodeId == null).toList();
     if (notes.isEmpty) return null;
     final jsonList = notes.map((n) => n.toJson()).toList();
     final bytes = _encodeJsonList(jsonList);
@@ -122,12 +148,11 @@ class BackupService {
     final tmpls = templatesBox.values
         .where((n) => n.category == 'template')
         .toList();
-    final notes = notesBox.values.toList();
+    final allNotes = notesBox.values.toList();
     final history = historyBox.values.toList();
     final settings = settingsBox.get('appSettings')?.themeMode ?? 'system';
 
     final archive = Archive();
-
     archive.addFile(
       ArchiveFile(
         'books.json',
@@ -152,8 +177,8 @@ class BackupService {
     archive.addFile(
       ArchiveFile(
         'notes.json',
-        notes.length,
-        _encodeJsonList(notes.map((n) => n.toJson()).toList()),
+        allNotes.length,
+        _encodeJsonList(allNotes.map((n) => n.toJson()).toList()),
       ),
     );
     archive.addFile(
@@ -172,9 +197,8 @@ class BackupService {
     );
 
     final zipData = ZipEncoder().encode(archive);
-    if (zipData == null) return null;
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    return _saveFile('backup_$timestamp.zip', zipData);
+    return _saveFile('backup_$timestamp.zip', zipData!);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -211,12 +235,16 @@ class BackupService {
   static Future<int> importPlans({bool clearExisting = false}) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['json'],
+      allowedExtensions: ['zip'],
     );
     if (result == null) return 0;
-    final jsonString = await _readString(result);
-    final List<dynamic> jsonList = jsonDecode(jsonString);
+    final bytes = result.files.first.bytes;
+    if (bytes == null) return 0;
+    final archive = ZipDecoder().decodeBytes(bytes);
+
     final box = Hive.box<Node>('templates');
+    final notesBox = Hive.box<Note>('notes');
+
     if (clearExisting) {
       final keysToDelete = box.keys
           .where((k) => box.get(k)?.category == 'planner')
@@ -225,13 +253,36 @@ class BackupService {
         await box.delete(key);
       }
     }
+
     int count = 0;
-    for (var item in jsonList) {
-      final node = Node.fromJson(item);
-      node.category = 'planner';
-      await box.add(node);
-      count++;
+    List<Note> importedNotes = [];
+
+    for (var file in archive) {
+      if (file.name == 'plans.json') {
+        final content = utf8.decode(file.content);
+        final List<dynamic> jsonList = jsonDecode(content);
+        for (var item in jsonList) {
+          final node = Node.fromJson(item);
+          node.category = 'planner';
+          await box.add(node);
+          count++;
+        }
+      } else if (file.name == 'plan_notes.json') {
+        final content = utf8.decode(file.content);
+        final List<dynamic> jsonList = jsonDecode(content);
+        importedNotes = jsonList.map((j) => Note.fromJson(j)).toList();
+      }
     }
+
+    for (var note in importedNotes) {
+      if (note.linkedNodeId != null) {
+        final planExists = box.values.any((n) => n.id == note.linkedNodeId);
+        if (planExists) {
+          await notesBox.put(note.id, note);
+        }
+      }
+    }
+
     return count;
   }
 
@@ -271,7 +322,14 @@ class BackupService {
     final jsonString = await _readString(result);
     final List<dynamic> jsonList = jsonDecode(jsonString);
     final box = Hive.box<Note>('notes');
-    if (clearExisting) await box.clear();
+    if (clearExisting) {
+      final keysToDelete = box.keys
+          .where((k) => box.get(k)?.linkedNodeId == null)
+          .toList();
+      for (var key in keysToDelete) {
+        await box.delete(key);
+      }
+    }
     int count = 0;
     for (var item in jsonList) {
       final note = Note.fromJson(item);

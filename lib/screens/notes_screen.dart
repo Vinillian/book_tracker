@@ -156,7 +156,7 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   Future<void> _exportNotes() async {
-    final notes = notesBox.values.toList();
+    final notes = notesBox.values.where((n) => n.linkedNodeId == null).toList();
     if (notes.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -208,7 +208,8 @@ class _NotesScreenState extends State<NotesScreen> {
       int imported = 0;
       for (final item in jsonList) {
         final note = Note.fromJson(item);
-        if (!notesBox.containsKey(note.id)) {
+        // Импортируем только если это inbox-заметка
+        if (note.linkedNodeId == null && !notesBox.containsKey(note.id)) {
           await notesBox.put(note.id, note);
           imported++;
         }
@@ -236,7 +237,7 @@ class _NotesScreenState extends State<NotesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Заметки'),
+        title: const Text('Inbox'),
         actions: [
           IconButton(
             icon: const Icon(Icons.upload),
@@ -259,17 +260,30 @@ class _NotesScreenState extends State<NotesScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: SearchBar(
-              hintText: 'Поиск по заметкам...',
-              leading: const Icon(Icons.search),
-              onChanged: (value) => setState(() => _searchQuery = value),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SearchBar(
+                  hintText: 'Поиск по заметкам...',
+                  leading: const Icon(Icons.search),
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Inbox — быстрые заметки без категорий.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
             ),
           ),
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: notesBox.listenable(),
               builder: (context, Box<Note> box, _) {
-                final notes = box.values.toList();
+                final notes = box.values
+                    .where((n) => n.linkedNodeId == null)
+                    .toList();
+
                 if (notes.isEmpty) {
                   return const Center(
                     child: Text('Нет заметок. Нажмите + чтобы создать.'),

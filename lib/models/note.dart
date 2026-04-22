@@ -21,17 +21,16 @@ class Note {
   DateTime updatedAt;
 
   @HiveField(5)
-  String? linkedNodeId; // ID связанного узла (дня)
+  String? linkedNodeId; // ID связанного дня (плана)
 
   Note({
     String? id,
-    String? title,
+    this.title = '',
     required this.content,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.linkedNodeId,
   }) : id = id ?? const Uuid().v4(),
-       title = title ?? '',
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
@@ -49,7 +48,7 @@ class Note {
   factory Note.fromJson(Map<String, dynamic> json) {
     return Note(
       id: json['id'],
-      title: json['title'],
+      title: json['title'] ?? '',
       content: json['content'] ?? '',
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])

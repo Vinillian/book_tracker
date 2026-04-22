@@ -300,8 +300,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     templatesBox.add(newDay);
 
+    // Создаём пустую дневную заметку
     final notesBox = Hive.box<Note>('notes');
-    final dayNote = Note(content: '', linkedNodeId: newDay.id);
+    final dayNote = Note(
+      title: '', // заголовок не используется
+      content: '',
+      linkedNodeId: newDay.id,
+    );
     notesBox.put(dayNote.id, dayNote);
   }
 
@@ -336,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
     templatesBox.add(newDay);
 
     final notesBox = Hive.box<Note>('notes');
-    final dayNote = Note(content: '', linkedNodeId: newDay.id);
+    final dayNote = Note(title: '', content: '', linkedNodeId: newDay.id);
     notesBox.put(dayNote.id, dayNote);
 
     ScaffoldMessenger.of(context).showSnackBar(
