@@ -24,7 +24,6 @@ class _BookScreenState extends State<BookScreen> {
   late TextEditingController _nameController;
   bool _isEditingTitle = false;
 
-  // Дневная заметка
   Note? _dayNote;
   final TextEditingController _noteController = TextEditingController();
   bool _isEditingNote = false;
@@ -42,11 +41,14 @@ class _BookScreenState extends State<BookScreen> {
       final notesBox = Hive.box<Note>('notes');
       _dayNote = notesBox.values.firstWhere(
         (n) => n.linkedNodeId == _node.id,
-        orElse: () => Note(content: ''),
+        orElse: () {
+          // Если заметка не найдена, создаём новую и сохраняем
+          final newNote = Note(title: '', content: '', linkedNodeId: _node.id);
+          notesBox.put(newNote.id, newNote);
+          return newNote;
+        },
       );
-      if (_dayNote!.id.isNotEmpty) {
-        _noteController.text = _dayNote!.content;
-      }
+      _noteController.text = _dayNote!.content;
     }
   }
 

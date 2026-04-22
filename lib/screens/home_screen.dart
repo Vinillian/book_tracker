@@ -72,9 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _createEmptyBookWithName() {
-    final TextEditingController nameController = TextEditingController(
-      text: 'Новая книга',
-    );
+    final TextEditingController nameController = TextEditingController(text: 'Новая книга');
 
     showDialog(
       context: context,
@@ -149,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (imported != null) {
         imported.category ??= 'book';
         final existingKey = templatesBox.keys.firstWhere(
-          (k) => templatesBox.get(k)?.id == imported.id,
+              (k) => templatesBox.get(k)?.id == imported.id,
           orElse: () => null,
         );
         if (existingKey != null) {
@@ -283,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _addEmptyDay(DateTime date) {
     final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-      (n) => n.name == dateStr && n.category == 'planner',
+          (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
@@ -300,10 +298,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     templatesBox.add(newDay);
 
-    // Создаём пустую дневную заметку
+    // Создаём пустую дневную заметку с привязкой
     final notesBox = Hive.box<Note>('notes');
     final dayNote = Note(
-      title: '', // заголовок не используется
+      title: '',
       content: '',
       linkedNodeId: newDay.id,
     );
@@ -313,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _createDayFromTemplate(Node template, DateTime date) {
     final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-      (n) => n.name == dateStr && n.category == 'planner',
+          (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
@@ -340,8 +338,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     templatesBox.add(newDay);
 
+    // Создаём пустую дневную заметку с привязкой
     final notesBox = Hive.box<Note>('notes');
-    final dayNote = Note(title: '', content: '', linkedNodeId: newDay.id);
+    final dayNote = Note(
+      title: '',
+      content: '',
+      linkedNodeId: newDay.id,
+    );
     notesBox.put(dayNote.id, dayNote);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -366,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (day != null) {
       final notesBox = Hive.box<Note>('notes');
       final linkedNote = notesBox.values.firstWhere(
-        (n) => n.linkedNodeId == day.id,
+            (n) => n.linkedNodeId == day.id,
         orElse: () => Note(content: ''),
       );
       if (linkedNote.id.isNotEmpty) {
@@ -476,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () async {
                   Navigator.pop(ctx);
                   final path = await BackupService.exportBooks();
-                  if (mounted)
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -484,6 +487,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     );
+                  }
                 },
               ),
               ListTile(
@@ -492,7 +496,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () async {
                   Navigator.pop(ctx);
                   final path = await BackupService.exportPlans();
-                  if (mounted)
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -500,6 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     );
+                  }
                 },
               ),
               ListTile(
@@ -508,7 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () async {
                   Navigator.pop(ctx);
                   final path = await BackupService.exportTemplates();
-                  if (mounted)
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -518,6 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     );
+                  }
                 },
               ),
               ListTile(
@@ -526,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () async {
                   Navigator.pop(ctx);
                   final path = await BackupService.exportNotes();
-                  if (mounted)
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -536,6 +542,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     );
+                  }
                 },
               ),
               ListTile(
@@ -544,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () async {
                   Navigator.pop(ctx);
                   final path = await BackupService.exportHistory();
-                  if (mounted)
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -554,6 +561,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     );
+                  }
                 },
               ),
             ],
@@ -749,12 +757,12 @@ class _HomeScreenState extends State<HomeScreen> {
               final filtered = _searchQuery.isEmpty
                   ? books
                   : books
-                        .where(
-                          (b) => b.name.toLowerCase().contains(
-                            _searchQuery.toLowerCase(),
-                          ),
-                        )
-                        .toList();
+                  .where(
+                    (b) => b.name.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ),
+              )
+                  .toList();
 
               if (filtered.isEmpty) {
                 return const Center(child: Text('Ничего не найдено'));

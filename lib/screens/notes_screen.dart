@@ -208,7 +208,6 @@ class _NotesScreenState extends State<NotesScreen> {
       int imported = 0;
       for (final item in jsonList) {
         final note = Note.fromJson(item);
-        // Импортируем только если это inbox-заметка
         if (note.linkedNodeId == null && !notesBox.containsKey(note.id)) {
           await notesBox.put(note.id, note);
           imported++;
@@ -295,10 +294,10 @@ class _NotesScreenState extends State<NotesScreen> {
                 final filtered = _searchQuery.isEmpty
                     ? notes
                     : notes.where((note) {
-                        final query = _searchQuery.toLowerCase();
-                        return note.title.toLowerCase().contains(query) ||
-                            note.content.toLowerCase().contains(query);
-                      }).toList();
+                  final query = _searchQuery.toLowerCase();
+                  return note.title.toLowerCase().contains(query) ||
+                      note.content.toLowerCase().contains(query);
+                }).toList();
 
                 if (filtered.isEmpty) {
                   return const Center(child: Text('Ничего не найдено'));
