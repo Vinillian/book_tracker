@@ -42,11 +42,14 @@ class _BookScreenState extends State<BookScreen> {
       final notesBox = Hive.box<Note>('notes');
       _dayNote = notesBox.values.firstWhere(
         (n) => n.linkedNodeId == _node.id,
-        orElse: () => Note(content: ''),
+        orElse: () {
+          // Автоматически создаём заметку для старых дней, где её ещё нет
+          final newNote = Note(content: '', linkedNodeId: _node.id);
+          notesBox.put(newNote.id, newNote);
+          return newNote;
+        },
       );
-      if (_dayNote!.id.isNotEmpty) {
-        _noteController.text = _dayNote!.content;
-      }
+      _noteController.text = _dayNote!.content;
     }
   }
 

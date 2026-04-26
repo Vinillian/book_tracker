@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 import 'models/node.dart';
 import 'models/settings.dart';
 import 'models/history_entry.dart';
@@ -98,7 +99,35 @@ void main() async {
     await Hive.openBox<Note>('notes');
   }
 
+  // Миграция: выдаём уникальный ID всем существующим планам, у которых его нет или он равен шаблонным
+  _migrateExistingPlans();
+
   runApp(const MyApp());
+}
+
+/// Однократная миграция старых планов — присваивает уникальный ID,
+/// если он отсутствует или совпадает с идентификаторами шаблонов.
+void _migrateExistingPlans() {
+  final templatesBox = Hive.box<Node>('templates');
+  final plans = templatesBox.values
+      .where((n) => n.category == 'planner')
+      .toList();
+
+  for (final plan in plans) {
+    if (plan.id.isEmpty ||
+        plan.id == 'template-workday' ||
+        plan.id == 'template-restday') {
+      final newId = const Uuid().v4();
+      final key = templatesBox.keys.firstWhere(
+        (k) => templatesBox.get(k) == plan,
+        orElse: () => null,
+      );
+      if (key != null) {
+        plan.id = newId;
+        templatesBox.put(key, plan);
+      }
+    }
+  }
 }
 
 class MyApp extends StatefulWidget {
