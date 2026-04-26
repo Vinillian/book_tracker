@@ -3,8 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/node.dart';
 import '../models/note.dart';
-import '../models/history_entry.dart';
-import '../utils/file_transfer.dart';
+import 'backup_restore_screen.dart';
 import 'editor_screen.dart';
 import 'book_screen.dart';
 import '../widgets/book_card.dart';
@@ -362,160 +361,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openBackupRestore() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BackupRestoreScreen()),
+    );
+  }
+
   void _openDrawer() {
     _scaffoldKey.currentState?.openEndDrawer();
-  }
-
-  // ========== Экспорт / Импорт (действия) ==========
-  Future<bool> _exportBooksAction() async {
-    return FileTransfer.exportBox(
-      box: templatesBox,
-      categoryFilter: 'book',
-      suggestedName: 'books',
-    );
-  }
-
-  Future<int> _importBooksAction() async {
-    return FileTransfer.importIntoBox(
-      box: templatesBox,
-      fromJson: Node.fromJson,
-      setCategory: 'book',
-    );
-  }
-
-  Future<bool> _exportPlansAction() async {
-    return FileTransfer.exportBox(
-      box: templatesBox,
-      categoryFilter: 'planner',
-      suggestedName: 'plans',
-    );
-  }
-
-  Future<int> _importPlansAction() async {
-    return FileTransfer.importIntoBox(
-      box: templatesBox,
-      fromJson: Node.fromJson,
-      setCategory: 'planner',
-    );
-  }
-
-  Future<bool> _exportTemplatesAction() async {
-    return FileTransfer.exportBox(
-      box: templatesBox,
-      categoryFilter: 'template',
-      suggestedName: 'templates',
-    );
-  }
-
-  Future<int> _importTemplatesAction() async {
-    return FileTransfer.importIntoBox(
-      box: templatesBox,
-      fromJson: Node.fromJson,
-      setCategory: 'template',
-    );
-  }
-
-  Future<bool> _exportNotesAction() async {
-    return FileTransfer.exportBox(
-      box: Hive.box<Note>('notes'),
-      suggestedName: 'notes',
-    );
-  }
-
-  Future<int> _importNotesAction() async {
-    return FileTransfer.importIntoBox(
-      box: Hive.box<Note>('notes'),
-      fromJson: Note.fromJson,
-    );
-  }
-
-  Future<bool> _exportHistoryAction() async {
-    return FileTransfer.exportBox(
-      box: Hive.box<HistoryEntry>('history'),
-      suggestedName: 'history',
-    );
-  }
-
-  Future<int> _importHistoryAction() async {
-    return FileTransfer.importIntoBox(
-      box: Hive.box<HistoryEntry>('history'),
-      fromJson: HistoryEntry.fromJson,
-    );
-  }
-
-  Future<bool> _exportAllAction() async {
-    return FileTransfer.exportAll(
-      templatesBox: templatesBox,
-      notesBox: Hive.box<Note>('notes'),
-      historyBox: Hive.box<HistoryEntry>('history'),
-    );
-  }
-
-  Future<bool> _importAllAction() async {
-    return FileTransfer.importAll(
-      templatesBox: templatesBox,
-      notesBox: Hive.box<Note>('notes'),
-      historyBox: Hive.box<HistoryEntry>('history'),
-    );
-  }
-
-  // Вспомогательные обёртки с SnackBar
-  Future<void> _runWithSnackBar(
-    Future<int> Function() action,
-    String successMsg,
-    String emptyMsg,
-  ) async {
-    int result;
-    try {
-      result = await action();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
-      }
-      return;
-    }
-    if (mounted) {
-      if (result == -1) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ошибка чтения файла. Проверьте формат JSON.'),
-          ),
-        );
-      } else if (result == 0) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(emptyMsg)));
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('$successMsg: $result')));
-      }
-    }
-  }
-
-  Future<void> _runExport(
-    Future<bool> Function() action,
-    String successMsg,
-    String emptyMsg,
-  ) async {
-    bool ok = false;
-    try {
-      ok = await action();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка экспорта: $e')));
-      }
-      return;
-    }
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(ok ? successMsg : emptyMsg)));
-    }
   }
 
   @override
@@ -636,112 +490,12 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           const Divider(),
-          // Экспорт / Импорт по категориям
-          _buildExportImportTile(
-            'Экспорт книг',
-            _exportBooksAction,
-            isExport: true,
-          ),
-          _buildExportImportTile(
-            'Импорт книг',
-            _importBooksAction,
-            isExport: false,
-          ),
-          _buildExportImportTile(
-            'Экспорт планов',
-            _exportPlansAction,
-            isExport: true,
-          ),
-          _buildExportImportTile(
-            'Импорт планов',
-            _importPlansAction,
-            isExport: false,
-          ),
-          _buildExportImportTile(
-            'Экспорт шаблонов',
-            _exportTemplatesAction,
-            isExport: true,
-          ),
-          _buildExportImportTile(
-            'Импорт шаблонов',
-            _importTemplatesAction,
-            isExport: false,
-          ),
-          const Divider(),
-          _buildExportImportTile(
-            'Экспорт заметок',
-            _exportNotesAction,
-            isExport: true,
-          ),
-          _buildExportImportTile(
-            'Импорт заметок',
-            _importNotesAction,
-            isExport: false,
-          ),
-          const Divider(),
-          _buildExportImportTile(
-            'Экспорт истории',
-            _exportHistoryAction,
-            isExport: true,
-          ),
-          _buildExportImportTile(
-            'Импорт истории',
-            _importHistoryAction,
-            isExport: false,
-          ),
-          const Divider(),
-          // Полный бэкап и восстановление
           ListTile(
-            leading: const Icon(Icons.backup),
-            title: const Text('Полный бэкап (экспорт всего)'),
+            leading: const Icon(Icons.import_export),
+            title: const Text('Импорт / Экспорт'),
             onTap: () {
               Navigator.pop(context);
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _runExport(
-                  _exportAllAction,
-                  'Полный бэкап сохранён',
-                  'Ошибка сохранения',
-                );
-              });
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.restore),
-            title: const Text('Восстановление из бэкапа'),
-            onTap: () async {
-              Navigator.pop(context);
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (c) => AlertDialog(
-                  title: const Text('Восстановление'),
-                  content: const Text(
-                    'Все текущие данные будут заменены. Продолжить?',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(c, false),
-                      child: const Text('Отмена'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(c, true),
-                      child: const Text('Восстановить'),
-                    ),
-                  ],
-                ),
-              );
-              if (confirmed != true || !mounted) return;
-              WidgetsBinding.instance.addPostFrameCallback((_) async {
-                final ok = await _importAllAction();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        ok ? 'Данные восстановлены' : 'Ошибка восстановления',
-                      ),
-                    ),
-                  );
-                }
-              });
+              _openBackupRestore();
             },
           ),
           const Divider(),
@@ -763,34 +517,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildExportImportTile(
-    String title,
-    dynamic action, {
-    required bool isExport,
-  }) {
-    return ListTile(
-      title: Text(title),
-      onTap: () {
-        Navigator.pop(context);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (isExport) {
-            _runExport(
-              action as Future<bool> Function(),
-              title,
-              'Нет данных для экспорта или отменено',
-            );
-          } else {
-            _runWithSnackBar(
-              action as Future<int> Function(),
-              title,
-              'Файл не выбран или нет данных',
-            );
-          }
-        });
-      },
     );
   }
 
