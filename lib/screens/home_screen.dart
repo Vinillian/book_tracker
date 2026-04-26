@@ -416,29 +416,50 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<bool> _exportNotesAction() async {
-    final box = Hive.box<Note>('notes');
-    return FileTransfer.exportBox(box: box, suggestedName: 'notes');
+    return FileTransfer.exportBox(
+      box: Hive.box<Note>('notes'),
+      suggestedName: 'notes',
+    );
   }
 
   Future<int> _importNotesAction() async {
-    final box = Hive.box<Note>('notes');
-    return FileTransfer.importIntoBox(box: box, fromJson: Note.fromJson);
+    return FileTransfer.importIntoBox(
+      box: Hive.box<Note>('notes'),
+      fromJson: Note.fromJson,
+    );
   }
 
   Future<bool> _exportHistoryAction() async {
-    final box = Hive.box<HistoryEntry>('history');
-    return FileTransfer.exportBox(box: box, suggestedName: 'history');
+    return FileTransfer.exportBox(
+      box: Hive.box<HistoryEntry>('history'),
+      suggestedName: 'history',
+    );
   }
 
   Future<int> _importHistoryAction() async {
-    final box = Hive.box<HistoryEntry>('history');
     return FileTransfer.importIntoBox(
-      box: box,
+      box: Hive.box<HistoryEntry>('history'),
       fromJson: HistoryEntry.fromJson,
     );
   }
 
-  // Вспомогательные методы для показа результата
+  Future<bool> _exportAllAction() async {
+    return FileTransfer.exportAll(
+      templatesBox: templatesBox,
+      notesBox: Hive.box<Note>('notes'),
+      historyBox: Hive.box<HistoryEntry>('history'),
+    );
+  }
+
+  Future<bool> _importAllAction() async {
+    return FileTransfer.importAll(
+      templatesBox: templatesBox,
+      notesBox: Hive.box<Note>('notes'),
+      historyBox: Hive.box<HistoryEntry>('history'),
+    );
+  }
+
+  // Вспомогательные обёртки с SnackBar
   Future<void> _runWithSnackBar(
     Future<int> Function() action,
     String successMsg,
@@ -615,120 +636,112 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           const Divider(),
-          // Секция экспорта/импорта
-          ListTile(
-            leading: const Icon(Icons.import_export),
-            title: const Text('Экспорт книг'),
-            onTap: () {
-              Navigator.pop(context);
-              _runExport(
-                _exportBooksAction,
-                'Книги экспортированы',
-                'Нет книг для экспорта или отменено',
-              );
-            },
+          // Экспорт / Импорт по категориям
+          _buildExportImportTile(
+            'Экспорт книг',
+            _exportBooksAction,
+            isExport: true,
           ),
-          ListTile(
-            title: const Text('Импорт книг'),
-            onTap: () {
-              Navigator.pop(context);
-              _runWithSnackBar(
-                _importBooksAction,
-                'Импортировано книг',
-                'Файл не выбран или нет данных',
-              );
-            },
+          _buildExportImportTile(
+            'Импорт книг',
+            _importBooksAction,
+            isExport: false,
           ),
-          ListTile(
-            title: const Text('Экспорт планов'),
-            onTap: () {
-              Navigator.pop(context);
-              _runExport(
-                _exportPlansAction,
-                'Планы экспортированы',
-                'Нет планов для экспорта или отменено',
-              );
-            },
+          _buildExportImportTile(
+            'Экспорт планов',
+            _exportPlansAction,
+            isExport: true,
           ),
-          ListTile(
-            title: const Text('Импорт планов'),
-            onTap: () {
-              Navigator.pop(context);
-              _runWithSnackBar(
-                _importPlansAction,
-                'Импортировано планов',
-                'Файл не выбран или нет данных',
-              );
-            },
+          _buildExportImportTile(
+            'Импорт планов',
+            _importPlansAction,
+            isExport: false,
           ),
-          ListTile(
-            title: const Text('Экспорт шаблонов'),
-            onTap: () {
-              Navigator.pop(context);
-              _runExport(
-                _exportTemplatesAction,
-                'Шаблоны экспортированы',
-                'Нет шаблонов для экспорта или отменено',
-              );
-            },
+          _buildExportImportTile(
+            'Экспорт шаблонов',
+            _exportTemplatesAction,
+            isExport: true,
           ),
-          ListTile(
-            title: const Text('Импорт шаблонов'),
-            onTap: () {
-              Navigator.pop(context);
-              _runWithSnackBar(
-                _importTemplatesAction,
-                'Импортировано шаблонов',
-                'Файл не выбран или нет данных',
-              );
-            },
+          _buildExportImportTile(
+            'Импорт шаблонов',
+            _importTemplatesAction,
+            isExport: false,
           ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.note),
-            title: const Text('Экспорт заметок'),
-            onTap: () {
-              Navigator.pop(context);
-              _runExport(
-                _exportNotesAction,
-                'Заметки экспортированы',
-                'Нет заметок для экспорта или отменено',
-              );
-            },
+          _buildExportImportTile(
+            'Экспорт заметок',
+            _exportNotesAction,
+            isExport: true,
           ),
-          ListTile(
-            title: const Text('Импорт заметок'),
-            onTap: () {
-              Navigator.pop(context);
-              _runWithSnackBar(
-                _importNotesAction,
-                'Импортировано заметок',
-                'Файл не выбран или нет данных',
-              );
-            },
+          _buildExportImportTile(
+            'Импорт заметок',
+            _importNotesAction,
+            isExport: false,
           ),
           const Divider(),
+          _buildExportImportTile(
+            'Экспорт истории',
+            _exportHistoryAction,
+            isExport: true,
+          ),
+          _buildExportImportTile(
+            'Импорт истории',
+            _importHistoryAction,
+            isExport: false,
+          ),
+          const Divider(),
+          // Полный бэкап и восстановление
           ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text('Экспорт истории'),
+            leading: const Icon(Icons.backup),
+            title: const Text('Полный бэкап (экспорт всего)'),
             onTap: () {
               Navigator.pop(context);
-              _runExport(
-                _exportHistoryAction,
-                'История экспортирована',
-                'Нет истории для экспорта или отменено',
-              );
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _runExport(
+                  _exportAllAction,
+                  'Полный бэкап сохранён',
+                  'Ошибка сохранения',
+                );
+              });
             },
           ),
           ListTile(
-            title: const Text('Импорт истории'),
-            onTap: () {
+            leading: const Icon(Icons.restore),
+            title: const Text('Восстановление из бэкапа'),
+            onTap: () async {
               Navigator.pop(context);
-              _runWithSnackBar(
-                _importHistoryAction,
-                'Импортировано записей истории',
-                'Файл не выбран или нет данных',
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (c) => AlertDialog(
+                  title: const Text('Восстановление'),
+                  content: const Text(
+                    'Все текущие данные будут заменены. Продолжить?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(c, false),
+                      child: const Text('Отмена'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(c, true),
+                      child: const Text('Восстановить'),
+                    ),
+                  ],
+                ),
               );
+              if (confirmed != true || !mounted) return;
+              WidgetsBinding.instance.addPostFrameCallback((_) async {
+                final ok = await _importAllAction();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        ok ? 'Данные восстановлены' : 'Ошибка восстановления',
+                      ),
+                    ),
+                  );
+                }
+              });
             },
           ),
           const Divider(),
@@ -750,6 +763,34 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildExportImportTile(
+    String title,
+    dynamic action, {
+    required bool isExport,
+  }) {
+    return ListTile(
+      title: Text(title),
+      onTap: () {
+        Navigator.pop(context);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (isExport) {
+            _runExport(
+              action as Future<bool> Function(),
+              title,
+              'Нет данных для экспорта или отменено',
+            );
+          } else {
+            _runWithSnackBar(
+              action as Future<int> Function(),
+              title,
+              'Файл не выбран или нет данных',
+            );
+          }
+        });
+      },
     );
   }
 
