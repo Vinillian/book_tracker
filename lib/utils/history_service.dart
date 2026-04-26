@@ -52,10 +52,8 @@ class HistoryService {
     final Map<DateTime, List<HistoryEntry>> grouped = {};
     for (var entry in _historyBox.values) {
       final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
-      if (!grouped.containsKey(date)) {
-        grouped[date] = [];
-      }
-      grouped[date]!.add(entry);
+      // putIfAbsent гарантирует наличие списка и не требует !
+      grouped.putIfAbsent(date, () => []).add(entry);
     }
     return grouped;
   }

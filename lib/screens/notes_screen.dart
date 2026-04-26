@@ -1,9 +1,6 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:file_picker/file_picker.dart';
 import '../models/note.dart';
 
 class NotesScreen extends StatefulWidget {
@@ -155,99 +152,12 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 
-  Future<void> _exportNotes() async {
-    final notes = notesBox.values.toList();
-    if (notes.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Нет заметок для экспорта')));
-      return;
-    }
-
-    final jsonList = notes.map((n) => n.toJson()).toList();
-    final jsonString = jsonEncode(jsonList);
-    final bytes = utf8.encode('\uFEFF$jsonString');
-
-    final result = await FilePicker.platform.saveFile(
-      dialogTitle: 'Экспорт заметок',
-      fileName: 'notes_${DateTime.now().millisecondsSinceEpoch}.json',
-      type: FileType.custom,
-      allowedExtensions: ['json'],
-    );
-
-    if (result != null) {
-      await File(result).writeAsBytes(bytes);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Заметки экспортированы')));
-      }
-    }
-  }
-
-  Future<void> _importNotes() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['json'],
-    );
-
-    if (result == null) return;
-
-    try {
-      final bytes = result.files.first.bytes;
-      String jsonString;
-      if (bytes != null) {
-        jsonString = utf8.decode(bytes);
-      } else {
-        final path = result.files.first.path;
-        if (path == null) throw Exception('Не удалось прочитать файл');
-        jsonString = await File(path).readAsString();
-      }
-
-      final List<dynamic> jsonList = jsonDecode(jsonString);
-      int imported = 0;
-      for (final item in jsonList) {
-        final note = Note.fromJson(item);
-        if (!notesBox.containsKey(note.id)) {
-          await notesBox.put(note.id, note);
-          imported++;
-        }
-      }
-
-      setState(() {});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Импортировано заметок: $imported')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка импорта: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Заметки'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.upload),
-            onPressed: _importNotes,
-            tooltip: 'Импорт заметок',
-          ),
-          IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: _exportNotes,
-            tooltip: 'Экспорт заметок',
-          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _addNote,
