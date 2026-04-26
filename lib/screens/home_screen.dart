@@ -366,156 +366,134 @@ class _HomeScreenState extends State<HomeScreen> {
     _scaffoldKey.currentState?.openEndDrawer();
   }
 
-  // ========== Экспорт / Импорт ==========
-  Future<void> _exportBooks() async {
-    final ok = await FileTransfer.exportBox(
+  // ========== Экспорт / Импорт (действия) ==========
+  Future<bool> _exportBooksAction() async {
+    return FileTransfer.exportBox(
       box: templatesBox,
       categoryFilter: 'book',
       suggestedName: 'books',
     );
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ok ? 'Книги экспортированы' : 'Нет книг для экспорта или отменено',
-          ),
-        ),
-      );
-    }
   }
 
-  Future<void> _importBooks() async {
-    final count = await FileTransfer.importIntoBox(
+  Future<int> _importBooksAction() async {
+    return FileTransfer.importIntoBox(
       box: templatesBox,
       fromJson: Node.fromJson,
       setCategory: 'book',
     );
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Импортировано книг: $count')));
-    }
   }
 
-  Future<void> _exportPlans() async {
-    final ok = await FileTransfer.exportBox(
+  Future<bool> _exportPlansAction() async {
+    return FileTransfer.exportBox(
       box: templatesBox,
       categoryFilter: 'planner',
       suggestedName: 'plans',
     );
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ok
-                ? 'Планы экспортированы'
-                : 'Нет планов для экспорта или отменено',
-          ),
-        ),
-      );
-    }
   }
 
-  Future<void> _importPlans() async {
-    final count = await FileTransfer.importIntoBox(
+  Future<int> _importPlansAction() async {
+    return FileTransfer.importIntoBox(
       box: templatesBox,
       fromJson: Node.fromJson,
       setCategory: 'planner',
     );
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Импортировано планов: $count')));
-    }
   }
 
-  Future<void> _exportTemplates() async {
-    final ok = await FileTransfer.exportBox(
+  Future<bool> _exportTemplatesAction() async {
+    return FileTransfer.exportBox(
       box: templatesBox,
       categoryFilter: 'template',
       suggestedName: 'templates',
     );
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ok
-                ? 'Шаблоны экспортированы'
-                : 'Нет шаблонов для экспорта или отменено',
-          ),
-        ),
-      );
-    }
   }
 
-  Future<void> _importTemplates() async {
-    final count = await FileTransfer.importIntoBox(
+  Future<int> _importTemplatesAction() async {
+    return FileTransfer.importIntoBox(
       box: templatesBox,
       fromJson: Node.fromJson,
       setCategory: 'template',
     );
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Импортировано шаблонов: $count')));
-    }
   }
 
-  Future<void> _exportNotes() async {
+  Future<bool> _exportNotesAction() async {
     final box = Hive.box<Note>('notes');
-    final ok = await FileTransfer.exportBox(box: box, suggestedName: 'notes');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ok
-                ? 'Заметки экспортированы'
-                : 'Нет заметок для экспорта или отменено',
-          ),
-        ),
-      );
-    }
+    return FileTransfer.exportBox(box: box, suggestedName: 'notes');
   }
 
-  Future<void> _importNotes() async {
+  Future<int> _importNotesAction() async {
     final box = Hive.box<Note>('notes');
-    final count = await FileTransfer.importIntoBox(
-      box: box,
-      fromJson: Note.fromJson,
-    );
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Импортировано заметок: $count')));
-    }
+    return FileTransfer.importIntoBox(box: box, fromJson: Note.fromJson);
   }
 
-  Future<void> _exportHistory() async {
+  Future<bool> _exportHistoryAction() async {
     final box = Hive.box<HistoryEntry>('history');
-    final ok = await FileTransfer.exportBox(box: box, suggestedName: 'history');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ok
-                ? 'История экспортирована'
-                : 'Нет истории для экспорта или отменено',
-          ),
-        ),
-      );
-    }
+    return FileTransfer.exportBox(box: box, suggestedName: 'history');
   }
 
-  Future<void> _importHistory() async {
+  Future<int> _importHistoryAction() async {
     final box = Hive.box<HistoryEntry>('history');
-    final count = await FileTransfer.importIntoBox(
+    return FileTransfer.importIntoBox(
       box: box,
       fromJson: HistoryEntry.fromJson,
     );
+  }
+
+  // Вспомогательные методы для показа результата
+  Future<void> _runWithSnackBar(
+    Future<int> Function() action,
+    String successMsg,
+    String emptyMsg,
+  ) async {
+    int result;
+    try {
+      result = await action();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+      return;
+    }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Импортировано записей истории: $count')),
-      );
+      if (result == -1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ошибка чтения файла. Проверьте формат JSON.'),
+          ),
+        );
+      } else if (result == 0) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(emptyMsg)));
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$successMsg: $result')));
+      }
+    }
+  }
+
+  Future<void> _runExport(
+    Future<bool> Function() action,
+    String successMsg,
+    String emptyMsg,
+  ) async {
+    bool ok = false;
+    try {
+      ok = await action();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка экспорта: $e')));
+      }
+      return;
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(ok ? successMsg : emptyMsg)));
     }
   }
 
@@ -580,20 +558,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDrawer() {
-    // Конфигурация пунктов импорта/экспорта для удобства и отсутствия дублирования
-    final List<_ExportImportEntry> exportImportEntries = [
-      _ExportImportEntry('Экспорт книг', _exportBooks),
-      _ExportImportEntry('Импорт книг', _importBooks),
-      _ExportImportEntry('Экспорт планов', _exportPlans),
-      _ExportImportEntry('Импорт планов', _importPlans),
-      _ExportImportEntry('Экспорт шаблонов', _exportTemplates),
-      _ExportImportEntry('Импорт шаблонов', _importTemplates),
-      _ExportImportEntry('Экспорт заметок', _exportNotes),
-      _ExportImportEntry('Импорт заметок', _importNotes),
-      _ExportImportEntry('Экспорт истории', _exportHistory),
-      _ExportImportEntry('Импорт истории', _importHistory),
-    ];
-
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -651,18 +615,121 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           const Divider(),
-          ExpansionTile(
+          // Секция экспорта/импорта
+          ListTile(
             leading: const Icon(Icons.import_export),
-            title: const Text('Экспорт / Импорт'),
-            children: exportImportEntries.map((entry) {
-              return ListTile(
-                title: Text(entry.title),
-                onTap: () {
-                  Navigator.pop(context);
-                  entry.action();
-                },
+            title: const Text('Экспорт книг'),
+            onTap: () {
+              Navigator.pop(context);
+              _runExport(
+                _exportBooksAction,
+                'Книги экспортированы',
+                'Нет книг для экспорта или отменено',
               );
-            }).toList(),
+            },
+          ),
+          ListTile(
+            title: const Text('Импорт книг'),
+            onTap: () {
+              Navigator.pop(context);
+              _runWithSnackBar(
+                _importBooksAction,
+                'Импортировано книг',
+                'Файл не выбран или нет данных',
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('Экспорт планов'),
+            onTap: () {
+              Navigator.pop(context);
+              _runExport(
+                _exportPlansAction,
+                'Планы экспортированы',
+                'Нет планов для экспорта или отменено',
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('Импорт планов'),
+            onTap: () {
+              Navigator.pop(context);
+              _runWithSnackBar(
+                _importPlansAction,
+                'Импортировано планов',
+                'Файл не выбран или нет данных',
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('Экспорт шаблонов'),
+            onTap: () {
+              Navigator.pop(context);
+              _runExport(
+                _exportTemplatesAction,
+                'Шаблоны экспортированы',
+                'Нет шаблонов для экспорта или отменено',
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('Импорт шаблонов'),
+            onTap: () {
+              Navigator.pop(context);
+              _runWithSnackBar(
+                _importTemplatesAction,
+                'Импортировано шаблонов',
+                'Файл не выбран или нет данных',
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.note),
+            title: const Text('Экспорт заметок'),
+            onTap: () {
+              Navigator.pop(context);
+              _runExport(
+                _exportNotesAction,
+                'Заметки экспортированы',
+                'Нет заметок для экспорта или отменено',
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('Импорт заметок'),
+            onTap: () {
+              Navigator.pop(context);
+              _runWithSnackBar(
+                _importNotesAction,
+                'Импортировано заметок',
+                'Файл не выбран или нет данных',
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: const Text('Экспорт истории'),
+            onTap: () {
+              Navigator.pop(context);
+              _runExport(
+                _exportHistoryAction,
+                'История экспортирована',
+                'Нет истории для экспорта или отменено',
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('Импорт истории'),
+            onTap: () {
+              Navigator.pop(context);
+              _runWithSnackBar(
+                _importHistoryAction,
+                'Импортировано записей истории',
+                'Файл не выбран или нет данных',
+              );
+            },
           ),
           const Divider(),
           ListTile(
@@ -820,11 +887,4 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-}
-
-/// Вспомогательный класс для генерации пунктов меню экспорта/импорта
-class _ExportImportEntry {
-  final String title;
-  final VoidCallback action;
-  const _ExportImportEntry(this.title, this.action);
 }
