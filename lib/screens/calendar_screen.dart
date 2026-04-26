@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/history_entry.dart';
 import '../models/node.dart';
+import '../models/note.dart';
 import '../utils/history_service.dart';
 import 'book_screen.dart';
 
@@ -85,6 +86,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         stepType: 'folder',
       );
       await _templatesBox.add(newPlan);
+
+      // Создаём пустую заметку для нового дня (как в HomeScreen)
+      final notesBox = Hive.box<Note>('notes');
+      final dayNote = Note(content: '', linkedNodeId: newPlan.id);
+      await notesBox.put(dayNote.id, dayNote);
+
       setState(() {});
 
       if (mounted) {

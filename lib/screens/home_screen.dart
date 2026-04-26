@@ -70,10 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _createEmptyBookWithName() {
-    final TextEditingController nameController = TextEditingController(
-      text: 'Новая книга',
-    );
-
+    final nameController = TextEditingController(text: 'Новая книга');
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -185,7 +182,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showNewDayDialog() {
     DateTime selectedDate = DateTime.now();
-
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -208,9 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       lastDate: DateTime(2030),
                     );
                     if (picked != null) {
-                      setStateDialog(() {
-                        selectedDate = picked;
-                      });
+                      setStateDialog(() => selectedDate = picked);
                     }
                   },
                 ),
@@ -250,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _addEmptyDay(DateTime date) {
     final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-          (n) => n.name == dateStr && n.category == 'planner',
+      (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
@@ -267,15 +261,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     templatesBox.add(newDay);
 
+    // Создаём пустую дневную заметку
     final notesBox = Hive.box<Note>('notes');
-    final dayNote = Note(title: '', content: '', linkedNodeId: newDay.id);
+    final dayNote = Note(content: '', linkedNodeId: newDay.id);
     notesBox.put(dayNote.id, dayNote);
   }
 
   void _createDayFromTemplate(Node template, DateTime date) {
     final dateStr = DateFormat('dd.MM.yyyy').format(date);
     final existing = templatesBox.values.firstWhere(
-          (n) => n.name == dateStr && n.category == 'planner',
+      (n) => n.name == dateStr && n.category == 'planner',
       orElse: () => Node(name: '', children: []),
     );
     if (existing.name.isNotEmpty) {
@@ -299,11 +294,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final newDay = copyAndReset(template);
     newDay.name = dateStr;
     newDay.category = 'planner';
-
     templatesBox.add(newDay);
 
     final notesBox = Hive.box<Note>('notes');
-    final dayNote = Note(title: '', content: '', linkedNodeId: newDay.id);
+    final dayNote = Note(content: '', linkedNodeId: newDay.id);
     notesBox.put(dayNote.id, dayNote);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -328,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (day != null) {
       final notesBox = Hive.box<Note>('notes');
       final linkedNote = notesBox.values.firstWhere(
-            (n) => n.linkedNodeId == day.id,
+        (n) => n.linkedNodeId == day.id,
         orElse: () => Note(content: ''),
       );
       if (linkedNote.id.isNotEmpty) {
@@ -533,12 +527,12 @@ class _HomeScreenState extends State<HomeScreen> {
               final filtered = _searchQuery.isEmpty
                   ? books
                   : books
-                  .where(
-                    (b) => b.name.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ),
-              )
-                  .toList();
+                        .where(
+                          (b) => b.name.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          ),
+                        )
+                        .toList();
 
               if (filtered.isEmpty) {
                 return const Center(child: Text('Ничего не найдено'));
