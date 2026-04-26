@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/node.dart';
 import '../utils/file_utils.dart';
 import '../utils/history_service.dart';
+import '../utils/backup_service.dart'; // <-- новый импорт
 
 class SettingsScreen extends StatelessWidget {
   final String currentThemeMode;
@@ -37,13 +38,23 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _importAsCategory(BuildContext context, String category) async {
     try {
-      final imported = await FileUtils.importTemplate();
-      if (imported != null) {
-        imported.category = category;
-        final box = Hive.box<Node>('templates');
-        await box.add(imported);
+      if (category == 'planner') {
+        // Для планов используем новый метод, поддерживающий JSON-массивы
+        final count = await BackupService.importPlansFromJson(
+          clearExisting: false,
+        );
         if (context.mounted) {
-          _showSnackBar(context, 'Импортировано как "${imported.name}"');
+          _showSnackBar(context, 'Импортировано планов: $count');
+        }
+      } else {
+        final imported = await FileUtils.importTemplate();
+        if (imported != null) {
+          imported.category = category;
+          final box = Hive.box<Node>('templates');
+          await box.add(imported);
+          if (context.mounted) {
+            _showSnackBar(context, 'Импортировано как "${imported.name}"');
+          }
         }
       }
     } catch (e) {
