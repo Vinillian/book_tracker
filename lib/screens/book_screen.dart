@@ -39,16 +39,21 @@ class _BookScreenState extends State<BookScreen> {
   void _loadDayNote() {
     if (_node.category == 'planner') {
       final notesBox = Hive.box<Note>('notes');
-      _dayNote = notesBox.values.firstWhere(
+      // Ищем заметку с точным совпадением linkedNodeId
+      final existing = notesBox.values.firstWhere(
         (n) => n.linkedNodeId == _node.id,
-        orElse: () {
-          // Если заметка не найдена, создаём новую и сохраняем
-          final newNote = Note(title: '', content: '', linkedNodeId: _node.id);
-          notesBox.put(newNote.id, newNote);
-          return newNote;
-        },
+        orElse: () => Note(content: ''),
       );
-      _noteController.text = _dayNote!.content;
+      if (existing.id.isNotEmpty) {
+        _dayNote = existing;
+        _noteController.text = _dayNote!.content;
+      } else {
+        // Заметка не найдена – создаём новую
+        final newNote = Note(title: '', content: '', linkedNodeId: _node.id);
+        notesBox.put(newNote.id, newNote);
+        _dayNote = newNote;
+        _noteController.clear();
+      }
     }
   }
 
@@ -58,6 +63,7 @@ class _BookScreenState extends State<BookScreen> {
     if (newContent != _dayNote!.content) {
       _dayNote!.content = newContent;
       _dayNote!.updatedAt = DateTime.now();
+      _dayNote!.linkedNodeId = _node.id; // гарантированно сохраняем привязку
       final notesBox = Hive.box<Note>('notes');
       notesBox.put(_dayNote!.id, _dayNote!);
     }

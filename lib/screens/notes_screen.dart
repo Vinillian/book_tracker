@@ -294,10 +294,10 @@ class _NotesScreenState extends State<NotesScreen> {
                 final filtered = _searchQuery.isEmpty
                     ? notes
                     : notes.where((note) {
-                  final query = _searchQuery.toLowerCase();
-                  return note.title.toLowerCase().contains(query) ||
-                      note.content.toLowerCase().contains(query);
-                }).toList();
+                        final query = _searchQuery.toLowerCase();
+                        return note.title.toLowerCase().contains(query) ||
+                            note.content.toLowerCase().contains(query);
+                      }).toList();
 
                 if (filtered.isEmpty) {
                   return const Center(child: Text('Ничего не найдено'));
