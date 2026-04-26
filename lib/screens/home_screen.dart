@@ -3,6 +3,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/node.dart';
 import '../models/note.dart';
+import '../models/history_entry.dart';
+import '../utils/file_transfer.dart';
 import 'editor_screen.dart';
 import 'book_screen.dart';
 import '../widgets/book_card.dart';
@@ -70,7 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _createEmptyBookWithName() {
-    final nameController = TextEditingController(text: 'Новая книга');
+    final TextEditingController nameController = TextEditingController(
+      text: 'Новая книга',
+    );
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -182,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showNewDayDialog() {
     DateTime selectedDate = DateTime.now();
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -204,7 +210,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       lastDate: DateTime(2030),
                     );
                     if (picked != null) {
-                      setStateDialog(() => selectedDate = picked);
+                      setStateDialog(() {
+                        selectedDate = picked;
+                      });
                     }
                   },
                 ),
@@ -261,7 +269,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     templatesBox.add(newDay);
 
-    // Создаём пустую дневную заметку
     final notesBox = Hive.box<Note>('notes');
     final dayNote = Note(content: '', linkedNodeId: newDay.id);
     notesBox.put(dayNote.id, dayNote);
@@ -294,6 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final newDay = copyAndReset(template);
     newDay.name = dateStr;
     newDay.category = 'planner';
+
     templatesBox.add(newDay);
 
     final notesBox = Hive.box<Note>('notes');
@@ -358,6 +366,159 @@ class _HomeScreenState extends State<HomeScreen> {
     _scaffoldKey.currentState?.openEndDrawer();
   }
 
+  // ========== Экспорт / Импорт ==========
+  Future<void> _exportBooks() async {
+    final ok = await FileTransfer.exportBox(
+      box: templatesBox,
+      categoryFilter: 'book',
+      suggestedName: 'books',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok ? 'Книги экспортированы' : 'Нет книг для экспорта или отменено',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _importBooks() async {
+    final count = await FileTransfer.importIntoBox(
+      box: templatesBox,
+      fromJson: Node.fromJson,
+      setCategory: 'book',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Импортировано книг: $count')));
+    }
+  }
+
+  Future<void> _exportPlans() async {
+    final ok = await FileTransfer.exportBox(
+      box: templatesBox,
+      categoryFilter: 'planner',
+      suggestedName: 'plans',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'Планы экспортированы'
+                : 'Нет планов для экспорта или отменено',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _importPlans() async {
+    final count = await FileTransfer.importIntoBox(
+      box: templatesBox,
+      fromJson: Node.fromJson,
+      setCategory: 'planner',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Импортировано планов: $count')));
+    }
+  }
+
+  Future<void> _exportTemplates() async {
+    final ok = await FileTransfer.exportBox(
+      box: templatesBox,
+      categoryFilter: 'template',
+      suggestedName: 'templates',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'Шаблоны экспортированы'
+                : 'Нет шаблонов для экспорта или отменено',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _importTemplates() async {
+    final count = await FileTransfer.importIntoBox(
+      box: templatesBox,
+      fromJson: Node.fromJson,
+      setCategory: 'template',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Импортировано шаблонов: $count')));
+    }
+  }
+
+  Future<void> _exportNotes() async {
+    final box = Hive.box<Note>('notes');
+    final ok = await FileTransfer.exportBox(box: box, suggestedName: 'notes');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'Заметки экспортированы'
+                : 'Нет заметок для экспорта или отменено',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _importNotes() async {
+    final box = Hive.box<Note>('notes');
+    final count = await FileTransfer.importIntoBox(
+      box: box,
+      fromJson: Note.fromJson,
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Импортировано заметок: $count')));
+    }
+  }
+
+  Future<void> _exportHistory() async {
+    final box = Hive.box<HistoryEntry>('history');
+    final ok = await FileTransfer.exportBox(box: box, suggestedName: 'history');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'История экспортирована'
+                : 'Нет истории для экспорта или отменено',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _importHistory() async {
+    final box = Hive.box<HistoryEntry>('history');
+    final count = await FileTransfer.importIntoBox(
+      box: box,
+      fromJson: HistoryEntry.fromJson,
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Импортировано записей истории: $count')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -386,26 +547,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _buildAppBarActions() {
-    final common = [
-      IconButton(
-        icon: const Icon(Icons.menu),
-        onPressed: _openDrawer,
-        tooltip: 'Меню',
-      ),
-    ];
+    final menuButton = IconButton(
+      icon: const Icon(Icons.menu),
+      onPressed: _openDrawer,
+      tooltip: 'Меню',
+    );
 
     if (_selectedIndex == 0) {
       return [
-        ...common,
         IconButton(
           icon: const Icon(Icons.add),
           onPressed: _showAddBookDialog,
           tooltip: 'Новая книга',
         ),
+        menuButton,
       ];
     } else {
       return [
-        ...common,
         IconButton(
           icon: const Icon(Icons.folder),
           onPressed: () => _openTemplateManager(selectionMode: false),
@@ -416,11 +574,26 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: _showNewDayDialog,
           tooltip: 'Новый день',
         ),
+        menuButton,
       ];
     }
   }
 
   Widget _buildDrawer() {
+    // Конфигурация пунктов импорта/экспорта для удобства и отсутствия дублирования
+    final List<_ExportImportEntry> exportImportEntries = [
+      _ExportImportEntry('Экспорт книг', _exportBooks),
+      _ExportImportEntry('Импорт книг', _importBooks),
+      _ExportImportEntry('Экспорт планов', _exportPlans),
+      _ExportImportEntry('Импорт планов', _importPlans),
+      _ExportImportEntry('Экспорт шаблонов', _exportTemplates),
+      _ExportImportEntry('Импорт шаблонов', _importTemplates),
+      _ExportImportEntry('Экспорт заметок', _exportNotes),
+      _ExportImportEntry('Импорт заметок', _importNotes),
+      _ExportImportEntry('Экспорт истории', _exportHistory),
+      _ExportImportEntry('Импорт истории', _importHistory),
+    ];
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -476,6 +649,20 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pop(context);
               _openTemplateManager(selectionMode: false);
             },
+          ),
+          const Divider(),
+          ExpansionTile(
+            leading: const Icon(Icons.import_export),
+            title: const Text('Экспорт / Импорт'),
+            children: exportImportEntries.map((entry) {
+              return ListTile(
+                title: Text(entry.title),
+                onTap: () {
+                  Navigator.pop(context);
+                  entry.action();
+                },
+              );
+            }).toList(),
           ),
           const Divider(),
           ListTile(
@@ -633,4 +820,11 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+}
+
+/// Вспомогательный класс для генерации пунктов меню экспорта/импорта
+class _ExportImportEntry {
+  final String title;
+  final VoidCallback action;
+  const _ExportImportEntry(this.title, this.action);
 }
