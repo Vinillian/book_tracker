@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../models/history_entry.dart';
 import '../models/node.dart';
 import '../models/note.dart';
-import '../utils/history_service.dart';
+import '../services/history_service.dart';
 import 'book_screen.dart';
 
 class CalendarScreen extends StatefulWidget {

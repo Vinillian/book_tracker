@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
-import '../utils/history_service.dart';
+import '../services/history_service.dart';
 
 class ViewItemScreen extends StatefulWidget {
   final String bookId;

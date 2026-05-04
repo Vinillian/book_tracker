@@ -8,6 +8,7 @@ import 'models/settings.dart';
 import 'models/history_entry.dart';
 import 'models/note.dart';
 import 'screens/home_screen.dart';
+import 'services/service_locator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,32 +100,33 @@ void main() async {
     await Hive.openBox<Note>('notes');
   }
 
+  // Инициализируем сервисы
+  ServiceLocator.instance.init(
+    templatesBox: Hive.box<Node>('templates'),
+    notesBox: Hive.box<Note>('notes'),
+  );
+
   // Миграция: выдаём уникальный ID всем существующим планам, у которых его нет или он равен шаблонным
-  _migrateExistingPlans();
+  _migrateExistingPlans(Hive.box<Node>('templates'));
 
   runApp(const MyApp());
 }
 
 /// Однократная миграция старых планов — присваивает уникальный ID,
 /// если он отсутствует или совпадает с идентификаторами шаблонов.
-void _migrateExistingPlans() {
-  final templatesBox = Hive.box<Node>('templates');
-  final plans = templatesBox.values
-      .where((n) => n.category == 'planner')
-      .toList();
+void _migrateExistingPlans(Box<Node> templatesBox) {
+  final nodeService = ServiceLocator.instance.nodeService;
+  final plans = nodeService.plans;
 
   for (final plan in plans) {
     if (plan.id.isEmpty ||
         plan.id == 'template-workday' ||
         plan.id == 'template-restday') {
       final newId = const Uuid().v4();
-      final key = templatesBox.keys.firstWhere(
-        (k) => templatesBox.get(k) == plan,
-        orElse: () => null,
-      );
+      final key = nodeService.getKey(plan);
       if (key != null) {
         plan.id = newId;
-        templatesBox.put(key, plan);
+        nodeService.update(key, plan);
       }
     }
   }
