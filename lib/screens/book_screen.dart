@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/node.dart';
+import '../providers/app_state.dart';
 import 'components/progress_card.dart';
 import 'components/day_note_card.dart';
 import 'components/chapter_tree_view.dart';
@@ -41,12 +43,10 @@ class _BookScreenState extends State<BookScreen> {
     if (newName.isNotEmpty && newName != _node.name) {
       setState(() => _node.name = newName);
       widget.onNodeUpdated();
+      // Уведомляем провайдер, что данные изменились (если нужно)
+      context.read<AppState>().notify();
     }
     setState(() => _isEditingTitle = false);
-  }
-
-  void _startEditingTitle() {
-    setState(() => _isEditingTitle = true);
   }
 
   @override
@@ -69,7 +69,7 @@ class _BookScreenState extends State<BookScreen> {
                 onSubmitted: (_) => _saveTitle(),
               )
             : GestureDetector(
-                onTap: _startEditingTitle,
+                onTap: () => setState(() => _isEditingTitle = true),
                 child: Text(_node.name),
               ),
         actions: _isEditingTitle

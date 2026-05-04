@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/node.dart';
 import '../../models/note.dart';
-import '../../services/service_locator.dart';
+import '../../providers/app_state.dart';
 
 class DayNoteCard extends StatefulWidget {
   final Node node;
@@ -24,11 +25,11 @@ class _DayNoteCardState extends State<DayNoteCard> {
   }
 
   void _loadDayNote() {
-    final noteService = ServiceLocator.instance.noteService;
-    _dayNote = noteService.getNoteForDay(widget.node.id);
+    final appState = context.read<AppState>();
+    _dayNote = appState.getNoteForDay(widget.node.id);
     if (_dayNote == null) {
-      noteService.createNoteForDay(widget.node.id);
-      _dayNote = noteService.getNoteForDay(widget.node.id);
+      appState.createNoteForDay(widget.node.id);
+      _dayNote = appState.getNoteForDay(widget.node.id);
     }
     _noteController.text = _dayNote?.content ?? '';
   }
@@ -38,7 +39,7 @@ class _DayNoteCardState extends State<DayNoteCard> {
     final newContent = _noteController.text.trim();
     if (newContent != _dayNote!.content) {
       _dayNote!.content = newContent;
-      ServiceLocator.instance.noteService.save(_dayNote!);
+      context.read<AppState>().saveNote(_dayNote!);
     }
     setState(() => _isEditingNote = false);
   }

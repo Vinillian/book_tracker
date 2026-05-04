@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/node.dart';
-import '../services/service_locator.dart';
+import '../providers/app_state.dart';
 import 'template_manager_screen.dart';
 import 'components/books_tab_view.dart';
 import 'components/planner_tab_view.dart';
@@ -87,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [],
                 category: 'book',
               );
-              ServiceLocator.instance.nodeService.add(newBook);
+              context.read<AppState>().addNode(newBook);
               Navigator.pop(ctx);
             },
             child: const Text('Создать'),
@@ -108,8 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     if (selected != null && mounted) {
-      final nodeService = ServiceLocator.instance.nodeService;
-      // Глубокое копирование со сбросом прогресса и установкой категории 'book'
+      final appState = context.read<AppState>();
       Node copyAndReset(Node node) {
         final copy = node.deepCopy();
         copy.category = 'book';
@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final newBook = copyAndReset(selected);
       newBook.name = selected.name;
-      nodeService.add(newBook);
+      appState.addNode(newBook);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Книга "${newBook.name}" создана из шаблона')),
       );
@@ -194,15 +194,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _addEmptyDay(DateTime date) {
-    final nodeService = ServiceLocator.instance.nodeService;
+    final appState = context.read<AppState>();
     final dateStr = DateFormat('dd.MM.yyyy').format(date);
-    if (nodeService.planExistsForDate(date)) {
+    if (appState.planExistsForDate(date)) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('День "$dateStr" уже существует')));
       return;
     }
-    nodeService.addEmptyDay(date);
+    appState.addEmptyDay(date);
   }
 
   void _openTemplateManagerForDay(DateTime date) async {
@@ -216,15 +216,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     if (selected != null && mounted) {
-      final nodeService = ServiceLocator.instance.nodeService;
+      final appState = context.read<AppState>();
       final dateStr = DateFormat('dd.MM.yyyy').format(date);
-      if (nodeService.planExistsForDate(date)) {
+      if (appState.planExistsForDate(date)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('День "$dateStr" уже существует')),
         );
         return;
       }
-      final newDay = nodeService.addDayFromTemplate(selected, date);
+      final newDay = appState.addDayFromTemplate(selected, date);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('День "$dateStr" создан из шаблона "${selected.name}"'),
