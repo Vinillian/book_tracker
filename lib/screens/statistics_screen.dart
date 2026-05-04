@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../models/node.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_state.dart';
 import '../widgets/activity_calendar.dart';
 
 class StatisticsScreen extends StatelessWidget {
@@ -8,16 +8,11 @@ class StatisticsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final templatesBox = Hive.box<Node>('templates');
-
     return Scaffold(
       appBar: AppBar(title: const Text('Статистика')),
-      body: ValueListenableBuilder(
-        valueListenable: templatesBox.listenable(),
-        builder: (context, Box<Node> box, _) {
-          final nodes = box.values
-              .where((n) => n.category == 'book' || n.category == 'planner')
-              .toList();
+      body: Consumer<AppState>(
+        builder: (context, appState, _) {
+          final nodes = [...appState.books, ...appState.plans];
 
           if (nodes.isEmpty) {
             return const Center(
@@ -25,8 +20,8 @@ class StatisticsScreen extends StatelessWidget {
             );
           }
 
-          int totalBooks = nodes.where((n) => n.category == 'book').length;
-          int totalPlans = nodes.where((n) => n.category == 'planner').length;
+          int totalBooks = appState.books.length;
+          int totalPlans = appState.plans.length;
           int totalLeaves = 0;
           int completedLeaves = 0;
 

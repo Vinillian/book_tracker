@@ -9,8 +9,9 @@ import 'models/settings.dart';
 import 'models/history_entry.dart';
 import 'models/note.dart';
 import 'screens/home_screen.dart';
-import 'services/service_locator.dart';
 import 'providers/app_state.dart';
+import 'services/node_service.dart';
+import 'services/note_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,11 +28,8 @@ void main() async {
   Box<HistoryEntry> historyBox = await _openBox<HistoryEntry>('history');
   Box<Note> notesBox = await _openBox<Note>('notes');
 
-  // Инициализируем ServiceLocator (для обратной совместимости, пока все экраны не переведены)
-  ServiceLocator.instance.init(templatesBox: templatesBox, notesBox: notesBox);
-
-  // Миграция старых планов
-  _migrateExistingPlans(templatesBox);
+  // Миграция старых планов (выполняется до создания AppState)
+  _migrateExistingPlans(templatesBox, notesBox);
 
   runApp(
     ChangeNotifierProvider(
@@ -67,8 +65,10 @@ Future<Box<T>> _openBox<T>(String name) async {
   }
 }
 
-void _migrateExistingPlans(Box<Node> templatesBox) {
-  final nodeService = ServiceLocator.instance.nodeService;
+void _migrateExistingPlans(Box<Node> templatesBox, Box<Note> notesBox) {
+  // Создаём временные сервисы только для миграции
+  final noteService = NoteService(notesBox);
+  final nodeService = NodeService(templatesBox, noteService);
   final plans = nodeService.plans;
 
   for (final plan in plans) {

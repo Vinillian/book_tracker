@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/note.dart';
+import '../providers/app_state.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -11,16 +12,9 @@ class NotesScreen extends StatefulWidget {
 }
 
 class _NotesScreenState extends State<NotesScreen> {
-  late Box<Note> notesBox;
   String _searchQuery = '';
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    notesBox = Hive.box<Note>('notes');
-  }
 
   @override
   void dispose() {
@@ -51,8 +45,7 @@ class _NotesScreenState extends State<NotesScreen> {
       ),
     );
     if (confirmed == true) {
-      await notesBox.delete(note.id);
-      setState(() {});
+      context.read<AppState>().deleteNote(note.id);
     }
   }
 
@@ -120,20 +113,19 @@ class _NotesScreenState extends State<NotesScreen> {
                         Navigator.pop(ctx);
                         return;
                       }
+                      final appState = context.read<AppState>();
                       if (note == null) {
                         final newNote = Note(
                           title: title.isEmpty ? 'Без заголовка' : title,
                           content: content,
                         );
-                        notesBox.put(newNote.id, newNote);
+                        appState.saveNote(newNote);
                       } else {
                         note.title = title.isEmpty ? 'Без заголовка' : title;
                         note.content = content;
-                        note.updatedAt = DateTime.now();
-                        notesBox.put(note.id, note);
+                        appState.saveNote(note);
                       }
                       Navigator.pop(ctx);
-                      setState(() {});
                     },
                     child: Text(note == null ? 'Создать' : 'Сохранить'),
                   ),
@@ -180,13 +172,9 @@ class _NotesScreenState extends State<NotesScreen> {
             ),
           ),
           Expanded(
-            child: ValueListenableBuilder(
-              valueListenable: notesBox.listenable(),
-              builder: (context, Box<Note> box, _) {
-                final notes = box.values
-                    .where((n) => n.linkedNodeId == null)
-                    .toList();
-
+            child: Consumer<AppState>(
+              builder: (context, appState, _) {
+                final notes = appState.inboxNotes;
                 if (notes.isEmpty) {
                   return const Center(
                     child: Text('Нет заметок. Нажмите + чтобы создать.'),
