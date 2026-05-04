@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/history_entry.dart';
 import '../models/node.dart';
-import '../models/note.dart';
-import '../utils/history_service.dart';
+import '../providers/app_state.dart';
+import '../services/history_service.dart';
 import 'book_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -19,7 +19,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   Map<DateTime, List<HistoryEntry>> _events = {};
-  final Box<Node> _templatesBox = Hive.box<Node>('templates');
 
   @override
   void initState() {
@@ -40,41 +39,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   String _getBookName(String bookId) {
-    final book = _templatesBox.values.firstWhere(
-      (b) => b.id == bookId,
-      orElse: () => Node(name: 'Книга удалена', children: []),
-    );
-    return book.name;
+    final appState = context.read<AppState>();
+    final book = appState.getNodeById(bookId);
+    return book?.name ?? 'Книга удалена';
   }
 
   Node? _existingPlanForDay(DateTime day) {
     final dateStr = DateFormat('dd.MM.yyyy').format(day);
-    try {
-      return _templatesBox.values.firstWhere(
-        (n) => n.name == dateStr && n.category == 'planner',
-      );
-    } catch (_) {
-      return null;
-    }
+    final appState = context.read<AppState>();
+    return appState.plans.cast<Node?>().firstWhere(
+      (n) => n!.name == dateStr,
+      orElse: () => null,
+    );
   }
 
   Future<void> _createOrOpenPlan(DateTime day) async {
+    final appState = context.read<AppState>();
     final dateStr = DateFormat('dd.MM.yyyy').format(day);
     final existing = _existingPlanForDay(day);
 
     if (existing != null) {
+      final key = appState.getKeyForNode(existing);
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => BookScreen(
             node: existing,
-            onNodeUpdated: () {
-              final key = _templatesBox.keys.firstWhere(
-                (k) => _templatesBox.get(k) == existing,
-              );
-              _templatesBox.put(key, existing);
-              setState(() {});
-            },
+            onNodeUpdated: () => appState.updateNode(key, existing),
           ),
         ),
       );
@@ -85,26 +76,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
         category: 'planner',
         stepType: 'folder',
       );
-      await _templatesBox.add(newPlan);
-
-      // Создаём пустую заметку для нового дня (как в HomeScreen)
-      final notesBox = Hive.box<Note>('notes');
-      final dayNote = Note(content: '', linkedNodeId: newPlan.id);
-      await notesBox.put(dayNote.id, dayNote);
-
-      setState(() {});
+      appState.addNode(newPlan);
+      appState.createNoteForDay(newPlan.id);
 
       if (mounted) {
+        final key = appState.getKeyForNode(newPlan);
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => BookScreen(
               node: newPlan,
-              onNodeUpdated: () {
-                final key = _templatesBox.keys.last;
-                _templatesBox.put(key, newPlan);
-                setState(() {});
-              },
+              onNodeUpdated: () => appState.updateNode(key, newPlan),
             ),
           ),
         );

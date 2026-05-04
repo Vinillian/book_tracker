@@ -2,12 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'models/node.dart';
 import 'models/settings.dart';
 import 'models/history_entry.dart';
 import 'models/note.dart';
 import 'screens/home_screen.dart';
+import 'providers/app_state.dart';
+import 'services/node_service.dart';
+import 'services/note_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,113 +22,64 @@ void main() async {
   Hive.registerAdapter(HistoryEntryAdapter());
   Hive.registerAdapter(NoteAdapter());
 
-  // Открываем бокс для книг и планов
-  try {
-    await Hive.openBox<Node>('templates');
-  } catch (e) {
-    debugPrint('Ошибка открытия templates: $e');
-    await Hive.close();
-    final appDir = await getApplicationDocumentsDirectory();
-    final hiveDir = Directory('${appDir.path}/app_flutter');
-    final filesToDelete = [
-      '${hiveDir.path}/templates.hive',
-      '${hiveDir.path}/templates.lock',
-    ];
-    for (final filePath in filesToDelete) {
-      try {
-        final file = File(filePath);
-        if (await file.exists()) await file.delete();
-      } catch (_) {}
-    }
-    await Hive.openBox<Node>('templates');
-  }
+  // Открываем боксы с обработкой ошибок
+  Box<Node> templatesBox = await _openBox<Node>('templates');
+  Box<AppSettings> settingsBox = await _openBox<AppSettings>('settings');
+  Box<HistoryEntry> historyBox = await _openBox<HistoryEntry>('history');
+  Box<Note> notesBox = await _openBox<Note>('notes');
 
-  try {
-    await Hive.openBox<AppSettings>('settings');
-  } catch (e) {
-    debugPrint('Ошибка открытия settings: $e');
-    await Hive.close();
-    final appDir = await getApplicationDocumentsDirectory();
-    final hiveDir = Directory('${appDir.path}/app_flutter');
-    final filesToDelete = [
-      '${hiveDir.path}/settings.hive',
-      '${hiveDir.path}/settings.lock',
-    ];
-    for (final filePath in filesToDelete) {
-      try {
-        final file = File(filePath);
-        if (await file.exists()) await file.delete();
-      } catch (_) {}
-    }
-    await Hive.openBox<AppSettings>('settings');
-  }
+  // Миграция старых планов (выполняется до создания AppState)
+  _migrateExistingPlans(templatesBox, notesBox);
 
-  try {
-    await Hive.openBox<HistoryEntry>('history');
-  } catch (e) {
-    debugPrint('Ошибка открытия history: $e');
-    await Hive.close();
-    final appDir = await getApplicationDocumentsDirectory();
-    final hiveDir = Directory('${appDir.path}/app_flutter');
-    final filesToDelete = [
-      '${hiveDir.path}/history.hive',
-      '${hiveDir.path}/history.lock',
-    ];
-    for (final filePath in filesToDelete) {
-      try {
-        final file = File(filePath);
-        if (await file.exists()) await file.delete();
-      } catch (_) {}
-    }
-    await Hive.openBox<HistoryEntry>('history');
-  }
-
-  try {
-    await Hive.openBox<Note>('notes');
-  } catch (e) {
-    debugPrint('Ошибка открытия notes: $e');
-    await Hive.close();
-    final appDir = await getApplicationDocumentsDirectory();
-    final hiveDir = Directory('${appDir.path}/app_flutter');
-    final filesToDelete = [
-      '${hiveDir.path}/notes.hive',
-      '${hiveDir.path}/notes.lock',
-    ];
-    for (final filePath in filesToDelete) {
-      try {
-        final file = File(filePath);
-        if (await file.exists()) await file.delete();
-      } catch (_) {}
-    }
-    await Hive.openBox<Note>('notes');
-  }
-
-  // Миграция: выдаём уникальный ID всем существующим планам, у которых его нет или он равен шаблонным
-  _migrateExistingPlans();
-
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AppState(
+        templatesBox: templatesBox,
+        notesBox: notesBox,
+        historyBox: historyBox,
+      ),
+      child: const MyApp(),
+    ),
+  );
 }
 
-/// Однократная миграция старых планов — присваивает уникальный ID,
-/// если он отсутствует или совпадает с идентификаторами шаблонов.
-void _migrateExistingPlans() {
-  final templatesBox = Hive.box<Node>('templates');
-  final plans = templatesBox.values
-      .where((n) => n.category == 'planner')
-      .toList();
+Future<Box<T>> _openBox<T>(String name) async {
+  try {
+    return await Hive.openBox<T>(name);
+  } catch (e) {
+    debugPrint('Ошибка открытия $name: $e');
+    await Hive.close();
+    final appDir = await getApplicationDocumentsDirectory();
+    final hiveDir = Directory('${appDir.path}/app_flutter');
+    final filesToDelete = [
+      '${hiveDir.path}/$name.hive',
+      '${hiveDir.path}/$name.lock',
+    ];
+    for (final filePath in filesToDelete) {
+      try {
+        final file = File(filePath);
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+    }
+    return await Hive.openBox<T>(name);
+  }
+}
+
+void _migrateExistingPlans(Box<Node> templatesBox, Box<Note> notesBox) {
+  // Создаём временные сервисы только для миграции
+  final noteService = NoteService(notesBox);
+  final nodeService = NodeService(templatesBox, noteService);
+  final plans = nodeService.plans;
 
   for (final plan in plans) {
     if (plan.id.isEmpty ||
         plan.id == 'template-workday' ||
         plan.id == 'template-restday') {
       final newId = const Uuid().v4();
-      final key = templatesBox.keys.firstWhere(
-        (k) => templatesBox.get(k) == plan,
-        orElse: () => null,
-      );
+      final key = nodeService.getKey(plan);
       if (key != null) {
         plan.id = newId;
-        templatesBox.put(key, plan);
+        nodeService.update(key, plan);
       }
     }
   }

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../models/note.dart';
 import '../models/history_entry.dart';
+import '../providers/app_state.dart';
 import '../utils/file_transfer.dart';
 
 class BackupRestoreScreen extends StatefulWidget {
@@ -13,68 +14,68 @@ class BackupRestoreScreen extends StatefulWidget {
 }
 
 class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
-  late final Box<Node> templatesBox;
-  late final Box<Note> notesBox;
-  late final Box<HistoryEntry> historyBox;
+  late final AppState _appState;
 
   @override
   void initState() {
     super.initState();
-    templatesBox = Hive.box<Node>('templates');
-    notesBox = Hive.box<Note>('notes');
-    historyBox = Hive.box<HistoryEntry>('history');
+    _appState = context.read<AppState>();
   }
 
   // ========== Действия ==========
   Future<bool> _exportBooks() => FileTransfer.exportBox(
-    box: templatesBox,
+    box: _appState.templatesBox,
     categoryFilter: 'book',
     suggestedName: 'books',
   );
   Future<int> _importBooks() => FileTransfer.importIntoBox(
-    box: templatesBox,
+    box: _appState.templatesBox,
     fromJson: Node.fromJson,
     setCategory: 'book',
   );
   Future<bool> _exportPlans() => FileTransfer.exportBox(
-    box: templatesBox,
+    box: _appState.templatesBox,
     categoryFilter: 'planner',
     suggestedName: 'plans',
   );
   Future<int> _importPlans() => FileTransfer.importIntoBox(
-    box: templatesBox,
+    box: _appState.templatesBox,
     fromJson: Node.fromJson,
     setCategory: 'planner',
   );
   Future<bool> _exportTemplates() => FileTransfer.exportBox(
-    box: templatesBox,
+    box: _appState.templatesBox,
     categoryFilter: 'template',
     suggestedName: 'templates',
   );
   Future<int> _importTemplates() => FileTransfer.importIntoBox(
-    box: templatesBox,
+    box: _appState.templatesBox,
     fromJson: Node.fromJson,
     setCategory: 'template',
   );
   Future<bool> _exportNotes() =>
-      FileTransfer.exportBox(box: notesBox, suggestedName: 'notes');
-  Future<int> _importNotes() =>
-      FileTransfer.importIntoBox(box: notesBox, fromJson: Note.fromJson);
-  Future<bool> _exportHistory() =>
-      FileTransfer.exportBox(box: historyBox, suggestedName: 'history');
+      FileTransfer.exportBox(box: _appState.notesBox, suggestedName: 'notes');
+  Future<int> _importNotes() => FileTransfer.importIntoBox(
+    box: _appState.notesBox,
+    fromJson: Note.fromJson,
+  );
+  Future<bool> _exportHistory() => FileTransfer.exportBox(
+    box: _appState.historyBox,
+    suggestedName: 'history',
+  );
   Future<int> _importHistory() => FileTransfer.importIntoBox(
-    box: historyBox,
+    box: _appState.historyBox,
     fromJson: HistoryEntry.fromJson,
   );
   Future<bool> _exportAll() => FileTransfer.exportAll(
-    templatesBox: templatesBox,
-    notesBox: notesBox,
-    historyBox: historyBox,
+    templatesBox: _appState.templatesBox,
+    notesBox: _appState.notesBox,
+    historyBox: _appState.historyBox,
   );
   Future<bool> _importAll() => FileTransfer.importAll(
-    templatesBox: templatesBox,
-    notesBox: notesBox,
-    historyBox: historyBox,
+    templatesBox: _appState.templatesBox,
+    notesBox: _appState.notesBox,
+    historyBox: _appState.historyBox,
   );
 
   // ========== Вспомогательные методы для SnackBar ==========
