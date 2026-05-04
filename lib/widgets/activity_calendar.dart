@@ -24,7 +24,7 @@ class ActivityCalendar extends StatelessWidget {
     for (final entry in historyBox.values) {
       final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
       if (map.containsKey(date)) {
-        map[date] = (map[date] ?? 0) + 1;
+        map[date] = (map[date] ?? 0) + 1; // исправлено
       }
     }
     return map;
@@ -91,7 +91,7 @@ class ActivityCalendar extends StatelessWidget {
               width: width,
               child: Center(
                 child: Text(
-                  currentMonth!,
+                  currentMonth, // <-- убрали !
                   style: const TextStyle(fontSize: 10, color: Colors.white70),
                 ),
               ),

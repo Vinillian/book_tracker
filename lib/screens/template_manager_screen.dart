@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/node.dart';
 import 'editor_screen.dart';
-import '../utils/file_utils.dart';
 
 class TemplateManagerScreen extends StatefulWidget {
   final bool selectionMode;
-  final String? filterCategory; // <-- добавлено
+  final String? filterCategory;
 
   const TemplateManagerScreen({
     super.key,
@@ -34,50 +33,6 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
       category: 'template',
     );
     templatesBox.add(newTemplate);
-  }
-
-  Future<void> _importTemplate() async {
-    try {
-      final imported = await FileUtils.importTemplate();
-      if (imported != null) {
-        imported.category = 'template';
-        templatesBox.add(imported);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Шаблон "${imported.name}" импортирован')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка импорта: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _exportTemplate(Node template) async {
-    try {
-      await FileUtils.exportTemplate(template);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Шаблон "${template.name}" экспортирован')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка экспорта: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   void _deleteTemplate(dynamic key) {
@@ -109,17 +64,12 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
         actions: widget.selectionMode
             ? null
             : [
-                IconButton(
-                  icon: const Icon(Icons.download),
-                  onPressed: _importTemplate,
-                  tooltip: 'Импорт шаблона',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: _addTemplate,
-                  tooltip: 'Новый шаблон',
-                ),
-              ],
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _addTemplate,
+            tooltip: 'Новый шаблон',
+          ),
+        ],
       ),
       body: ValueListenableBuilder(
         valueListenable: templatesBox.listenable(),
@@ -128,14 +78,8 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
               .where((n) => n.category == 'template')
               .toList();
 
-          // Фильтрация по категории (для book/planner)
           if (widget.filterCategory != null) {
-            templates = templates.where((t) {
-              // Здесь можно добавить дополнительную логику,
-              // например, проверять какое-то свойство шаблона.
-              // Пока просто возвращаем все.
-              return true;
-            }).toList();
+            templates = templates.where((t) => true).toList();
           }
 
           if (templates.isEmpty) {
@@ -158,22 +102,18 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                   trailing: widget.selectionMode
                       ? const Icon(Icons.arrow_forward)
                       : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _editTemplate(key, template),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.upload),
-                              onPressed: () => _exportTemplate(template),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => _deleteTemplate(key),
-                            ),
-                          ],
-                        ),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _editTemplate(key, template),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => _deleteTemplate(key),
+                      ),
+                    ],
+                  ),
                   onTap: () {
                     if (widget.selectionMode) {
                       _selectTemplate(template);

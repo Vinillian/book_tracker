@@ -21,7 +21,7 @@ class Note {
   DateTime updatedAt;
 
   @HiveField(5)
-  String? linkedNodeId; // ID связанного узла (дня)
+  String? linkedNodeId; // ID связанного дня (плана)
 
   Note({
     String? id,
@@ -35,29 +35,25 @@ class Note {
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'content': content,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'linkedNodeId': linkedNodeId,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'content': content,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'linkedNodeId': linkedNodeId,
+  };
 
-  factory Note.fromJson(Map<String, dynamic> json) {
-    return Note(
-      id: json['id'],
-      title: json['title'],
-      content: json['content'] ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : null,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : null,
-      linkedNodeId: json['linkedNodeId'],
-    );
-  }
+  factory Note.fromJson(Map<String, dynamic> json) => Note(
+    id: json['id'],
+    title: json['title'] ?? '',
+    content: json['content'] ?? '',
+    createdAt: json['createdAt'] != null
+        ? DateTime.parse(json['createdAt'])
+        : null,
+    updatedAt: json['updatedAt'] != null
+        ? DateTime.parse(json['updatedAt'])
+        : null,
+    linkedNodeId: json['linkedNodeId'],
+  );
 }

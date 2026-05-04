@@ -6,7 +6,6 @@ class BookCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
-  final VoidCallback? onExport;
 
   const BookCard({
     super.key,
@@ -14,7 +13,6 @@ class BookCard extends StatelessWidget {
     required this.onTap,
     this.onEdit,
     this.onDelete,
-    this.onExport,
   });
 
   @override
@@ -46,12 +44,10 @@ class BookCard extends StatelessWidget {
           onSelected: (value) {
             if (value == 'edit') onEdit?.call();
             if (value == 'delete') onDelete?.call();
-            if (value == 'export') onExport?.call();
           },
           itemBuilder: (context) => const [
             PopupMenuItem(value: 'edit', child: Text('Редактировать')),
             PopupMenuItem(value: 'delete', child: Text('Удалить')),
-            PopupMenuItem(value: 'export', child: Text('Экспорт')),
           ],
           icon: const Icon(Icons.more_vert),
         ),

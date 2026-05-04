@@ -3,10 +3,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/node.dart';
 import '../models/note.dart';
-import '../utils/backup_service.dart';
+import 'backup_restore_screen.dart';
 import 'editor_screen.dart';
 import 'book_screen.dart';
-import '../utils/file_utils.dart';
 import '../widgets/book_card.dart';
 import 'settings_screen.dart';
 import 'statistics_screen.dart';
@@ -140,37 +139,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Книга "${newBook.name}" создана из шаблона')),
       );
-    }
-  }
-
-  Future<void> _importBook() async {
-    try {
-      final imported = await FileUtils.importTemplate(addHistory: true);
-      if (imported != null) {
-        imported.category ??= 'book';
-        final existingKey = templatesBox.keys.firstWhere(
-          (k) => templatesBox.get(k)?.id == imported.id,
-          orElse: () => null,
-        );
-        if (existingKey != null) {
-          await templatesBox.delete(existingKey);
-        }
-        await templatesBox.add(imported);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Книга "${imported.name}" импортирована')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка импорта: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
@@ -393,169 +361,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openDrawer() {
-    _scaffoldKey.currentState?.openEndDrawer();
+  void _openBackupRestore() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BackupRestoreScreen()),
+    );
   }
 
-  void _showBackupDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Резервное копирование'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.save_alt),
-                title: const Text('Экспорт полного бэкапа'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final path = await BackupService.exportFullBackup();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          path != null
-                              ? 'Бэкап сохранён в $path'
-                              : 'Ошибка экспорта',
-                        ),
-                      ),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.upload_file),
-                title: const Text('Импорт из полного бэкапа'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (c) => AlertDialog(
-                      title: const Text('Восстановление'),
-                      content: const Text(
-                        'Все текущие данные будут заменены. Продолжить?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(c, false),
-                          child: const Text('Отмена'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(c, true),
-                          child: const Text('Заменить'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirmed != true) return;
-                  final result = await BackupService.importFullBackup(
-                    clearExisting: true,
-                  );
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          result != null ? 'Восстановлено' : 'Ошибка импорта',
-                        ),
-                      ),
-                    );
-                  }
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.book),
-                title: const Text('Экспорт книг'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final path = await BackupService.exportBooks();
-                  if (mounted)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          path != null ? 'Книги экспортированы' : 'Нет книг',
-                        ),
-                      ),
-                    );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.calendar_today),
-                title: const Text('Экспорт планов'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final path = await BackupService.exportPlans();
-                  if (mounted)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          path != null ? 'Планы экспортированы' : 'Нет планов',
-                        ),
-                      ),
-                    );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.folder),
-                title: const Text('Экспорт шаблонов'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final path = await BackupService.exportTemplates();
-                  if (mounted)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          path != null
-                              ? 'Шаблоны экспортированы'
-                              : 'Нет шаблонов',
-                        ),
-                      ),
-                    );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.note),
-                title: const Text('Экспорт заметок'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final path = await BackupService.exportNotes();
-                  if (mounted)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          path != null
-                              ? 'Заметки экспортированы'
-                              : 'Нет заметок',
-                        ),
-                      ),
-                    );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.history),
-                title: const Text('Экспорт истории'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final path = await BackupService.exportHistory();
-                  if (mounted)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          path != null
-                              ? 'История экспортирована'
-                              : 'Нет истории',
-                        ),
-                      ),
-                    );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openEndDrawer();
   }
 
   @override
@@ -586,26 +400,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _buildAppBarActions() {
-    final common = [
-      IconButton(
-        icon: const Icon(Icons.menu),
-        onPressed: _openDrawer,
-        tooltip: 'Меню',
-      ),
-    ];
+    final menuButton = IconButton(
+      icon: const Icon(Icons.menu),
+      onPressed: _openDrawer,
+      tooltip: 'Меню',
+    );
 
     if (_selectedIndex == 0) {
       return [
-        ...common,
         IconButton(
           icon: const Icon(Icons.add),
           onPressed: _showAddBookDialog,
           tooltip: 'Новая книга',
         ),
+        menuButton,
       ];
     } else {
       return [
-        ...common,
         IconButton(
           icon: const Icon(Icons.folder),
           onPressed: () => _openTemplateManager(selectionMode: false),
@@ -616,6 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: _showNewDayDialog,
           tooltip: 'Новый день',
         ),
+        menuButton,
       ];
     }
   }
@@ -677,21 +489,13 @@ class _HomeScreenState extends State<HomeScreen> {
               _openTemplateManager(selectionMode: false);
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.download),
-            title: const Text('Импорт книги'),
-            onTap: () {
-              Navigator.pop(context);
-              _importBook();
-            },
-          ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.backup),
-            title: const Text('Резервное копирование'),
+            leading: const Icon(Icons.import_export),
+            title: const Text('Импорт / Экспорт'),
             onTap: () {
               Navigator.pop(context);
-              _showBackupDialog();
+              _openBackupRestore();
             },
           ),
           const Divider(),
@@ -776,7 +580,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     onEdit: () => _editBook(key, book),
                     onDelete: () => _deleteBook(key),
-                    onExport: () => FileUtils.exportTemplate(book),
                   );
                 },
               );
