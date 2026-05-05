@@ -46,6 +46,10 @@ class _DayNoteCardState extends State<DayNoteCard> {
 
   @override
   void dispose() {
+    // Автосохранение заметки, если пользователь редактировал и уходит с экрана
+    if (_isEditingNote) {
+      _saveDayNote();
+    }
     _noteController.dispose();
     super.dispose();
   }

@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:uuid/uuid.dart';
 import '../models/node.dart';
 import 'note_service.dart';
 
@@ -107,6 +108,7 @@ class NodeService {
 
   Node _copyAndReset(Node node) {
     final copy = node.deepCopy();
+    copy.id = const Uuid().v4(); // ← гарантированно уникальный ID
     if (copy.children.isEmpty) {
       copy.completed = false;
       copy.completedSteps = 0;

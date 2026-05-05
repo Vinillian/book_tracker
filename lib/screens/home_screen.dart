@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
 import 'template_manager_screen.dart';
@@ -120,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final appState = context.read<AppState>();
       Node copyAndReset(Node node) {
         final copy = node.deepCopy();
+        copy.id = const Uuid().v4(); // ← гарантированно уникальный ID
         copy.category = 'book';
         if (copy.children.isEmpty) {
           copy.completed = false;
