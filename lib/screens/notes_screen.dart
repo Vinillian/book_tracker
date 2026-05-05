@@ -35,6 +35,9 @@ class _NotesScreenState extends State<NotesScreen> {
   void _editNote(Note note) => _showNoteEditor(note: note);
 
   void _deleteNote(Note note) async {
+    final appState = context
+        .read<AppState>(); // <-- захватили до асинхронной операции
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -53,7 +56,7 @@ class _NotesScreenState extends State<NotesScreen> {
       ),
     );
     if (confirmed == true) {
-      context.read<AppState>().deleteNote(note.id);
+      appState.deleteNote(note.id);
     }
   }
 

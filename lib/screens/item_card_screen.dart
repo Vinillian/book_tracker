@@ -5,8 +5,14 @@ import 'editor_screen.dart';
 class ItemCardScreen extends StatefulWidget {
   final Node node;
   final bool isNew;
+  final bool quickAdd;
 
-  const ItemCardScreen({super.key, required this.node, this.isNew = false});
+  const ItemCardScreen({
+    super.key,
+    required this.node,
+    this.isNew = false,
+    this.quickAdd = false,
+  });
 
   @override
   State<ItemCardScreen> createState() => _ItemCardScreenState();
@@ -20,6 +26,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   late int _totalSteps;
   late int _completedSteps;
   late bool _excludeFromHistory;
+  bool _didSave = false;
 
   @override
   void initState() {
@@ -37,11 +44,18 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   void dispose() {
     _nameController.dispose();
     _totalStepsController.dispose();
+    if (!_didSave) {
+      if (widget.quickAdd) {
+        Navigator.pop(context, null);
+      } else {
+        _saveOnDispose();
+      }
+    }
     super.dispose();
   }
 
-  void _save() {
-    _workingCopy.name = _nameController.text;
+  void _saveOnDispose() {
+    _workingCopy.name = _nameController.text.trim();
     _workingCopy.stepType = _stepType;
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
@@ -53,6 +67,15 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
       _workingCopy.completed = false;
     }
     Navigator.pop(context, _workingCopy);
+  }
+
+  void _save() {
+    _didSave = true;
+    _saveOnDispose();
+  }
+
+  void _cancel() {
+    Navigator.pop(context, null);
   }
 
   void _openStructureEditor() async {
@@ -148,6 +171,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isNew ? 'Новый элемент' : 'Редактировать элемент'),
+        leading: widget.quickAdd
+            ? IconButton(icon: const Icon(Icons.close), onPressed: _cancel)
+            : null,
         actions: [IconButton(icon: const Icon(Icons.check), onPressed: _save)],
       ),
       body: Padding(
@@ -179,18 +205,21 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              // Возвращаемся к RadioListTile (работает стабильно)
-              RadioListTile<String>(
-                title: const Text('Одиночный чекбокс'),
-                value: 'single',
+              RadioGroup<String>(
                 groupValue: _stepType,
                 onChanged: _onStepTypeChanged,
-              ),
-              RadioListTile<String>(
-                title: const Text('Пошаговый'),
-                value: 'stepByStep',
-                groupValue: _stepType,
-                onChanged: _onStepTypeChanged,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: Radio<String>(value: 'single'),
+                      title: const Text('Одиночный чекбокс'),
+                    ),
+                    ListTile(
+                      leading: Radio<String>(value: 'stepByStep'),
+                      title: const Text('Пошаговый'),
+                    ),
+                  ],
+                ),
               ),
               if (_stepType == 'stepByStep') ...[
                 const SizedBox(height: 16),

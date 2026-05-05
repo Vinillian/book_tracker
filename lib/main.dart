@@ -24,9 +24,7 @@ void main() async {
 
   // Открываем все боксы
   Box<Node> templatesBox = await _openBox<Node>('templates');
-  Box<AppSettings> settingsBox = await _openBox<AppSettings>(
-    'settings',
-  ); // ← добавляем
+  await _openBox<AppSettings>('settings'); // ← больше не сохраняем в переменную
   Box<HistoryEntry> historyBox = await _openBox<HistoryEntry>('history');
   Box<Note> notesBox = await _openBox<Note>('notes');
 
@@ -68,7 +66,6 @@ Future<Box<T>> _openBox<T>(String name) async {
 }
 
 void _migrateExistingPlans(Box<Node> templatesBox, Box<Note> notesBox) {
-  // Создаём временные сервисы только для миграции
   final noteService = NoteService(notesBox);
   final nodeService = NodeService(templatesBox, noteService);
   final plans = nodeService.plans;
