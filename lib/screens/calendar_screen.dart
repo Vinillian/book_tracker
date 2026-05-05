@@ -7,9 +7,17 @@ import '../models/node.dart';
 import '../providers/app_state.dart';
 import '../services/history_service.dart';
 import 'book_screen.dart';
+import 'components/app_drawer_menu.dart';
 
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+  final String currentThemeMode;
+  final Function(String) onThemeChanged;
+
+  const CalendarScreen({
+    super.key,
+    required this.currentThemeMode,
+    required this.onThemeChanged,
+  });
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -102,6 +110,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Календарь прогресса')),
+      endDrawer: AppDrawerMenu(
+        currentThemeMode: widget.currentThemeMode,
+        onThemeChanged: widget.onThemeChanged,
+      ),
       body: Column(
         children: [
           TableCalendar(

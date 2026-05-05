@@ -22,13 +22,15 @@ void main() async {
   Hive.registerAdapter(HistoryEntryAdapter());
   Hive.registerAdapter(NoteAdapter());
 
-  // Открываем боксы с обработкой ошибок
+  // Открываем все боксы
   Box<Node> templatesBox = await _openBox<Node>('templates');
-  Box<AppSettings> settingsBox = await _openBox<AppSettings>('settings');
+  Box<AppSettings> settingsBox = await _openBox<AppSettings>(
+    'settings',
+  ); // ← добавляем
   Box<HistoryEntry> historyBox = await _openBox<HistoryEntry>('history');
   Box<Note> notesBox = await _openBox<Note>('notes');
 
-  // Миграция старых планов (выполняется до создания AppState)
+  // Миграция старых планов
   _migrateExistingPlans(templatesBox, notesBox);
 
   runApp(

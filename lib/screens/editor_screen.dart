@@ -27,41 +27,20 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    // Автосохранение при закрытии экрана (если не было явного сохранения через ✓)
+    _saveOnDispose();
     super.dispose();
   }
 
-  void _showAddChildDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Добавить элемент'),
-        content: const Text('Выберите тип нового элемента:'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _addLeaf();
-            },
-            child: const Text('Лист'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _addFolder();
-            },
-            child: const Text('Папка'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
-          ),
-        ],
-      ),
-    );
+  void _saveOnDispose() {
+    // Сохраняем, даже если пользователь не нажал ✓ (назад или системная кнопка)
+    _workingCopy.name = _nameController.text.trim();
+    _workingCopy.category = _category;
+    Navigator.pop(context, _workingCopy);
   }
 
   void _addLeaf() async {
-    final newNode = Node.leaf('Новый элемент');
+    final newNode = Node.leaf('');
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -76,7 +55,7 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   void _addFolder() {
-    final newNode = Node(name: 'Новая папка', children: [], stepType: 'folder');
+    final newNode = Node(name: '', children: [], stepType: 'folder');
     setState(() {
       _workingCopy.children.add(newNode);
     });
@@ -106,7 +85,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isRoot = widget.node.category != null; // Корень имеет категорию
+    final bool isRoot = widget.node.category != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -120,9 +99,11 @@ class _EditorScreenState extends State<EditorScreen> {
           onChanged: (value) => _workingCopy.name = value,
         ),
         actions: [
+          // Кнопка "Готово" по-прежнему доступна, но автосохранение при возврате сработает и без неё.
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () {
+              _workingCopy.name = _nameController.text.trim();
               _workingCopy.category = _category;
               Navigator.pop(context, _workingCopy);
             },
@@ -173,10 +154,23 @@ class _EditorScreenState extends State<EditorScreen> {
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _showAddChildDialog,
+                // Быстрое добавление листа или папки
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'leaf') _addLeaf();
+                    if (value == 'folder') _addFolder();
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'leaf',
+                      child: Text('Добавить лист'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'folder',
+                      child: Text('Добавить папку'),
+                    ),
+                  ],
                   icon: const Icon(Icons.add),
-                  label: const Text('Добавить'),
                 ),
               ],
             ),
@@ -185,7 +179,7 @@ class _EditorScreenState extends State<EditorScreen> {
             child: _workingCopy.children.isEmpty
                 ? const Center(
                     child: Text(
-                      'Нет дочерних элементов. Нажмите "Добавить", чтобы создать.',
+                      'Нет дочерних элементов. Нажмите "+" для создания.',
                     ),
                   )
                 : ReorderableListView.builder(
@@ -210,16 +204,18 @@ class _EditorScreenState extends State<EditorScreen> {
                             index: index,
                             child: const Icon(Icons.drag_handle),
                           ),
-                          title: Text(child.name),
+                          title: Text(
+                            child.name.isEmpty ? '[Без названия]' : child.name,
+                          ),
                           subtitle: child.children.isNotEmpty
                               ? Text('${child.children.length} подэлементов')
-                              : (child.stepType == 'stepByStep'
-                                    ? Text(
-                                        '${child.completedSteps}/${child.totalSteps}',
-                                      )
-                                    : child.stepType == 'single'
-                                    ? const Text('Одиночный чекбокс')
-                                    : const Text('Папка')),
+                              : child.stepType == 'stepByStep'
+                              ? Text(
+                                  '${child.completedSteps}/${child.totalSteps}',
+                                )
+                              : child.stepType == 'single'
+                              ? const Text('Одиночный чекбокс')
+                              : const Text('Папка'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [

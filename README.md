@@ -1,17 +1,26 @@
-# book_tracker
+# Book Planner
 
-A new Flutter project.
+**A Flutter app for tracking learning progress through books and daily plans.**
+
+## Features
+
+- 📚 **Books** – hierarchical structure of chapters and tasks, with single checkboxes or step-by-step progress.
+- 📅 **Planner days** – create daily plans from templates or empty, each with its own note.
+- 📈 **Statistics** – overall progress, top items, and an activity calendar.
+- 📝 **Inbox** – quick notes without categories.
+- 💾 **Backup & Restore** – export/import all data (books, plans, notes, history) as JSON.
+- 🌗 **Light / Dark / System theme**.
+- ⚡ **Reactive UI** – Provider-based state management, no manual setState.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+### Prerequisites
+- Flutter SDK (>=3.11.0)
+- Android Studio or VS Code with Flutter plugin
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Installation
+```bash
+git clone https://github.com/Vinillian/book_tracker.git
+cd book_tracker
+flutter pub get
+flutter run

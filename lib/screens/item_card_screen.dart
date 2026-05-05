@@ -178,6 +178,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 'Тип прогресса:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 8),
+              // Возвращаемся к RadioListTile (работает стабильно)
               RadioListTile<String>(
                 title: const Text('Одиночный чекбокс'),
                 value: 'single',

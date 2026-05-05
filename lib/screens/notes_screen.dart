@@ -3,9 +3,17 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../providers/app_state.dart';
+import 'components/app_drawer_menu.dart';
 
 class NotesScreen extends StatefulWidget {
-  const NotesScreen({super.key});
+  final String currentThemeMode;
+  final Function(String) onThemeChanged;
+
+  const NotesScreen({
+    super.key,
+    required this.currentThemeMode,
+    required this.onThemeChanged,
+  });
 
   @override
   State<NotesScreen> createState() => _NotesScreenState();
@@ -150,6 +158,10 @@ class _NotesScreenState extends State<NotesScreen> {
             tooltip: 'Новая заметка',
           ),
         ],
+      ),
+      endDrawer: AppDrawerMenu(
+        currentThemeMode: widget.currentThemeMode,
+        onThemeChanged: widget.onThemeChanged,
       ),
       body: Column(
         children: [

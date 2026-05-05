@@ -11,11 +11,13 @@ import 'components/app_drawer_menu.dart';
 class HomeScreen extends StatefulWidget {
   final Function(String) onThemeChanged;
   final String currentThemeMode;
+  final int initialTab; // 0 – книги, 1 – планы
 
   const HomeScreen({
     super.key,
     required this.onThemeChanged,
     required this.currentThemeMode,
+    this.initialTab = 0,
   });
 
   @override
@@ -23,9 +25,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   String _searchQuery = '';
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialTab;
+  }
 
   // ---------- Книги ----------
   void _showAddBookDialog() {
@@ -246,27 +254,12 @@ class _HomeScreenState extends State<HomeScreen> {
         currentThemeMode: widget.currentThemeMode,
         onThemeChanged: widget.onThemeChanged,
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          BooksTabView(
-            searchQuery: _searchQuery,
-            onSearchChanged: (value) => setState(() => _searchQuery = value),
-          ),
-          const PlannerTabView(),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Книги'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Планы',
-          ),
-        ],
-      ),
+      body: _selectedIndex == 0
+          ? BooksTabView(
+              searchQuery: _searchQuery,
+              onSearchChanged: (value) => setState(() => _searchQuery = value),
+            )
+          : const PlannerTabView(),
     );
   }
 

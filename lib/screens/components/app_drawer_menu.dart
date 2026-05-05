@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../home_screen.dart';
 import '../calendar_screen.dart';
 import '../statistics_screen.dart';
 import '../notes_screen.dart';
@@ -42,13 +43,51 @@ class AppDrawerMenu extends StatelessWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.book),
+            title: const Text('Книги'),
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HomeScreen(
+                    onThemeChanged: onThemeChanged,
+                    currentThemeMode: currentThemeMode,
+                    initialTab: 0,
+                  ),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('Планы'),
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HomeScreen(
+                    onThemeChanged: onThemeChanged,
+                    currentThemeMode: currentThemeMode,
+                    initialTab: 1,
+                  ),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.calendar_month),
             title: const Text('Календарь'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CalendarScreen()),
+                MaterialPageRoute(
+                  builder: (_) => CalendarScreen(
+                    currentThemeMode: currentThemeMode,
+                    onThemeChanged: onThemeChanged,
+                  ),
+                ),
               );
             },
           ),
@@ -59,7 +98,12 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const StatisticsScreen()),
+                MaterialPageRoute(
+                  builder: (_) => StatisticsScreen(
+                    currentThemeMode: currentThemeMode,
+                    onThemeChanged: onThemeChanged,
+                  ),
+                ),
               );
             },
           ),
@@ -70,7 +114,12 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const NotesScreen()),
+                MaterialPageRoute(
+                  builder: (_) => NotesScreen(
+                    currentThemeMode: currentThemeMode,
+                    onThemeChanged: onThemeChanged,
+                  ),
+                ),
               );
             },
           ),
