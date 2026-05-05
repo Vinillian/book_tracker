@@ -377,8 +377,9 @@ class ActivityCalendar extends StatelessWidget {
                                 width: _columnWidth,
                                 child: Column(
                                   children: List.generate(7, (i) {
-                                    if (i >= week.length)
+                                    if (i >= week.length) {
                                       return const SizedBox();
+                                    }
                                     final date = week[i];
                                     final count =
                                         activity[DateTime(

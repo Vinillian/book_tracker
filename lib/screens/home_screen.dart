@@ -232,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         return;
       }
-      final newDay = appState.addDayFromTemplate(selected, date);
+      appState.addDayFromTemplate(selected, date);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('День "$dateStr" создан из шаблона "${selected.name}"'),

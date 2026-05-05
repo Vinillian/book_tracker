@@ -3,7 +3,7 @@ import '../models/node.dart';
 import 'item_card_screen.dart';
 
 class EditorScreen extends StatefulWidget {
-  final Node node; // исходный узел (будет скопирован)
+  final Node node;
 
   const EditorScreen({super.key, required this.node});
 
@@ -16,6 +16,10 @@ class _EditorScreenState extends State<EditorScreen> {
   late TextEditingController _nameController;
   String? _category;
 
+  // Multi‑select state
+  Set<int> _selectedIndices = {};
+  bool _multiSelect = false;
+
   @override
   void initState() {
     super.initState();
@@ -27,30 +31,55 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    // Автосохранение при закрытии экрана (если не было явного сохранения через ✓)
     _saveOnDispose();
     super.dispose();
   }
 
   void _saveOnDispose() {
-    // Сохраняем, даже если пользователь не нажал ✓ (назад или системная кнопка)
     _workingCopy.name = _nameController.text.trim();
     _workingCopy.category = _category;
     Navigator.pop(context, _workingCopy);
   }
 
+  // ----- Mass delete -----
+  void _deleteSelected() {
+    final sorted = _selectedIndices.toList()..sort((a, b) => b.compareTo(a));
+    for (final i in sorted) {
+      _workingCopy.children.removeAt(i);
+    }
+    setState(() {
+      _multiSelect = false;
+      _selectedIndices.clear();
+    });
+  }
+
+  void _cancelSelection() {
+    setState(() {
+      _multiSelect = false;
+      _selectedIndices.clear();
+    });
+  }
+
+  // ----- Quick‑add leaf (chain) -----
   void _addLeaf() async {
-    final newNode = Node.leaf('');
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ItemCardScreen(node: newNode, isNew: true),
-      ),
-    );
-    if (result != null && result is Node) {
-      setState(() {
-        _workingCopy.children.add(result);
-      });
+    while (true) {
+      final newNode = Node.leaf('');
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              ItemCardScreen(node: newNode, isNew: true, quickAdd: true),
+        ),
+      );
+      if (result is Node) {
+        setState(() {
+          _workingCopy.children.add(result);
+        });
+        // continue looping → immediately opens next dialog
+      } else {
+        // user cancelled (returned null)
+        break;
+      }
     }
   }
 
@@ -72,8 +101,7 @@ class _EditorScreenState extends State<EditorScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            ItemCardScreen(node: child.deepCopy(), isNew: false),
+        builder: (_) => ItemCardScreen(node: child.deepCopy(), isNew: false),
       ),
     );
     if (result != null && result is Node) {
@@ -99,15 +127,15 @@ class _EditorScreenState extends State<EditorScreen> {
           onChanged: (value) => _workingCopy.name = value,
         ),
         actions: [
-          // Кнопка "Готово" по-прежнему доступна, но автосохранение при возврате сработает и без неё.
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: () {
-              _workingCopy.name = _nameController.text.trim();
-              _workingCopy.category = _category;
-              Navigator.pop(context, _workingCopy);
-            },
-          ),
+          if (!_multiSelect)
+            IconButton(
+              icon: const Icon(Icons.check),
+              onPressed: () {
+                _workingCopy.name = _nameController.text.trim();
+                _workingCopy.category = _category;
+                Navigator.pop(context, _workingCopy);
+              },
+            ),
         ],
       ),
       body: Column(
@@ -116,7 +144,7 @@ class _EditorScreenState extends State<EditorScreen> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 decoration: const InputDecoration(
                   labelText: 'Категория',
                   border: OutlineInputBorder(),
@@ -154,24 +182,24 @@ class _EditorScreenState extends State<EditorScreen> {
                     ],
                   ),
                 ),
-                // Быстрое добавление листа или папки
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'leaf') _addLeaf();
-                    if (value == 'folder') _addFolder();
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'leaf',
-                      child: Text('Добавить лист'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'folder',
-                      child: Text('Добавить папку'),
-                    ),
-                  ],
-                  icon: const Icon(Icons.add),
-                ),
+                if (!_multiSelect)
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'leaf') _addLeaf();
+                      if (value == 'folder') _addFolder();
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'leaf',
+                        child: Text('Добавить лист'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'folder',
+                        child: Text('Добавить папку'),
+                      ),
+                    ],
+                    icon: const Icon(Icons.add),
+                  ),
               ],
             ),
           ),
@@ -185,6 +213,9 @@ class _EditorScreenState extends State<EditorScreen> {
                 : ReorderableListView.builder(
                     itemCount: _workingCopy.children.length,
                     onReorder: (oldIndex, newIndex) {
+                      if (_multiSelect) {
+                        return;
+                      } // block dragging in selection mode
                       setState(() {
                         if (newIndex > oldIndex) newIndex--;
                         final item = _workingCopy.children.removeAt(oldIndex);
@@ -193,6 +224,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     },
                     itemBuilder: (context, index) {
                       final child = _workingCopy.children[index];
+                      final isSelected = _selectedIndices.contains(index);
                       return Card(
                         key: ValueKey(child),
                         margin: const EdgeInsets.symmetric(
@@ -200,10 +232,23 @@ class _EditorScreenState extends State<EditorScreen> {
                           vertical: 4,
                         ),
                         child: ListTile(
-                          leading: ReorderableDragStartListener(
-                            index: index,
-                            child: const Icon(Icons.drag_handle),
-                          ),
+                          leading: _multiSelect
+                              ? Checkbox(
+                                  value: isSelected,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        _selectedIndices.add(index);
+                                      } else {
+                                        _selectedIndices.remove(index);
+                                      }
+                                    });
+                                  },
+                                )
+                              : ReorderableDragStartListener(
+                                  index: index,
+                                  child: const Icon(Icons.drag_handle),
+                                ),
                           title: Text(
                             child.name.isEmpty ? '[Без названия]' : child.name,
                           ),
@@ -216,25 +261,74 @@ class _EditorScreenState extends State<EditorScreen> {
                               : child.stepType == 'single'
                               ? const Text('Одиночный чекбокс')
                               : const Text('Папка'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () => _editChild(index),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () => _deleteChild(index),
-                              ),
-                            ],
-                          ),
-                          onTap: () => _editChild(index),
+                          trailing: _multiSelect
+                              ? null
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () => _editChild(index),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () => _deleteChild(index),
+                                    ),
+                                  ],
+                                ),
+                          onTap: () {
+                            if (_multiSelect) {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedIndices.remove(index);
+                                } else {
+                                  _selectedIndices.add(index);
+                                }
+                              });
+                            } else {
+                              _editChild(index);
+                            }
+                          },
+                          onLongPress: () {
+                            if (!_multiSelect) {
+                              setState(() {
+                                _multiSelect = true;
+                                _selectedIndices = {index};
+                              });
+                            }
+                          },
                         ),
                       );
                     },
                   ),
           ),
+          // Bottom bar for selection mode
+          if (_multiSelect)
+            Container(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Text('Выбрано: ${_selectedIndices.length}'),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _cancelSelection,
+                    child: const Text('Отмена'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _selectedIndices.isEmpty
+                        ? null
+                        : _deleteSelected,
+                    icon: const Icon(Icons.delete),
+                    label: const Text('Удалить'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

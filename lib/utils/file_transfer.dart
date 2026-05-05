@@ -177,8 +177,9 @@ class FileTransfer {
     final data = items.first;
     if (data['templates'] is! List ||
         data['notes'] is! List ||
-        data['history'] is! List)
+        data['history'] is! List) {
       return false;
+    }
 
     await templatesBox.clear();
     await notesBox.clear();
