@@ -24,7 +24,7 @@ class ActivityCalendar extends StatelessWidget {
     for (final entry in historyBox.values) {
       final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
       if (map.containsKey(date)) {
-        map[date] = (map[date] ?? 0) + 1; // исправлено
+        map[date] = (map[date] ?? 0) + 1;
       }
     }
     return map;
@@ -91,7 +91,7 @@ class ActivityCalendar extends StatelessWidget {
               width: width,
               child: Center(
                 child: Text(
-                  currentMonth, // <-- убрали !
+                  currentMonth ?? '', // защита от null
                   style: const TextStyle(fontSize: 10, color: Colors.white70),
                 ),
               ),
@@ -303,13 +303,16 @@ class ActivityCalendar extends StatelessWidget {
           );
         }
 
-        final maxScrollExtent = _calculateMaxScrollExtent(weeks);
+        final maxScrollExtent = _calculateMaxScrollExtent(
+          weeks,
+        ).clamp(0.0, double.infinity);
         final scrollController = ScrollController(
-          initialScrollOffset: maxScrollExtent,
+          /* без initialScrollOffset */
         );
 
+        // Прокручиваем к правому краю после построения первого кадра
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (scrollController.hasClients) {
+          if (scrollController.hasClients && maxScrollExtent > 0) {
             scrollController.jumpTo(maxScrollExtent);
           }
         });
@@ -377,9 +380,8 @@ class ActivityCalendar extends StatelessWidget {
                                 width: _columnWidth,
                                 child: Column(
                                   children: List.generate(7, (i) {
-                                    if (i >= week.length) {
+                                    if (i >= week.length)
                                       return const SizedBox();
-                                    }
                                     final date = week[i];
                                     final count =
                                         activity[DateTime(
