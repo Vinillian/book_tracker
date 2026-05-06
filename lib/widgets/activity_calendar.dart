@@ -24,7 +24,7 @@ class ActivityCalendar extends StatelessWidget {
     for (final entry in historyBox.values) {
       final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
       if (map.containsKey(date)) {
-        map[date] = (map[date] ?? 0) + 1;
+        map.update(date, (v) => v + 1);
       }
     }
     return map;
@@ -86,12 +86,14 @@ class ActivityCalendar extends StatelessWidget {
       }
       if (label != currentMonth) {
         if (currentMonth != null) {
+          // ignore: unnecessary_non_null_assertion
+          final month = currentMonth!;
           headers.add(
             SizedBox(
               width: width,
               child: Center(
                 child: Text(
-                  currentMonth ?? '', // защита от null
+                  month,
                   style: const TextStyle(fontSize: 10, color: Colors.white70),
                 ),
               ),
@@ -105,12 +107,14 @@ class ActivityCalendar extends StatelessWidget {
       }
     }
     if (currentMonth != null) {
+      // ignore: unnecessary_non_null_assertion
+      final month = currentMonth!;
       headers.add(
         SizedBox(
           width: width,
           child: Center(
             child: Text(
-              currentMonth,
+              month,
               style: const TextStyle(fontSize: 10, color: Colors.white70),
             ),
           ),
@@ -221,51 +225,55 @@ class ActivityCalendar extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70),
               ),
               const Divider(color: Colors.white24),
-              if (entries.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(
-                    child: Text(
-                      'Нет действий за этот день',
-                      style: TextStyle(color: Colors.white54),
+              // Заменённый if-else на тернарный оператор
+              entries.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(
+                        child: Text(
+                          'Нет действий за этот день',
+                          style: TextStyle(color: Colors.white54),
+                        ),
+                      ),
+                    )
+                  : Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: entries.length,
+                        itemBuilder: (context, index) {
+                          final entry = entries[index];
+                          String action;
+                          IconData icon;
+                          if (entry.stepType == 'single') {
+                            action = entry.completed == true
+                                ? 'Выполнено'
+                                : 'Снято';
+                            icon = entry.completed == true
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked;
+                          } else {
+                            action = 'Шагов: ${entry.completedSteps}';
+                            icon = Icons.list;
+                          }
+                          return ListTile(
+                            leading: Icon(
+                              icon,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                            title: Text(
+                              entry.nodeName,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                            trailing: Text(
+                              action,
+                              style: const TextStyle(color: Colors.white54),
+                            ),
+                            dense: true,
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                )
-              else
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: entries.length,
-                    itemBuilder: (context, index) {
-                      final entry = entries[index];
-                      String action;
-                      IconData icon;
-                      if (entry.stepType == 'single') {
-                        action = entry.completed == true
-                            ? 'Выполнено'
-                            : 'Снято';
-                        icon = entry.completed == true
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked;
-                      } else {
-                        action = 'Шагов: ${entry.completedSteps}';
-                        icon = Icons.list;
-                      }
-                      return ListTile(
-                        leading: Icon(icon, color: Colors.white70, size: 20),
-                        title: Text(
-                          entry.nodeName,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        trailing: Text(
-                          action,
-                          style: const TextStyle(color: Colors.white54),
-                        ),
-                        dense: true,
-                      );
-                    },
-                  ),
-                ),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
@@ -306,11 +314,8 @@ class ActivityCalendar extends StatelessWidget {
         final maxScrollExtent = _calculateMaxScrollExtent(
           weeks,
         ).clamp(0.0, double.infinity);
-        final scrollController = ScrollController(
-          /* без initialScrollOffset */
-        );
+        final scrollController = ScrollController();
 
-        // Прокручиваем к правому краю после построения первого кадра
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (scrollController.hasClients && maxScrollExtent > 0) {
             scrollController.jumpTo(maxScrollExtent);
