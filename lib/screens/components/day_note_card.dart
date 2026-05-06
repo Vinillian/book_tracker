@@ -17,6 +17,7 @@ class _DayNoteCardState extends State<DayNoteCard> {
   Note? _dayNote;
   final TextEditingController _noteController = TextEditingController();
   bool _isEditingNote = false;
+  bool _expanded = false;
 
   @override
   void initState() {
@@ -46,7 +47,6 @@ class _DayNoteCardState extends State<DayNoteCard> {
 
   @override
   void dispose() {
-    // Автосохранение заметки, если пользователь редактировал и уходит с экрана
     if (_isEditingNote) {
       _saveDayNote();
     }
@@ -58,6 +58,9 @@ class _DayNoteCardState extends State<DayNoteCard> {
   Widget build(BuildContext context) {
     if (widget.node.category != 'planner') return const SizedBox.shrink();
 
+    final noteContent = _dayNote?.content ?? '';
+    final bool isEmpty = noteContent.isEmpty;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
@@ -65,6 +68,7 @@ class _DayNoteCardState extends State<DayNoteCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Заголовок и кнопки
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -72,41 +76,77 @@ class _DayNoteCardState extends State<DayNoteCard> {
                   'Заметка дня',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                IconButton(
-                  icon: Icon(
-                    _isEditingNote ? Icons.check : Icons.edit,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    if (_isEditingNote) {
-                      _saveDayNote();
-                    } else {
-                      setState(() => _isEditingNote = true);
-                    }
-                  },
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Кнопка разворачивания/сворачивания в режиме просмотра
+                    if (!_isEditingNote && !isEmpty)
+                      IconButton(
+                        icon: Icon(
+                          _expanded ? Icons.expand_less : Icons.expand_more,
+                          size: 20,
+                        ),
+                        onPressed: () => setState(() => _expanded = !_expanded),
+                        tooltip: _expanded ? 'Свернуть' : 'Развернуть',
+                      ),
+                    // Кнопка редактирования
+                    IconButton(
+                      icon: Icon(
+                        _isEditingNote ? Icons.check : Icons.edit,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        if (_isEditingNote) {
+                          _saveDayNote();
+                        } else {
+                          setState(() {
+                            _isEditingNote = true;
+                            _expanded = false;
+                          });
+                        }
+                      },
+                      tooltip: _isEditingNote ? 'Сохранить' : 'Редактировать',
+                    ),
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 8),
+            // Основное содержимое
             if (_isEditingNote)
-              TextField(
-                controller: _noteController,
-                maxLines: 5,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Введите заметку...',
-                  border: OutlineInputBorder(),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: SingleChildScrollView(
+                  child: TextField(
+                    controller: _noteController,
+                    maxLines: null,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Введите заметку...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
                 ),
               )
             else
-              Text(
-                _dayNote?.content.isEmpty == true
-                    ? 'Нет заметки'
-                    : _dayNote!.content,
-                style: TextStyle(
-                  color: _dayNote?.content.isEmpty == true ? Colors.grey : null,
-                ),
-              ),
+              isEmpty
+                  ? const Text(
+                      'Нет заметки',
+                      style: TextStyle(color: Colors.grey),
+                    )
+                  : _expanded
+                  ? ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: SingleChildScrollView(child: Text(noteContent)),
+                    )
+                  : GestureDetector(
+                      onTap: () => setState(() => _expanded = true),
+                      child: Text(
+                        noteContent,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
           ],
         ),
       ),
