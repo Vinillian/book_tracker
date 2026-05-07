@@ -190,10 +190,10 @@ class ActivityCalendar extends StatelessWidget {
   );
 
   void _showDayDetails(
-    BuildContext context,
-    DateTime day,
-    Box<HistoryEntry> historyBox,
-  ) {
+      BuildContext context,
+      DateTime day,
+      Box<HistoryEntry> historyBox,
+      ) {
     initializeDateFormatting('ru');
     final entries = _getEntriesForDay(historyBox, day);
     final dateStr = DateFormat('dd MMMM yyyy', 'ru').format(day);
@@ -225,55 +225,54 @@ class ActivityCalendar extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70),
               ),
               const Divider(color: Colors.white24),
-              // Заменённый if-else на тернарный оператор
               entries.isEmpty
                   ? const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(
-                        child: Text(
-                          'Нет действий за этот день',
-                          style: TextStyle(color: Colors.white54),
-                        ),
-                      ),
-                    )
+                padding: EdgeInsets.all(16),
+                child: Center(
+                  child: Text(
+                    'Нет действий за этот день',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ),
+              )
                   : Flexible(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: entries.length,
-                        itemBuilder: (context, index) {
-                          final entry = entries[index];
-                          String action;
-                          IconData icon;
-                          if (entry.stepType == 'single') {
-                            action = entry.completed == true
-                                ? 'Выполнено'
-                                : 'Снято';
-                            icon = entry.completed == true
-                                ? Icons.check_circle
-                                : Icons.radio_button_unchecked;
-                          } else {
-                            action = 'Шагов: ${entry.completedSteps}';
-                            icon = Icons.list;
-                          }
-                          return ListTile(
-                            leading: Icon(
-                              icon,
-                              color: Colors.white70,
-                              size: 20,
-                            ),
-                            title: Text(
-                              entry.nodeName,
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            trailing: Text(
-                              action,
-                              style: const TextStyle(color: Colors.white54),
-                            ),
-                            dense: true,
-                          );
-                        },
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: entries.length,
+                  itemBuilder: (context, index) {
+                    final entry = entries[index];
+                    String action;
+                    IconData icon;
+                    if (entry.stepType == 'single') {
+                      action = entry.completed == true
+                          ? 'Выполнено'
+                          : 'Снято';
+                      icon = entry.completed == true
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked;
+                    } else {
+                      action = 'Шагов: ${entry.completedSteps}';
+                      icon = Icons.list;
+                    }
+                    return ListTile(
+                      leading: Icon(
+                        icon,
+                        color: Colors.white70,
+                        size: 20,
                       ),
-                    ),
+                      title: Text(
+                        entry.nodeName,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      trailing: Text(
+                        action,
+                        style: const TextStyle(color: Colors.white54),
+                      ),
+                      dense: true,
+                    );
+                  },
+                ),
+              ),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
@@ -316,6 +315,7 @@ class ActivityCalendar extends StatelessWidget {
         ).clamp(0.0, double.infinity);
         final scrollController = ScrollController();
 
+        // Прокрутка к сегодняшнему дню после построения первого кадра
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (scrollController.hasClients && maxScrollExtent > 0) {
             scrollController.jumpTo(maxScrollExtent);
@@ -394,7 +394,7 @@ class ActivityCalendar extends StatelessWidget {
                                           date.month,
                                           date.day,
                                         )] ??
-                                        0;
+                                            0;
                                     final color = _colorForCount(count);
                                     final isToday = _isToday(date);
 
@@ -415,15 +415,15 @@ class ActivityCalendar extends StatelessWidget {
                                           border: Border.all(
                                             color: isToday
                                                 ? Colors.blue.withValues(
-                                                    alpha: 0.8,
-                                                  )
+                                              alpha: 0.8,
+                                            )
                                                 : const Color(0x33FFFFFF),
                                             width: isToday ? 1.5 : 1,
                                           ),
                                         ),
                                         child: Tooltip(
                                           message:
-                                              '${DateFormat('dd MMM yyyy').format(date)}\n$count действий${isToday ? ' (сегодня)' : ''}',
+                                          '${DateFormat('dd MMM yyyy').format(date)}\n$count действий${isToday ? ' (сегодня)' : ''}',
                                           child: const SizedBox.expand(),
                                         ),
                                       ),
