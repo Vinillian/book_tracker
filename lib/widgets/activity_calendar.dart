@@ -86,7 +86,6 @@ class ActivityCalendar extends StatelessWidget {
       }
       if (label != currentMonth) {
         if (currentMonth != null) {
-          // ignore: unnecessary_non_null_assertion
           final month = currentMonth!;
           headers.add(
             SizedBox(
@@ -107,7 +106,6 @@ class ActivityCalendar extends StatelessWidget {
       }
     }
     if (currentMonth != null) {
-      // ignore: unnecessary_non_null_assertion
       final month = currentMonth!;
       headers.add(
         SizedBox(
@@ -122,10 +120,6 @@ class ActivityCalendar extends StatelessWidget {
       );
     }
     return Row(children: headers);
-  }
-
-  double _calculateMaxScrollExtent(List<List<DateTime>> weeks) {
-    return (weeks.length * _columnWidth) - 300;
   }
 
   bool _isToday(DateTime date) {
@@ -190,10 +184,10 @@ class ActivityCalendar extends StatelessWidget {
   );
 
   void _showDayDetails(
-      BuildContext context,
-      DateTime day,
-      Box<HistoryEntry> historyBox,
-      ) {
+    BuildContext context,
+    DateTime day,
+    Box<HistoryEntry> historyBox,
+  ) {
     initializeDateFormatting('ru');
     final entries = _getEntriesForDay(historyBox, day);
     final dateStr = DateFormat('dd MMMM yyyy', 'ru').format(day);
@@ -227,52 +221,52 @@ class ActivityCalendar extends StatelessWidget {
               const Divider(color: Colors.white24),
               entries.isEmpty
                   ? const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
-                  child: Text(
-                    'Нет действий за этот день',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                ),
-              )
+                      padding: EdgeInsets.all(16),
+                      child: Center(
+                        child: Text(
+                          'Нет действий за этот день',
+                          style: TextStyle(color: Colors.white54),
+                        ),
+                      ),
+                    )
                   : Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: entries.length,
-                  itemBuilder: (context, index) {
-                    final entry = entries[index];
-                    String action;
-                    IconData icon;
-                    if (entry.stepType == 'single') {
-                      action = entry.completed == true
-                          ? 'Выполнено'
-                          : 'Снято';
-                      icon = entry.completed == true
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked;
-                    } else {
-                      action = 'Шагов: ${entry.completedSteps}';
-                      icon = Icons.list;
-                    }
-                    return ListTile(
-                      leading: Icon(
-                        icon,
-                        color: Colors.white70,
-                        size: 20,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: entries.length,
+                        itemBuilder: (context, index) {
+                          final entry = entries[index];
+                          String action;
+                          IconData icon;
+                          if (entry.stepType == 'single') {
+                            action = entry.completed == true
+                                ? 'Выполнено'
+                                : 'Снято';
+                            icon = entry.completed == true
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked;
+                          } else {
+                            action = 'Шагов: ${entry.completedSteps}';
+                            icon = Icons.list;
+                          }
+                          return ListTile(
+                            leading: Icon(
+                              icon,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                            title: Text(
+                              entry.nodeName,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                            trailing: Text(
+                              action,
+                              style: const TextStyle(color: Colors.white54),
+                            ),
+                            dense: true,
+                          );
+                        },
                       ),
-                      title: Text(
-                        entry.nodeName,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      trailing: Text(
-                        action,
-                        style: const TextStyle(color: Colors.white54),
-                      ),
-                      dense: true,
-                    );
-                  },
-                ),
-              ),
+                    ),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
@@ -310,15 +304,18 @@ class ActivityCalendar extends StatelessWidget {
           );
         }
 
-        final maxScrollExtent = _calculateMaxScrollExtent(
-          weeks,
-        ).clamp(0.0, double.infinity);
+        // Контроллер без initialOffset — будет установлен в post-frame
         final scrollController = ScrollController();
 
-        // Прокрутка к сегодняшнему дню после построения первого кадра
+        // Прокручиваем к самому концу, чтобы последняя неделя была у правого края
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (scrollController.hasClients && maxScrollExtent > 0) {
-            scrollController.jumpTo(maxScrollExtent);
+          if (scrollController.hasClients) {
+            final maxScroll = scrollController.position.maxScrollExtent;
+            scrollController.animateTo(
+              maxScroll,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
           }
         });
 
@@ -339,103 +336,106 @@ class ActivityCalendar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                SingleChildScrollView(
-                  controller: scrollController,
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Column(
-                        children: [
-                          const SizedBox(height: 18),
-                          for (final day in [
-                            'Пн',
-                            '',
-                            'Ср',
-                            '',
-                            'Пт',
-                            '',
-                            'Вс',
-                          ])
-                            SizedBox(
-                              height: _cellSize + _cellMargin * 2,
-                              width: 24,
-                              child: Center(
-                                child: Text(
-                                  day,
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: Colors.white70,
+                ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(
+                    context,
+                  ).copyWith(scrollbars: false),
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Column(
+                          children: [
+                            const SizedBox(height: 18),
+                            for (final day in [
+                              'Пн',
+                              '',
+                              'Ср',
+                              '',
+                              'Пт',
+                              '',
+                              'Вс',
+                            ])
+                              SizedBox(
+                                height: _cellSize + _cellMargin * 2,
+                                width: 24,
+                                child: Center(
+                                  child: Text(
+                                    day,
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.white70,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _monthHeaders(weeks),
-                          const SizedBox(height: 4),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: weeks.map((week) {
-                              return SizedBox(
-                                width: _columnWidth,
-                                child: Column(
-                                  children: List.generate(7, (i) {
-                                    if (i >= week.length)
-                                      return const SizedBox();
-                                    final date = week[i];
-                                    final count =
-                                        activity[DateTime(
-                                          date.year,
-                                          date.month,
-                                          date.day,
-                                        )] ??
-                                            0;
-                                    final color = _colorForCount(count);
-                                    final isToday = _isToday(date);
+                          ],
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _monthHeaders(weeks),
+                            const SizedBox(height: 4),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: weeks.map((week) {
+                                return SizedBox(
+                                  width: _columnWidth,
+                                  child: Column(
+                                    children: List.generate(7, (i) {
+                                      if (i >= week.length)
+                                        return const SizedBox();
+                                      final date = week[i];
+                                      final count =
+                                          activity[DateTime(
+                                            date.year,
+                                            date.month,
+                                            date.day,
+                                          )] ??
+                                          0;
+                                      final color = _colorForCount(count);
+                                      final isToday = _isToday(date);
 
-                                    return GestureDetector(
-                                      onTap: () =>
-                                          _showDayDetails(context, date, box),
-                                      child: Container(
-                                        width: _cellSize,
-                                        height: _cellSize,
-                                        margin: const EdgeInsets.all(
-                                          _cellMargin,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: color,
-                                          borderRadius: BorderRadius.circular(
-                                            2,
+                                      return GestureDetector(
+                                        onTap: () =>
+                                            _showDayDetails(context, date, box),
+                                        child: Container(
+                                          width: _cellSize,
+                                          height: _cellSize,
+                                          margin: const EdgeInsets.all(
+                                            _cellMargin,
                                           ),
-                                          border: Border.all(
-                                            color: isToday
-                                                ? Colors.blue.withValues(
-                                              alpha: 0.8,
-                                            )
-                                                : const Color(0x33FFFFFF),
-                                            width: isToday ? 1.5 : 1,
+                                          decoration: BoxDecoration(
+                                            color: color,
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                            border: Border.all(
+                                              color: isToday
+                                                  ? Colors.blue.withAlpha(200)
+                                                  : const Color(0x33FFFFFF),
+                                              width: isToday ? 1.5 : 1,
+                                            ),
+                                          ),
+                                          child: Tooltip(
+                                            message:
+                                                '${DateFormat('dd MMM yyyy').format(date)}\n$count действий${isToday ? ' (сегодня)' : ''}',
+                                            child: const SizedBox.expand(),
                                           ),
                                         ),
-                                        child: Tooltip(
-                                          message:
-                                          '${DateFormat('dd MMM yyyy').format(date)}\n$count действий${isToday ? ' (сегодня)' : ''}',
-                                          child: const SizedBox.expand(),
-                                        ),
-                                      ),
-                                    );
-                                  }),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ],
+                                      );
+                                    }),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
