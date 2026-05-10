@@ -23,7 +23,6 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
   @override
   void initState() {
     super.initState();
-
     initializeDateFormatting('ru');
   }
 
@@ -45,24 +44,18 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
 
     for (final entry in historyBox.values) {
       final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
-
       if (map.containsKey(date)) {
         map.update(date, (v) => v + 1);
       }
     }
-
     return map;
   }
 
   List<List<DateTime>> _weeks(Map<DateTime, int> activity) {
     final dates = activity.keys.toList()..sort();
-
-    if (dates.isEmpty) {
-      return [];
-    }
+    if (dates.isEmpty) return [];
 
     var cur = dates.first;
-
     while (cur.weekday != DateTime.monday) {
       cur = cur.subtract(const Duration(days: 1));
     }
@@ -72,51 +65,39 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
 
     while (!cur.isAfter(last)) {
       final week = <DateTime>[];
-
       for (int i = 0; i < 7; i++) {
         week.add(cur);
         cur = cur.add(const Duration(days: 1));
       }
-
       weeks.add(week);
     }
-
     return weeks;
   }
 
   List<HistoryEntry> _getEntriesForDay(Box<HistoryEntry> box, DateTime day) {
     final start = DateTime(day.year, day.month, day.day);
-
     final end = start
         .add(const Duration(days: 1))
         .subtract(const Duration(milliseconds: 1));
-
     return box.values
         .where((e) => e.date.isAfter(start) && e.date.isBefore(end))
         .toList();
   }
 
   Color _colorForCount(int count) {
-    if (count == 0) {
-      return const Color(0xFFEBEDF0);
-    }
+    if (count == 0) return const Color(0xFFEBEDF0);
     if (count < 3) return const Color(0xFF9BE9A8);
     if (count < 6) return const Color(0xFF40C463);
     if (count < 10) return const Color(0xFF30A14E);
-
     return const Color(0xFF216E39);
   }
 
+  /// Заголовки месяцев – показываем только если название месяца полностью влезает
   Widget _monthHeaders(List<List<DateTime>> weeks) {
-    if (weeks.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
+    if (weeks.isEmpty) return const SizedBox.shrink();
     final headers = <Widget>[];
-
     String? currentMonth;
     double width = 0;
-
     final monthFormat = DateFormat.MMM('ru');
 
     double textWidth(String text) => text.length * 7.0;
@@ -124,7 +105,6 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
     for (final week in weeks) {
       final first = week.first;
       final label = monthFormat.format(first);
-
       if (label != currentMonth) {
         if (currentMonth != null) {
           if (width >= textWidth(currentMonth)) {
@@ -147,7 +127,6 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
             headers.add(SizedBox(width: width));
           }
         }
-
         currentMonth = label;
         width = _columnWidth;
       } else {
@@ -182,7 +161,6 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
 
   bool _isToday(DateTime date) {
     final now = DateTime.now();
-
     return date.year == now.year &&
         date.month == now.month &&
         date.day == now.day;
@@ -204,49 +182,111 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
         children: [
           const Text(
             'Сегодня: ',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70),
           ),
           Text(
             '$todayCount действий',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: _colorForCount(todayCount),
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _colorForCount(todayCount)),
           ),
+          if (todayCount > 0) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.check_circle, color: _colorForCount(todayCount), size: 16),
+          ],
         ],
       ),
     );
   }
 
-  Widget _legendBox(Color color) {
-    return Container(
-      width: 12,
-      height: 12,
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(2),
-        border: Border.all(color: const Color(0x33FFFFFF)),
-      ),
-    );
-  }
+  Widget _legendBox(Color color) => Container(
+    width: 12,
+    height: 12,
+    margin: const EdgeInsets.symmetric(horizontal: 2),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(2),
+      border: Border.all(color: const Color(0x33FFFFFF)),
+    ),
+  );
 
   void _scrollToEndOnce() {
     if (_initialScrollDone) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _initialScrollDone) return;
-
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         _initialScrollDone = true;
       }
     });
+  }
+
+  void _showDayDetails(
+      BuildContext context,
+      DateTime day,
+      Box<HistoryEntry> historyBox,
+      ) {
+    final entries = _getEntriesForDay(historyBox, day);
+    final dateStr = DateFormat('dd MMMM yyyy', 'ru').format(day);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[850],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(dateStr, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 8),
+              Text('Всего действий: ${entries.length}', style: const TextStyle(color: Colors.white70)),
+              const Divider(color: Colors.white24),
+              entries.isEmpty
+                  ? const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: Text('Нет действий за этот день', style: TextStyle(color: Colors.white54))),
+              )
+                  : Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: entries.length,
+                  itemBuilder: (context, index) {
+                    final entry = entries[index];
+                    String action;
+                    IconData icon;
+                    if (entry.stepType == 'single') {
+                      action = entry.completed == true ? 'Выполнено' : 'Снято';
+                      icon = entry.completed == true ? Icons.check_circle : Icons.radio_button_unchecked;
+                    } else {
+                      action = 'Шагов: ${entry.completedSteps}';
+                      icon = Icons.list;
+                    }
+                    return ListTile(
+                      leading: Icon(icon, color: Colors.white70, size: 20),
+                      title: Text(entry.nodeName, style: const TextStyle(color: Colors.white)),
+                      trailing: Text(action, style: const TextStyle(color: Colors.white54)),
+                      dense: true,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Закрыть', style: TextStyle(color: Colors.blue)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -261,10 +301,7 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
 
         if (weeks.isEmpty) {
           return const Center(
-            child: Text(
-              'Нет данных для отображения',
-              style: TextStyle(color: Colors.white70),
-            ),
+            child: Text('Нет данных для отображения', style: TextStyle(color: Colors.white70)),
           );
         }
 
@@ -277,55 +314,95 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                const Text(
-                  'Календарь активности',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                const SizedBox(height: 4),
+                const Text('Календарь активности', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 8),
                 SingleChildScrollView(
                   controller: _scrollController,
                   scrollDirection: Axis.horizontal,
-                  child: Column(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _monthHeaders(weeks),
-                      const SizedBox(height: 4),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: weeks.map((week) {
-                          return SizedBox(
-                            width: _columnWidth,
-                            child: Column(
-                              children: List.generate(7, (i) {
-                                final date = week[i];
-                                final count =
-                                    activity[DateTime(
-                                      date.year,
-                                      date.month,
-                                      date.day,
-                                    )] ??
-                                    0;
-
-                                return Container(
-                                  width: _cellSize,
-                                  height: _cellSize,
-                                  margin: const EdgeInsets.all(_cellMargin),
-                                  decoration: BoxDecoration(
-                                    color: _colorForCount(count),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                );
-                              }),
+                      // Колонка с днями недели
+                      Column(
+                        children: [
+                          const SizedBox(height: 18), // компенсация высоты заголовков месяцев
+                          for (final day in ['Пн', '', 'Ср', '', 'Пт', '', 'Вс'])
+                            SizedBox(
+                              height: _cellSize + _cellMargin * 2,
+                              width: 24,
+                              child: Center(
+                                child: Text(day, style: const TextStyle(fontSize: 9, color: Colors.white70)),
+                              ),
                             ),
-                          );
-                        }).toList(),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      // Сетка календаря с заголовками месяцев
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _monthHeaders(weeks),
+                          const SizedBox(height: 4),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: weeks.map((week) {
+                              return SizedBox(
+                                width: _columnWidth,
+                                child: Column(
+                                  children: List.generate(7, (i) {
+                                    if (i >= week.length) return const SizedBox();
+                                    final date = week[i];
+                                    final count = activity[DateTime(date.year, date.month, date.day)] ?? 0;
+                                    final color = _colorForCount(count);
+                                    final isToday = _isToday(date);
+
+                                    return GestureDetector(
+                                      onTap: () => _showDayDetails(context, date, box),
+                                      child: Container(
+                                        width: _cellSize,
+                                        height: _cellSize,
+                                        margin: const EdgeInsets.all(_cellMargin),
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          borderRadius: BorderRadius.circular(2),
+                                          border: Border.all(
+                                            color: isToday ? Colors.blue.withAlpha(200) : const Color(0x33FFFFFF),
+                                            width: isToday ? 1.5 : 1,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 12),
+                _buildTodayStats(activity),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Меньше', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                    const SizedBox(width: 8),
+                    _legendBox(const Color(0xFFEBEDF0)),
+                    const SizedBox(width: 4),
+                    _legendBox(const Color(0xFF9BE9A8)),
+                    const SizedBox(width: 4),
+                    _legendBox(const Color(0xFF40C463)),
+                    const SizedBox(width: 4),
+                    _legendBox(const Color(0xFF30A14E)),
+                    const SizedBox(width: 4),
+                    _legendBox(const Color(0xFF216E39)),
+                    const SizedBox(width: 8),
+                    const Text('Больше', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                  ],
                 ),
               ],
             ),
