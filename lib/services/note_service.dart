@@ -6,7 +6,6 @@ class NoteService {
 
   NoteService(this._box);
 
-  // ---------- Публичный доступ к боксу ----------
   Box<Note> get box => _box;
 
   Note? getNoteForDay(String linkedNodeId) {
@@ -35,6 +34,25 @@ class NoteService {
   }
 
   void delete(String id) {
-    _box.delete(id);
+    // Сначала пробуем удалить по ключу = id (для новых заметок)
+    if (_box.containsKey(id)) {
+      _box.delete(id);
+      return;
+    }
+    // Если не нашли, ищем заметку, у которой поле id равно переданному id
+    dynamic keyToDelete;
+    for (var key in _box.keys) {
+      final note = _box.get(key);
+      if (note != null && note.id == id) {
+        keyToDelete = key;
+        break;
+      }
+    }
+    if (keyToDelete != null) {
+      _box.delete(keyToDelete);
+    } else {
+      // Если всё равно не нашли, возможно заметка уже удалена
+      print('Note with id $id not found for deletion');
+    }
   }
 }
