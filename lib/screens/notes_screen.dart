@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // Добавлен недостающий импорт
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/note.dart';
 import '../providers/app_state.dart';
 import 'components/app_drawer_menu.dart';
@@ -39,22 +39,21 @@ class _NotesScreenState extends State<NotesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete note?'),
-        content: Text('The note "${note.title}" will be permanently deleted.'),
+        title: const Text('Удалить заметку?'),
+        content: Text('Заметка "${note.title}" будет безвозвратно удалена.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text('Отмена'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
     if (confirmed == true && mounted) {
-      // Добавлена проверка mounted
       context.read<AppState>().deleteNote(note.id);
     }
   }
@@ -83,17 +82,14 @@ class _NotesScreenState extends State<NotesScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                note == null ? 'New note' : 'Edit note',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                note == null ? 'Новая заметка' : 'Редактировать заметку',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _titleController,
                 decoration: const InputDecoration(
-                  labelText: 'Title',
+                  labelText: 'Заголовок',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -102,7 +98,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 controller: _contentController,
                 maxLines: 5,
                 decoration: const InputDecoration(
-                  labelText: 'Content',
+                  labelText: 'Содержание',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -112,7 +108,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Cancel'),
+                    child: const Text('Отмена'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
@@ -126,18 +122,18 @@ class _NotesScreenState extends State<NotesScreen> {
                       final appState = context.read<AppState>();
                       if (note == null) {
                         final newNote = Note(
-                          title: title.isEmpty ? 'Untitled' : title,
+                          title: title.isEmpty ? 'Без заголовка' : title,
                           content: content,
                         );
                         appState.saveNote(newNote);
                       } else {
-                        note.title = title.isEmpty ? 'Untitled' : title;
+                        note.title = title.isEmpty ? 'Без заголовка' : title;
                         note.content = content;
                         appState.saveNote(note);
                       }
                       Navigator.pop(ctx);
                     },
-                    child: Text(note == null ? 'Create' : 'Save'),
+                    child: Text(note == null ? 'Создать' : 'Сохранить'),
                   ),
                 ],
               ),
@@ -157,7 +153,7 @@ class _NotesScreenState extends State<NotesScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _addNote,
-            tooltip: 'New note',
+            tooltip: 'Новая заметка',
           ),
         ],
       ),
@@ -173,13 +169,13 @@ class _NotesScreenState extends State<NotesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SearchBar(
-                  hintText: 'Search notes...',
+                  hintText: 'Поиск заметок...',
                   leading: const Icon(Icons.search),
                   onChanged: (value) => setState(() => _searchQuery = value),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Inbox — quick notes without categories.',
+                  'Inbox — быстрые заметки без категорий.',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
@@ -188,14 +184,13 @@ class _NotesScreenState extends State<NotesScreen> {
           Expanded(
             child: Consumer<AppState>(
               builder: (context, appState, _) {
-                // Используем listenable() от бокса через Hive Flutter
                 return ValueListenableBuilder(
                   valueListenable: appState.notesBox.listenable(),
                   builder: (context, Box<Note> box, _) {
                     final notes = appState.inboxNotes;
                     if (notes.isEmpty) {
                       return const Center(
-                        child: Text('No notes. Tap + to create one.'),
+                        child: Text('Нет заметок. Нажмите +, чтобы создать.'),
                       );
                     }
 
@@ -210,7 +205,7 @@ class _NotesScreenState extends State<NotesScreen> {
                           }).toList();
 
                     if (filtered.isEmpty) {
-                      return const Center(child: Text('Nothing found'));
+                      return const Center(child: Text('Ничего не найдено'));
                     }
 
                     return ListView.builder(
@@ -218,10 +213,7 @@ class _NotesScreenState extends State<NotesScreen> {
                       itemBuilder: (context, index) {
                         final note = filtered[index];
                         return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 4,
-                          ),
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           child: ListTile(
                             title: Text(note.title),
                             subtitle: Text(
@@ -234,10 +226,7 @@ class _NotesScreenState extends State<NotesScreen> {
                               children: [
                                 Text(
                                   DateFormat('dd.MM.yy').format(note.updatedAt),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.edit, size: 20),
