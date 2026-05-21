@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/note.dart';
 
@@ -51,8 +52,7 @@ class NoteService {
     if (keyToDelete != null) {
       _box.delete(keyToDelete);
     } else {
-      // Если всё равно не нашли, возможно заметка уже удалена
-      print('Note with id $id not found for deletion');
+      debugPrint('Note with id $id not found for deletion');
     }
   }
 }
