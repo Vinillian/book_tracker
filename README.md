@@ -1,6 +1,4 @@
-Вот финальный `README.md` для версии `1.0.3`. Просто скопируйте его в файл.
 
-```markdown
 # Book Planner
 
 **A Flutter app for tracking learning progress through books and daily plans.**
@@ -61,4 +59,4 @@ MIT License – see [LICENSE](LICENSE) file for details.
 ---
 
 For questions or suggestions, open an [issue](https://github.com/Vinillian/book_tracker/issues).
-```
+
