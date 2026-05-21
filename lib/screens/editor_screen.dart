@@ -65,8 +65,7 @@ class _EditorScreenState extends State<EditorScreen> {
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              ItemCardScreen(node: newNode, isNew: true, quickAdd: true),
+          builder: (_) => ItemCardScreen(node: newNode, isNew: true, quickAdd: true),
         ),
       );
       if (result is Node) {
@@ -76,16 +75,16 @@ class _EditorScreenState extends State<EditorScreen> {
         final addAnother = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Leaf saved'),
-            content: const Text('Do you want to add another leaf?'),
+            title: const Text('Лист сохранён'),
+            content: const Text('Добавить ещё?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('No'),
+                child: const Text('Нет'),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Yes'),
+                child: const Text('Да'),
               ),
             ],
           ),
@@ -136,7 +135,7 @@ class _EditorScreenState extends State<EditorScreen> {
         title: TextField(
           controller: _nameController,
           decoration: const InputDecoration(
-            hintText: 'Name',
+            hintText: 'Название',
             border: InputBorder.none,
           ),
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -162,13 +161,13 @@ class _EditorScreenState extends State<EditorScreen> {
               child: DropdownButtonFormField<String>(
                 initialValue: _category,
                 decoration: const InputDecoration(
-                  labelText: 'Category',
+                  labelText: 'Категория',
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'book', child: Text('Book')),
-                  DropdownMenuItem(value: 'planner', child: Text('Plan')),
-                  DropdownMenuItem(value: 'template', child: Text('Template')),
+                  DropdownMenuItem(value: 'book', child: Text('Книга')),
+                  DropdownMenuItem(value: 'planner', child: Text('План')),
+                  DropdownMenuItem(value: 'template', child: Text('Шаблон')),
                 ],
                 onChanged: (value) => setState(() => _category = value),
               ),
@@ -184,15 +183,12 @@ class _EditorScreenState extends State<EditorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Type: ${_workingCopy.children.isEmpty ? "Leaf (task)" : "Folder (section)"}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
+                        'Тип: ${_workingCopy.children.isEmpty ? "Лист (задача)" : "Папка (раздел)"}',
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Total items: ${_workingCopy.totalLeaves}',
+                        'Всего элементов: ${_workingCopy.totalLeaves}',
                         style: const TextStyle(fontSize: 16),
                       ),
                     ],
@@ -205,8 +201,8 @@ class _EditorScreenState extends State<EditorScreen> {
                       if (value == 'folder') _addFolder();
                     },
                     itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'leaf', child: Text('Add leaf')),
-                      PopupMenuItem(value: 'folder', child: Text('Add folder')),
+                      PopupMenuItem(value: 'leaf', child: Text('Добавить лист')),
+                      PopupMenuItem(value: 'folder', child: Text('Добавить папку')),
                     ],
                     icon: const Icon(Icons.add),
                   ),
@@ -216,7 +212,7 @@ class _EditorScreenState extends State<EditorScreen> {
           Expanded(
             child: _workingCopy.children.isEmpty
                 ? const Center(
-                    child: Text('No child elements. Press "+" to create.'),
+                    child: Text('Нет дочерних элементов. Нажмите "+" для создания.'),
                   )
                 : ReorderableListView.builder(
                     itemCount: _workingCopy.children.length,
@@ -233,10 +229,7 @@ class _EditorScreenState extends State<EditorScreen> {
                       final isSelected = _selectedIndices.contains(index);
                       return Card(
                         key: ValueKey(child),
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
-                        ),
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         child: ListTile(
                           leading: _multiSelect
                               ? Checkbox(
@@ -255,18 +248,14 @@ class _EditorScreenState extends State<EditorScreen> {
                                   index: index,
                                   child: const Icon(Icons.drag_handle),
                                 ),
-                          title: Text(
-                            child.name.isEmpty ? '[Untitled]' : child.name,
-                          ),
+                          title: Text(child.name.isEmpty ? '[Без названия]' : child.name),
                           subtitle: child.children.isNotEmpty
-                              ? Text('${child.children.length} subitems')
+                              ? Text('${child.children.length} подэлементов')
                               : child.stepType == 'stepByStep'
-                              ? Text(
-                                  '${child.completedSteps}/${child.totalSteps}',
-                                )
-                              : child.stepType == 'single'
-                              ? const Text('Single checkbox')
-                              : const Text('Folder'),
+                                  ? Text('${child.completedSteps}/${child.totalSteps}')
+                                  : child.stepType == 'single'
+                                      ? const Text('Одиночный чекбокс')
+                                      : const Text('Папка'),
                           trailing: _multiSelect
                               ? null
                               : Row(
@@ -314,22 +303,18 @@ class _EditorScreenState extends State<EditorScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  Text('Selected: ${_selectedIndices.length}'),
+                  Text('Выбрано: ${_selectedIndices.length}'),
                   const Spacer(),
                   TextButton(
                     onPressed: _cancelSelection,
-                    child: const Text('Cancel'),
+                    child: const Text('Отмена'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
-                    onPressed: _selectedIndices.isEmpty
-                        ? null
-                        : _deleteSelected,
+                    onPressed: _selectedIndices.isEmpty ? null : _deleteSelected,
                     icon: const Icon(Icons.delete),
-                    label: const Text('Delete'),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                    ),
+                    label: const Text('Удалить'),
+                    style: ElevatedButton.styleFrom(foregroundColor: Colors.red),
                   ),
                 ],
               ),
