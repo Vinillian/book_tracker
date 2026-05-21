@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/note.dart';
 
@@ -6,7 +7,6 @@ class NoteService {
 
   NoteService(this._box);
 
-  // ---------- Публичный доступ к боксу ----------
   Box<Note> get box => _box;
 
   Note? getNoteForDay(String linkedNodeId) {
@@ -35,6 +35,24 @@ class NoteService {
   }
 
   void delete(String id) {
-    _box.delete(id);
+    // Сначала пробуем удалить по ключу = id (для новых заметок)
+    if (_box.containsKey(id)) {
+      _box.delete(id);
+      return;
+    }
+    // Если не нашли, ищем заметку, у которой поле id равно переданному id
+    dynamic keyToDelete;
+    for (var key in _box.keys) {
+      final note = _box.get(key);
+      if (note != null && note.id == id) {
+        keyToDelete = key;
+        break;
+      }
+    }
+    if (keyToDelete != null) {
+      _box.delete(keyToDelete);
+    } else {
+      debugPrint('Note with id $id not found for deletion');
+    }
   }
 }

@@ -43,7 +43,6 @@ class _BookScreenState extends State<BookScreen> {
     if (newName.isNotEmpty && newName != _node.name) {
       setState(() => _node.name = newName);
       widget.onNodeUpdated();
-      // Уведомляем провайдер, что данные изменились (если нужно)
       context.read<AppState>().notify();
     }
     setState(() => _isEditingTitle = false);
