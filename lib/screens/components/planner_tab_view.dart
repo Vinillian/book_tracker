@@ -20,7 +20,6 @@ class PlannerTabView extends StatelessWidget {
       );
     }
 
-    // Сортировка
     final sorted = List<Node>.from(plans)
       ..sort((a, b) {
         try {
@@ -42,7 +41,7 @@ class PlannerTabView extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: ListTile(
             title: Text(plan.name),
-            subtitle: Text('Задач: ${plan.totalLeaves}'),
+            subtitle: Text('Задач: ${plan.nonRoutineLeafCount}'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

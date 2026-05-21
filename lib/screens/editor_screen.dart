@@ -16,7 +16,6 @@ class _EditorScreenState extends State<EditorScreen> {
   late TextEditingController _nameController;
   String? _category;
 
-  // Multi‑select state
   Set<int> _selectedIndices = {};
   bool _multiSelect = false;
 
@@ -41,7 +40,6 @@ class _EditorScreenState extends State<EditorScreen> {
     Navigator.pop(context, _workingCopy);
   }
 
-  // ----- Mass delete -----
   void _deleteSelected() {
     final sorted = _selectedIndices.toList()..sort((a, b) => b.compareTo(a));
     for (final i in sorted) {
@@ -60,9 +58,9 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-  // ----- Quick‑add leaf (chain) -----
   void _addLeaf() async {
-    while (true) {
+    bool keepAdding = true;
+    while (keepAdding) {
       final newNode = Node.leaf('');
       final result = await Navigator.push(
         context,
@@ -75,10 +73,28 @@ class _EditorScreenState extends State<EditorScreen> {
         setState(() {
           _workingCopy.children.add(result);
         });
-        // continue looping → immediately opens next dialog
+        final addAnother = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Leaf saved'),
+            content: const Text('Do you want to add another leaf?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Yes'),
+              ),
+            ],
+          ),
+        );
+        if (addAnother != true) {
+          keepAdding = false;
+        }
       } else {
-        // user cancelled (returned null)
-        break;
+        keepAdding = false;
       }
     }
   }
@@ -120,7 +136,7 @@ class _EditorScreenState extends State<EditorScreen> {
         title: TextField(
           controller: _nameController,
           decoration: const InputDecoration(
-            hintText: 'Название',
+            hintText: 'Name',
             border: InputBorder.none,
           ),
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -146,13 +162,13 @@ class _EditorScreenState extends State<EditorScreen> {
               child: DropdownButtonFormField<String>(
                 initialValue: _category,
                 decoration: const InputDecoration(
-                  labelText: 'Категория',
+                  labelText: 'Category',
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'book', child: Text('Книга')),
-                  DropdownMenuItem(value: 'planner', child: Text('План')),
-                  DropdownMenuItem(value: 'template', child: Text('Шаблон')),
+                  DropdownMenuItem(value: 'book', child: Text('Book')),
+                  DropdownMenuItem(value: 'planner', child: Text('Plan')),
+                  DropdownMenuItem(value: 'template', child: Text('Template')),
                 ],
                 onChanged: (value) => setState(() => _category = value),
               ),
@@ -168,7 +184,7 @@ class _EditorScreenState extends State<EditorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Тип: ${_workingCopy.children.isEmpty ? "Лист (задача)" : "Папка (раздел)"}',
+                        'Type: ${_workingCopy.children.isEmpty ? "Leaf (task)" : "Folder (section)"}',
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
@@ -176,7 +192,7 @@ class _EditorScreenState extends State<EditorScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Всего единиц: ${_workingCopy.totalLeaves}',
+                        'Total items: ${_workingCopy.totalLeaves}',
                         style: const TextStyle(fontSize: 16),
                       ),
                     ],
@@ -188,15 +204,9 @@ class _EditorScreenState extends State<EditorScreen> {
                       if (value == 'leaf') _addLeaf();
                       if (value == 'folder') _addFolder();
                     },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'leaf',
-                        child: Text('Добавить лист'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'folder',
-                        child: Text('Добавить папку'),
-                      ),
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'leaf', child: Text('Add leaf')),
+                      PopupMenuItem(value: 'folder', child: Text('Add folder')),
                     ],
                     icon: const Icon(Icons.add),
                   ),
@@ -206,16 +216,12 @@ class _EditorScreenState extends State<EditorScreen> {
           Expanded(
             child: _workingCopy.children.isEmpty
                 ? const Center(
-                    child: Text(
-                      'Нет дочерних элементов. Нажмите "+" для создания.',
-                    ),
+                    child: Text('No child elements. Press "+" to create.'),
                   )
                 : ReorderableListView.builder(
                     itemCount: _workingCopy.children.length,
                     onReorder: (oldIndex, newIndex) {
-                      if (_multiSelect) {
-                        return;
-                      } // block dragging in selection mode
+                      if (_multiSelect) return;
                       setState(() {
                         if (newIndex > oldIndex) newIndex--;
                         final item = _workingCopy.children.removeAt(oldIndex);
@@ -250,17 +256,17 @@ class _EditorScreenState extends State<EditorScreen> {
                                   child: const Icon(Icons.drag_handle),
                                 ),
                           title: Text(
-                            child.name.isEmpty ? '[Без названия]' : child.name,
+                            child.name.isEmpty ? '[Untitled]' : child.name,
                           ),
                           subtitle: child.children.isNotEmpty
-                              ? Text('${child.children.length} подэлементов')
+                              ? Text('${child.children.length} subitems')
                               : child.stepType == 'stepByStep'
                               ? Text(
                                   '${child.completedSteps}/${child.totalSteps}',
                                 )
                               : child.stepType == 'single'
-                              ? const Text('Одиночный чекбокс')
-                              : const Text('Папка'),
+                              ? const Text('Single checkbox')
+                              : const Text('Folder'),
                           trailing: _multiSelect
                               ? null
                               : Row(
@@ -302,18 +308,17 @@ class _EditorScreenState extends State<EditorScreen> {
                     },
                   ),
           ),
-          // Bottom bar for selection mode
           if (_multiSelect)
             Container(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  Text('Выбрано: ${_selectedIndices.length}'),
+                  Text('Selected: ${_selectedIndices.length}'),
                   const Spacer(),
                   TextButton(
                     onPressed: _cancelSelection,
-                    child: const Text('Отмена'),
+                    child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
@@ -321,7 +326,7 @@ class _EditorScreenState extends State<EditorScreen> {
                         ? null
                         : _deleteSelected,
                     icon: const Icon(Icons.delete),
-                    label: const Text('Удалить'),
+                    label: const Text('Delete'),
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.red,
                     ),

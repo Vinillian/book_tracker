@@ -82,7 +82,9 @@ class Node {
     );
   }
 
+  // Общее количество листьев (игнорирует рутину)
   int get totalLeaves {
+    if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
       return children.fold(0, (sum, child) => sum + child.totalLeaves);
     }
@@ -91,13 +93,25 @@ class Node {
     return 0;
   }
 
+  // Количество выполненных листьев (игнорирует рутину)
   int get completedLeaves {
+    if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
       return children.fold(0, (sum, child) => sum + child.completedLeaves);
     }
     if (stepType == 'single') return completed ? 1 : 0;
     if (stepType == 'stepByStep') return completedSteps;
     return 0;
+  }
+
+  // Количество не-рутинных листовых задач (без учёта папок и рутины)
+  int get nonRoutineLeafCount {
+    if (excludeFromHistory) return 0;
+    if (children.isNotEmpty) {
+      return children.fold(0, (sum, child) => sum + child.nonRoutineLeafCount);
+    }
+    // Это лист (нет детей) и не рутина – считаем за 1
+    return 1;
   }
 
   void toggle() {
