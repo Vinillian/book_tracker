@@ -65,9 +65,11 @@ class _EditorScreenState extends State<EditorScreen> {
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ItemCardScreen(node: newNode, isNew: true, quickAdd: true),
+          builder: (_) =>
+              ItemCardScreen(node: newNode, isNew: true, quickAdd: true),
         ),
       );
+      if (!mounted) return;
       if (result is Node) {
         setState(() {
           _workingCopy.children.add(result);
@@ -89,6 +91,7 @@ class _EditorScreenState extends State<EditorScreen> {
             ],
           ),
         );
+        if (!mounted) return;
         if (addAnother != true) {
           keepAdding = false;
         }
@@ -119,6 +122,7 @@ class _EditorScreenState extends State<EditorScreen> {
         builder: (_) => ItemCardScreen(node: child.deepCopy(), isNew: false),
       ),
     );
+    if (!mounted) return;
     if (result != null && result is Node) {
       setState(() {
         _workingCopy.children[index] = result;
@@ -184,7 +188,10 @@ class _EditorScreenState extends State<EditorScreen> {
                     children: [
                       Text(
                         'Тип: ${_workingCopy.children.isEmpty ? "Лист (задача)" : "Папка (раздел)"}',
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -201,8 +208,14 @@ class _EditorScreenState extends State<EditorScreen> {
                       if (value == 'folder') _addFolder();
                     },
                     itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'leaf', child: Text('Добавить лист')),
-                      PopupMenuItem(value: 'folder', child: Text('Добавить папку')),
+                      PopupMenuItem(
+                        value: 'leaf',
+                        child: Text('Добавить лист'),
+                      ),
+                      PopupMenuItem(
+                        value: 'folder',
+                        child: Text('Добавить папку'),
+                      ),
                     ],
                     icon: const Icon(Icons.add),
                   ),
@@ -212,7 +225,9 @@ class _EditorScreenState extends State<EditorScreen> {
           Expanded(
             child: _workingCopy.children.isEmpty
                 ? const Center(
-                    child: Text('Нет дочерних элементов. Нажмите "+" для создания.'),
+                    child: Text(
+                      'Нет дочерних элементов. Нажмите "+" для создания.',
+                    ),
                   )
                 : ReorderableListView.builder(
                     itemCount: _workingCopy.children.length,
@@ -229,7 +244,10 @@ class _EditorScreenState extends State<EditorScreen> {
                       final isSelected = _selectedIndices.contains(index);
                       return Card(
                         key: ValueKey(child),
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
                         child: ListTile(
                           leading: _multiSelect
                               ? Checkbox(
@@ -248,14 +266,18 @@ class _EditorScreenState extends State<EditorScreen> {
                                   index: index,
                                   child: const Icon(Icons.drag_handle),
                                 ),
-                          title: Text(child.name.isEmpty ? '[Без названия]' : child.name),
+                          title: Text(
+                            child.name.isEmpty ? '[Без названия]' : child.name,
+                          ),
                           subtitle: child.children.isNotEmpty
                               ? Text('${child.children.length} подэлементов')
                               : child.stepType == 'stepByStep'
-                                  ? Text('${child.completedSteps}/${child.totalSteps}')
-                                  : child.stepType == 'single'
-                                      ? const Text('Одиночный чекбокс')
-                                      : const Text('Папка'),
+                              ? Text(
+                                  '${child.completedSteps}/${child.totalSteps}',
+                                )
+                              : child.stepType == 'single'
+                              ? const Text('Одиночный чекбокс')
+                              : const Text('Папка'),
                           trailing: _multiSelect
                               ? null
                               : Row(
@@ -311,10 +333,14 @@ class _EditorScreenState extends State<EditorScreen> {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
-                    onPressed: _selectedIndices.isEmpty ? null : _deleteSelected,
+                    onPressed: _selectedIndices.isEmpty
+                        ? null
+                        : _deleteSelected,
                     icon: const Icon(Icons.delete),
                     label: const Text('Удалить'),
-                    style: ElevatedButton.styleFrom(foregroundColor: Colors.red),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
                   ),
                 ],
               ),
