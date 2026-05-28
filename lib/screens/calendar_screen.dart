@@ -46,12 +46,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return _events[normalized] ?? [];
   }
 
-  String _getBookName(String bookId) {
-    final appState = context.read<AppState>();
-    final book = appState.getNodeById(bookId);
-    return book?.name ?? 'Книга удалена';
-  }
-
   Node? _existingPlanForDay(DateTime day) {
     final dateStr = DateFormat('dd.MM.yyyy').format(day);
     final appState = context.read<AppState>();
@@ -165,7 +159,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       itemCount: events.length,
       itemBuilder: (ctx, index) {
         final entry = events[index];
-        final bookName = _getBookName(entry.bookId);
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: ListTile(
@@ -178,7 +171,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   )
                 : const Icon(Icons.list, color: Colors.blue),
             title: Text(entry.nodeName),
-            subtitle: Text(bookName),
+            subtitle: Text(
+              entry.nodeName,
+            ), // теперь показывает имя задачи (а не книги)
             trailing: entry.stepType == 'stepByStep'
                 ? Text('Шагов: ${entry.completedSteps}')
                 : null,

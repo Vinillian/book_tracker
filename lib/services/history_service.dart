@@ -13,6 +13,8 @@ class HistoryService {
   static Box<HistoryEntry> get _box =>
       _customBox ?? Hive.box<HistoryEntry>('history');
 
+  // ========== Старые методы (оставлены для совместимости) ==========
+
   static void recordToggle({
     required String bookId,
     required Node node,
@@ -40,6 +42,88 @@ class HistoryService {
     );
     _box.add(entry);
   }
+
+  // ========== Новые методы: уникальная запись за день ==========
+
+  /// Удалить старую запись за сегодня для этого узла и добавить новую (для single задач)
+  static void recordUniqueToggle({
+    required String bookId,
+    required Node node,
+    required bool newValue,
+  }) {
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    // Найти существующую запись за сегодня для этого узла
+    dynamic existingKey;
+    for (var key in _box.keys) {
+      final entry = _box.get(key);
+      if (entry != null &&
+          entry.nodeId == node.id &&
+          entry.date.isAfter(startOfDay) &&
+          entry.date.isBefore(endOfDay)) {
+        existingKey = key;
+        break;
+      }
+    }
+
+    // Удалить старую запись, если есть
+    if (existingKey != null) {
+      _box.delete(existingKey);
+    }
+
+    // Создать новую запись
+    final newEntry = HistoryEntry.forSingle(
+      bookId: bookId,
+      nodeId: node.id,
+      nodeName: node.name,
+      completed: newValue,
+      date: today,
+    );
+    _box.add(newEntry);
+  }
+
+  /// Удалить старую запись за сегодня для этого узла и добавить новую (для stepByStep задач)
+  static void recordUniqueProgress({
+    required String bookId,
+    required Node node,
+    required int newSteps,
+  }) {
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    // Найти существующую запись за сегодня для этого узла
+    dynamic existingKey;
+    for (var key in _box.keys) {
+      final entry = _box.get(key);
+      if (entry != null &&
+          entry.nodeId == node.id &&
+          entry.date.isAfter(startOfDay) &&
+          entry.date.isBefore(endOfDay)) {
+        existingKey = key;
+        break;
+      }
+    }
+
+    // Удалить старую запись, если есть
+    if (existingKey != null) {
+      _box.delete(existingKey);
+    }
+
+    // Создать новую запись
+    final newEntry = HistoryEntry.forStep(
+      bookId: bookId,
+      nodeId: node.id,
+      nodeName: node.name,
+      completedSteps: newSteps,
+      date: today,
+    );
+    _box.add(newEntry);
+  }
+
+  // ========== Остальные методы (без изменений) ==========
 
   static List<HistoryEntry> getEntriesForDay(DateTime day) {
     final start = DateTime(day.year, day.month, day.day);
