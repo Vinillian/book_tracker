@@ -7,12 +7,14 @@ class ChapterTreeView extends StatelessWidget {
   final Node node;
   final String bookId;
   final VoidCallback onNodeUpdated;
+  final DateTime? planDate;
 
   const ChapterTreeView({
     super.key,
     required this.node,
     required this.bookId,
     required this.onNodeUpdated,
+    this.planDate,
   });
 
   @override
@@ -45,6 +47,7 @@ class ChapterTreeView extends StatelessWidget {
                   onNodeUpdated();
                 }
               : null,
+          planDate: planDate,
         ),
       );
       if (child.isExpanded && child.children.isNotEmpty) {
@@ -67,6 +70,7 @@ class ChapterTreeView extends StatelessWidget {
           bookId: bookId,
           node: node,
           onNodeUpdated: onNodeUpdated,
+          targetDate: planDate,
         ),
       ),
     );
