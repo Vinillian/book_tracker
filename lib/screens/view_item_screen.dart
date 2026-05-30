@@ -6,12 +6,14 @@ class ViewItemScreen extends StatefulWidget {
   final String bookId;
   final Node node;
   final VoidCallback onNodeUpdated;
+  final DateTime? targetDate;
 
   const ViewItemScreen({
     super.key,
     required this.bookId,
     required this.node,
     required this.onNodeUpdated,
+    this.targetDate,
   });
 
   @override
@@ -20,7 +22,7 @@ class ViewItemScreen extends StatefulWidget {
 
 class _ViewItemScreenState extends State<ViewItemScreen> {
   late Node _node;
-  late int _tempSteps; // для плавного отображения слайдера
+  late int _tempSteps;
 
   @override
   void initState() {
@@ -30,16 +32,15 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   }
 
   void _onToggle(bool? value) {
-    final oldCompleted = _node.completed;
     setState(() {
       _node.completed = value!;
     });
-    // Записываем только если ставим галочку (false → true)
-    if (!_node.excludeFromHistory && _node.completed && !oldCompleted) {
+    if (!_node.excludeFromHistory) {
       HistoryService.recordUniqueToggle(
         bookId: widget.bookId,
         node: _node,
-        newValue: true,
+        newValue: _node.completed,
+        targetDate: widget.targetDate,
       );
     }
     widget.onNodeUpdated();
@@ -59,12 +60,12 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         _node.completedSteps = newSteps;
         _tempSteps = newSteps;
       });
-      // Записываем любое изменение (и увеличение, и уменьшение)
       if (!_node.excludeFromHistory) {
         HistoryService.recordUniqueProgress(
           bookId: widget.bookId,
           node: _node,
           newSteps: newSteps,
+          targetDate: widget.targetDate,
         );
       }
       widget.onNodeUpdated();

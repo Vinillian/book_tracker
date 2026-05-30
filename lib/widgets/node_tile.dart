@@ -9,6 +9,7 @@ class NodeTile extends StatelessWidget {
   final VoidCallback? onCheckboxChanged;
   final VoidCallback onTap;
   final VoidCallback? onExpandToggle;
+  final DateTime? planDate;
 
   const NodeTile({
     super.key,
@@ -18,6 +19,7 @@ class NodeTile extends StatelessWidget {
     this.onCheckboxChanged,
     required this.onTap,
     this.onExpandToggle,
+    this.planDate,
   });
 
   @override
@@ -51,14 +53,16 @@ class NodeTile extends StatelessWidget {
                   Checkbox(
                     value: node.completed,
                     onChanged: (_) {
+                      final oldCompleted = node.completed;
+                      onCheckboxChanged?.call();
                       if (!node.excludeFromHistory) {
-                        HistoryService.recordToggle(
+                        HistoryService.recordUniqueToggle(
                           bookId: bookId,
                           node: node,
-                          newValue: !node.completed,
+                          newValue: node.completed,
+                          targetDate: planDate,
                         );
                       }
-                      onCheckboxChanged?.call();
                     },
                   ),
                   Expanded(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
@@ -24,18 +25,23 @@ class _BookScreenState extends State<BookScreen> {
   late Node _node;
   late TextEditingController _nameController;
   bool _isEditingTitle = false;
+  DateTime? _planDate;
 
   @override
   void initState() {
     super.initState();
     _node = widget.node;
     _nameController = TextEditingController(text: _node.name);
+    _planDate = _parsePlanDate();
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
+  DateTime? _parsePlanDate() {
+    if (_node.category != 'planner') return null;
+    try {
+      return DateFormat('dd.MM.yyyy').parseStrict(_node.name);
+    } catch (_) {
+      return null; // не удалось распарсить – значит, это не дата
+    }
   }
 
   void _saveTitle() {
@@ -43,6 +49,8 @@ class _BookScreenState extends State<BookScreen> {
     if (newName.isNotEmpty && newName != _node.name) {
       setState(() => _node.name = newName);
       widget.onNodeUpdated();
+      // Обновляем дату после переименования
+      _planDate = _parsePlanDate();
       context.read<AppState>().notify();
     }
     setState(() => _isEditingTitle = false);
@@ -100,6 +108,7 @@ class _BookScreenState extends State<BookScreen> {
               widget.onNodeUpdated();
               setState(() {});
             },
+            planDate: _planDate,
           ),
         ],
       ),
