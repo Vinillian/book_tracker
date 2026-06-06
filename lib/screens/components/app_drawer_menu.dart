@@ -6,6 +6,7 @@ import '../notes_screen.dart';
 import '../template_manager_screen.dart';
 import '../backup_restore_screen.dart';
 import '../settings_screen.dart';
+import '../standard_tasks_screen.dart';
 
 class AppDrawerMenu extends StatelessWidget {
   final String currentThemeMode;
@@ -125,6 +126,18 @@ class AppDrawerMenu extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.star),
+            title: const Text('Стандартные задачи'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const StandardTasksScreen()),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.folder),
             title: const Text('Управление шаблонами'),
             onTap: () {
@@ -132,8 +145,7 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      const TemplateManagerScreen(selectionMode: false),
+                  builder: (_) => const TemplateManagerScreen(selectionMode: false),
                 ),
               );
             },

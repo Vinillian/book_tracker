@@ -53,13 +53,12 @@ class NodeTile extends StatelessWidget {
                   Checkbox(
                     value: node.completed,
                     onChanged: (_) {
-                      final oldCompleted = node.completed;
-                      onCheckboxChanged?.call();
-                      if (!node.excludeFromHistory) {
+                      onCheckboxChanged?.call(); // переключает completed
+                      if (!node.excludeFromHistory && node.completed) {
                         HistoryService.recordUniqueToggle(
                           bookId: bookId,
                           node: node,
-                          newValue: node.completed,
+                          newValue: true,
                           targetDate: planDate,
                         );
                       }
