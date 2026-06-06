@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../models/note.dart';
 import '../models/history_entry.dart';
+import '../models/standard_task.dart';
 import '../providers/app_state.dart';
 import '../utils/file_transfer.dart';
 
@@ -67,6 +68,17 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     box: _appState.historyBox,
     fromJson: HistoryEntry.fromJson,
   );
+
+  // Новые методы для стандартных задач
+  Future<bool> _exportStandardTasks() => FileTransfer.exportBox(
+    box: _appState.standardTasksBox,
+    suggestedName: 'standard_tasks',
+  );
+  Future<int> _importStandardTasks() => FileTransfer.importIntoBox(
+    box: _appState.standardTasksBox,
+    fromJson: StandardTask.fromJson,
+  );
+
   Future<bool> _exportAll() => FileTransfer.exportAll(
     templatesBox: _appState.templatesBox,
     notesBox: _appState.notesBox,
@@ -243,6 +255,23 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 () => _runImport(
               _importHistory,
               'Импортировано записей истории',
+              'Файл не выбран или нет данных',
+            ),
+          ),
+          _sectionHeader('Стандартные задачи'),
+          _buildTile(
+            'Экспорт стандартных задач',
+                () => _runExport(
+              _exportStandardTasks,
+              'Стандартные задачи экспортированы',
+              'Нет задач для экспорта или отменено',
+            ),
+          ),
+          _buildTile(
+            'Импорт стандартных задач',
+                () => _runImport(
+              _importStandardTasks,
+              'Импортировано стандартных задач',
               'Файл не выбран или нет данных',
             ),
           ),
