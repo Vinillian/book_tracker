@@ -71,11 +71,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     templatesBox: _appState.templatesBox,
     notesBox: _appState.notesBox,
     historyBox: _appState.historyBox,
+    standardTasksBox: _appState.standardTasksBox,
   );
   Future<bool> _importAll() => FileTransfer.importAll(
     templatesBox: _appState.templatesBox,
     notesBox: _appState.notesBox,
     historyBox: _appState.historyBox,
+    standardTasksBox: _appState.standardTasksBox,
   );
 
   // ========== Вспомогательные методы для SnackBar ==========
@@ -88,10 +90,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   Future<void> _runExport(
-    Future<bool> Function() action,
-    String successMsg,
-    String emptyMsg,
-  ) async {
+      Future<bool> Function() action,
+      String successMsg,
+      String emptyMsg,
+      ) async {
     bool ok = false;
     try {
       ok = await action();
@@ -103,10 +105,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   Future<void> _runImport(
-    Future<int> Function() action,
-    String successMsg,
-    String emptyMsg,
-  ) async {
+      Future<int> Function() action,
+      String successMsg,
+      String emptyMsg,
+      ) async {
     int result;
     try {
       result = await action();
@@ -143,7 +145,12 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
     if (confirmed != true) return;
     final ok = await _importAll();
-    _showSnackBar(ok ? 'Данные восстановлены' : 'Ошибка восстановления');
+    if (ok) {
+      _appState.notify();
+      _showSnackBar('Данные восстановлены');
+    } else {
+      _showSnackBar('Ошибка восстановления');
+    }
   }
 
   // ========== UI ==========
@@ -157,7 +164,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _sectionHeader('Книги'),
           _buildTile(
             'Экспорт книг',
-            () => _runExport(
+                () => _runExport(
               _exportBooks,
               'Книги экспортированы',
               'Нет книг для экспорта или отменено',
@@ -165,7 +172,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
           _buildTile(
             'Импорт книг',
-            () => _runImport(
+                () => _runImport(
               _importBooks,
               'Импортировано книг',
               'Файл не выбран или нет данных',
@@ -174,7 +181,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _sectionHeader('Планы'),
           _buildTile(
             'Экспорт планов',
-            () => _runExport(
+                () => _runExport(
               _exportPlans,
               'Планы экспортированы',
               'Нет планов для экспорта или отменено',
@@ -182,7 +189,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
           _buildTile(
             'Импорт планов',
-            () => _runImport(
+                () => _runImport(
               _importPlans,
               'Импортировано планов',
               'Файл не выбран или нет данных',
@@ -191,7 +198,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _sectionHeader('Шаблоны'),
           _buildTile(
             'Экспорт шаблонов',
-            () => _runExport(
+                () => _runExport(
               _exportTemplates,
               'Шаблоны экспортированы',
               'Нет шаблонов для экспорта или отменено',
@@ -199,7 +206,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
           _buildTile(
             'Импорт шаблонов',
-            () => _runImport(
+                () => _runImport(
               _importTemplates,
               'Импортировано шаблонов',
               'Файл не выбран или нет данных',
@@ -208,7 +215,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _sectionHeader('Заметки'),
           _buildTile(
             'Экспорт заметок',
-            () => _runExport(
+                () => _runExport(
               _exportNotes,
               'Заметки экспортированы',
               'Нет заметок для экспорта или отменено',
@@ -216,7 +223,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
           _buildTile(
             'Импорт заметок',
-            () => _runImport(
+                () => _runImport(
               _importNotes,
               'Импортировано заметок',
               'Файл не выбран или нет данных',
@@ -225,7 +232,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _sectionHeader('История'),
           _buildTile(
             'Экспорт истории',
-            () => _runExport(
+                () => _runExport(
               _exportHistory,
               'История экспортирована',
               'Нет истории для экспорта или отменено',
@@ -233,7 +240,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
           _buildTile(
             'Импорт истории',
-            () => _runImport(
+                () => _runImport(
               _importHistory,
               'Импортировано записей истории',
               'Файл не выбран или нет данных',
@@ -243,7 +250,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _sectionHeader('Полный бэкап'),
           _buildTile(
             'Экспорт всего',
-            () => _runExport(
+                () => _runExport(
               _exportAll,
               'Полный бэкап сохранён',
               'Ошибка сохранения',
