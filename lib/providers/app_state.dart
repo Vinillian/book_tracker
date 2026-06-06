@@ -4,6 +4,7 @@ import '../models/node.dart';
 import '../models/note.dart';
 import '../models/history_entry.dart';
 import '../models/standard_task.dart';
+import '../models/tracked_activity.dart';
 import '../services/node_service.dart';
 import '../services/note_service.dart';
 import '../services/history_service.dart';
@@ -13,15 +14,18 @@ class AppState extends ChangeNotifier {
   late final NoteService _noteService;
   late final Box<HistoryEntry> _historyBox;
   late final Box<StandardTask> _standardTasksBox;
+  late final Box<TrackedActivity> _trackedActivitiesBox;
 
   AppState({
     required Box<Node> templatesBox,
     required Box<Note> notesBox,
     required Box<HistoryEntry> historyBox,
     required Box<StandardTask> standardTasksBox,
+    required Box<TrackedActivity> trackedActivitiesBox,
   }) {
     _historyBox = historyBox;
     _standardTasksBox = standardTasksBox;
+    _trackedActivitiesBox = trackedActivitiesBox;
     HistoryService.init(historyBox);
     _noteService = NoteService(notesBox);
     _nodeService = NodeService(templatesBox, _noteService);
@@ -32,6 +36,7 @@ class AppState extends ChangeNotifier {
   Box<Note> get notesBox => _noteService.box;
   Box<HistoryEntry> get historyBox => _historyBox;
   Box<StandardTask> get standardTasksBox => _standardTasksBox;
+  Box<TrackedActivity> get trackedActivitiesBox => _trackedActivitiesBox;
 
   // ---------- Прокси к NodeService ----------
   List<Node> get books => _nodeService.books;
@@ -102,6 +107,24 @@ class AppState extends ChangeNotifier {
 
   void deleteStandardTask(String id) {
     _standardTasksBox.delete(id);
+    notifyListeners();
+  }
+
+  // ---------- Отслеживаемые задачи для тепловой карты ----------
+  List<TrackedActivity> get trackedActivities => _trackedActivitiesBox.values.toList();
+
+  void addTrackedActivity(TrackedActivity activity) {
+    _trackedActivitiesBox.put(activity.id, activity);
+    notifyListeners();
+  }
+
+  void updateTrackedActivity(String id, TrackedActivity activity) {
+    _trackedActivitiesBox.put(id, activity);
+    notifyListeners();
+  }
+
+  void deleteTrackedActivity(String id) {
+    _trackedActivitiesBox.delete(id);
     notifyListeners();
   }
 

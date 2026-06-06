@@ -7,6 +7,7 @@ import '../template_manager_screen.dart';
 import '../backup_restore_screen.dart';
 import '../settings_screen.dart';
 import '../standard_tasks_screen.dart';
+import '../heatmap_screen.dart';
 
 class AppDrawerMenu extends StatelessWidget {
   final String currentThemeMode;
@@ -105,6 +106,17 @@ class AppDrawerMenu extends StatelessWidget {
                     onThemeChanged: onThemeChanged,
                   ),
                 ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.heat_pump),
+            title: const Text('Тепловая карта'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HeatmapScreen()),
               );
             },
           ),
