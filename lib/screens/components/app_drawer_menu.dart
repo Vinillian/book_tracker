@@ -116,7 +116,12 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const HeatmapScreen()),
+                MaterialPageRoute(
+                  builder: (_) => HeatmapScreen(
+                    currentThemeMode: currentThemeMode,
+                    onThemeChanged: onThemeChanged,
+                  ),
+                ),
               );
             },
           ),

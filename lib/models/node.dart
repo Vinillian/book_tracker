@@ -38,6 +38,9 @@ class Node {
   @HiveField(10)
   bool excludeFromHistory;
 
+  @HiveField(11)
+  String trackingId;  // постоянный идентификатор для отслеживания
+
   Node({
     required this.name,
     required this.children,
@@ -50,21 +53,25 @@ class Node {
     String? id,
     this.category,
     this.excludeFromHistory = false,
-  }) : id = id ?? const Uuid().v4();
+    String? trackingId,
+  }) : id = id ?? const Uuid().v4(),
+        trackingId = trackingId ?? const Uuid().v4();
 
   Node.leaf(
-    this.name, {
-    this.plannedDate,
-    this.stepType = 'single',
-    this.totalSteps = 1,
-    this.completedSteps = 0,
-    String? id,
-    this.category,
-    this.excludeFromHistory = false,
-  }) : children = [],
-       isExpanded = false,
-       completed = false,
-       id = id ?? const Uuid().v4();
+      this.name, {
+        this.plannedDate,
+        this.stepType = 'single',
+        this.totalSteps = 1,
+        this.completedSteps = 0,
+        String? id,
+        this.category,
+        this.excludeFromHistory = false,
+        String? trackingId,
+      }) : children = [],
+        isExpanded = false,
+        completed = false,
+        id = id ?? const Uuid().v4(),
+        trackingId = trackingId ?? const Uuid().v4();
 
   Node deepCopy() {
     return Node(
@@ -79,10 +86,12 @@ class Node {
       id: id,
       category: category,
       excludeFromHistory: excludeFromHistory,
+      trackingId: trackingId,
     );
   }
 
-  // Общее количество листьев (игнорирует рутину)
+  // ... остальные методы (totalLeaves, completedLeaves, nonRoutineLeafCount, toggle, toJson, fromJson) без изменений ...
+
   int get totalLeaves {
     if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
@@ -93,7 +102,6 @@ class Node {
     return 0;
   }
 
-  // Количество выполненных листьев (игнорирует рутину)
   int get completedLeaves {
     if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
@@ -104,13 +112,11 @@ class Node {
     return 0;
   }
 
-  // Количество не-рутинных листовых задач (без учёта папок и рутины)
   int get nonRoutineLeafCount {
     if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
       return children.fold(0, (sum, child) => sum + child.nonRoutineLeafCount);
     }
-    // Это лист (нет детей) и не рутина – считаем за 1
     return 1;
   }
 
@@ -133,6 +139,7 @@ class Node {
       'id': id,
       'category': category,
       'excludeFromHistory': excludeFromHistory,
+      'trackingId': trackingId,
     };
   }
 
@@ -152,6 +159,7 @@ class Node {
       id: json['id'],
       category: json['category'],
       excludeFromHistory: json['excludeFromHistory'] ?? false,
+      trackingId: json['trackingId'] ?? const Uuid().v4(),
     );
   }
 }

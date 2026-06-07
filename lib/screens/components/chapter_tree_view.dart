@@ -25,10 +25,10 @@ class ChapterTreeView extends StatelessWidget {
   }
 
   List<Widget> _buildChildren(
-    List<Node> children,
-    int depth,
-    BuildContext context,
-  ) {
+      List<Node> children,
+      int depth,
+      BuildContext context,
+      ) {
     List<Widget> widgets = [];
     for (var child in children) {
       widgets.add(
@@ -43,9 +43,9 @@ class ChapterTreeView extends StatelessWidget {
           onTap: () => _openViewScreen(context, child),
           onExpandToggle: child.children.isNotEmpty
               ? () {
-                  child.isExpanded = !child.isExpanded;
-                  onNodeUpdated();
-                }
+            child.isExpanded = !child.isExpanded;
+            onNodeUpdated();
+          }
               : null,
           planDate: planDate,
         ),

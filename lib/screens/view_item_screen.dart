@@ -32,14 +32,15 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   }
 
   void _onToggle(bool? value) {
+    final newValue = value ?? false;
     setState(() {
-      _node.completed = value!;
+      _node.completed = newValue;
     });
     if (!_node.excludeFromHistory) {
       HistoryService.recordUniqueToggle(
         bookId: widget.bookId,
         node: _node,
-        newValue: _node.completed,
+        newValue: newValue,
         targetDate: widget.targetDate,
       );
     }

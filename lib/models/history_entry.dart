@@ -9,25 +9,28 @@ class HistoryEntry {
   String id;
 
   @HiveField(1)
-  String bookId; // ID корневой книги
+  String bookId;
 
   @HiveField(2)
-  String nodeId; // ID изменённого узла
+  String nodeId;        // ID экземпляра задачи (может меняться)
 
   @HiveField(3)
-  DateTime date; // дата события (без времени)
+  DateTime date;
 
   @HiveField(4)
-  String nodeName; // имя узла на момент события
+  String nodeName;
 
   @HiveField(5)
-  String stepType; // 'single' или 'stepByStep'
+  String stepType;
 
   @HiveField(6)
-  bool? completed; // для single
+  bool? completed;
 
   @HiveField(7)
-  int? completedSteps; // для stepByStep
+  int? completedSteps;
+
+  @HiveField(8)
+  String trackingId;    // постоянный идентификатор для отслеживания
 
   HistoryEntry({
     String? id,
@@ -38,14 +41,16 @@ class HistoryEntry {
     required this.stepType,
     this.completed,
     this.completedSteps,
+    required this.trackingId,
   }) : id = id ?? const Uuid().v4();
 
-  // для удобства создания записи single-задачи
+  // для single-задачи
   factory HistoryEntry.forSingle({
     required String bookId,
     required String nodeId,
     required String nodeName,
     required bool completed,
+    required String trackingId,
     DateTime? date,
   }) {
     return HistoryEntry(
@@ -55,6 +60,7 @@ class HistoryEntry {
       nodeName: nodeName,
       stepType: 'single',
       completed: completed,
+      trackingId: trackingId,
     );
   }
 
@@ -64,6 +70,7 @@ class HistoryEntry {
     required String nodeId,
     required String nodeName,
     required int completedSteps,
+    required String trackingId,
     DateTime? date,
   }) {
     return HistoryEntry(
@@ -73,6 +80,7 @@ class HistoryEntry {
       nodeName: nodeName,
       stepType: 'stepByStep',
       completedSteps: completedSteps,
+      trackingId: trackingId,
     );
   }
 
@@ -86,6 +94,7 @@ class HistoryEntry {
       'stepType': stepType,
       'completed': completed,
       'completedSteps': completedSteps,
+      'trackingId': trackingId,
     };
   }
 
@@ -99,6 +108,7 @@ class HistoryEntry {
       stepType: json['stepType'],
       completed: json['completed'],
       completedSteps: json['completedSteps'],
+      trackingId: json['trackingId'] ?? '', // для обратной совместимости
     );
   }
 }

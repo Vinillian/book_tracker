@@ -9,7 +9,6 @@ class PickTaskForTrackingScreen extends StatelessWidget {
   List<Node> _collectLeafNodesFromPlans(List<Node> nodes) {
     final List<Node> result = [];
     for (var node in nodes) {
-      // Пропускаем рутинные задачи
       if (node.excludeFromHistory) continue;
       if (node.children.isEmpty && node.stepType != 'folder') {
         result.add(node);
@@ -23,15 +22,14 @@ class PickTaskForTrackingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
-    // Берём только планы (категория 'planner')
     final plans = appState.plans;
     final allLeafNodes = _collectLeafNodesFromPlans(plans);
 
-    // Группируем по имени (уникальные задачи)
+    // Группируем по trackingId (постоянный идентификатор)
     final uniqueMap = <String, Node>{};
     for (var node in allLeafNodes) {
-      if (!uniqueMap.containsKey(node.name)) {
-        uniqueMap[node.name] = node;
+      if (!uniqueMap.containsKey(node.trackingId)) {
+        uniqueMap[node.trackingId] = node;
       }
     }
     final uniqueNodes = uniqueMap.values.toList();
@@ -40,7 +38,9 @@ class PickTaskForTrackingScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Выберите задачу')),
       body: uniqueNodes.isEmpty
-          ? const Center(child: Text('Нет доступных задач. Создайте не-рутинные задачи в планах.'))
+          ? const Center(
+        child: Text('Нет доступных задач. Создайте не-рутинные задачи в планах.'),
+      )
           : ListView.builder(
         itemCount: uniqueNodes.length,
         itemBuilder: (ctx, index) {
@@ -48,7 +48,9 @@ class PickTaskForTrackingScreen extends StatelessWidget {
           return ListTile(
             title: Text(node.name),
             subtitle: Text(
-              node.stepType == 'single' ? 'Одиночный чекбокс' : 'Пошаговая (${node.totalSteps} шагов)',
+              node.stepType == 'single'
+                  ? 'Одиночный чекбокс'
+                  : 'Пошаговая (${node.totalSteps} шагов)',
             ),
             onTap: () => Navigator.pop(context, node),
           );

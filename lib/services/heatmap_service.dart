@@ -11,17 +11,17 @@ class HeatmapService {
   Map<DateTime, Map<String, int>> getIntensityData() {
     final Map<DateTime, Map<String, int>> result = {};
 
-    final activeTrackedIds = _trackedBox.values
+    // Собираем trackingId активных отслеживаемых задач
+    final activeTrackingIds = _trackedBox.values
         .where((t) => t.isActive)
-        .map((t) => t.nodeId)
+        .map((t) => t.nodeId)   // nodeId в TrackedActivity теперь хранит trackingId
         .toSet();
 
     for (var entry in _historyBox.values) {
-      if (!activeTrackedIds.contains(entry.nodeId)) continue;
+      // Сравниваем по trackingId
+      if (!activeTrackingIds.contains(entry.trackingId)) continue;
 
       final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
-      final nodeId = entry.nodeId;
-
       result.putIfAbsent(date, () => {});
 
       int intensity = 0;
@@ -33,7 +33,8 @@ class HeatmapService {
         continue;
       }
 
-      result[date]![nodeId] = (result[date]![nodeId] ?? 0) + intensity;
+      // Используем trackingId как ключ
+      result[date]![entry.trackingId] = (result[date]![entry.trackingId] ?? 0) + intensity;
     }
 
     return result;

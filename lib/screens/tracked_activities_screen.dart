@@ -53,10 +53,11 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
     if (!mounted) return;
     if (selectedColor == null) return;
 
+    // ВАЖНО: используем trackingId вместо node.id
     final newActivity = TrackedActivity(
-      nodeId: selectedNode.id,
+      nodeId: selectedNode.trackingId,   // ← постоянный идентификатор
       name: selectedNode.name,
-      colorValue: selectedColor.toARGB32(), // замена .value
+      colorValue: selectedColor.toARGB32(),
       stepType: selectedNode.stepType,
       isActive: true,
     );
@@ -74,7 +75,8 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       stepType: activity.stepType,
       isActive: value,
     );
-    Provider.of<AppState>(context, listen: false).updateTrackedActivity(activity.id, updated);
+    Provider.of<AppState>(context, listen: false)
+        .updateTrackedActivity(activity.id, updated);
     setState(() {});
   }
 
@@ -98,7 +100,8 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
     );
     if (!mounted) return;
     if (confirmed == true) {
-      Provider.of<AppState>(context, listen: false).deleteTrackedActivity(activity.id);
+      Provider.of<AppState>(context, listen: false)
+          .deleteTrackedActivity(activity.id);
       setState(() {});
     }
   }
@@ -119,7 +122,9 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
         ],
       ),
       body: activities.isEmpty
-          ? const Center(child: Text('Нет отслеживаемых задач. Нажмите + для добавления.'))
+          ? const Center(
+        child: Text('Нет отслеживаемых задач. Нажмите + для добавления.'),
+      )
           : ListView.builder(
         itemCount: activities.length,
         itemBuilder: (ctx, index) {
@@ -132,7 +137,9 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
                 child: const Icon(Icons.circle, color: Colors.white),
               ),
               title: Text(activity.name),
-              subtitle: Text(activity.stepType == 'single' ? 'Одиночная' : 'Пошаговая'),
+              subtitle: Text(
+                activity.stepType == 'single' ? 'Одиночная' : 'Пошаговая',
+              ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
