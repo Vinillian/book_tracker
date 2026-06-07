@@ -85,6 +85,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
         if (trackedActivities.isEmpty) {
           return Scaffold(
+            key: _scaffoldKey, // добавляем ключ для открытия меню
             appBar: AppBar(
               title: const Text('Тепловая карта активности'),
               actions: [
@@ -103,7 +104,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                 ),
               ],
             ),
-            endDrawer: AppDrawerMenu(
+            endDrawer: AppDrawerMenu(  // добавляем endDrawer
               currentThemeMode: widget.currentThemeMode,
               onThemeChanged: widget.onThemeChanged,
             ),
