@@ -39,7 +39,7 @@ class Node {
   bool excludeFromHistory;
 
   @HiveField(11)
-  String trackingId;  // постоянный идентификатор для отслеживания
+  String trackingId;
 
   Node({
     required this.name,
@@ -89,8 +89,6 @@ class Node {
       trackingId: trackingId,
     );
   }
-
-  // ... остальные методы (totalLeaves, completedLeaves, nonRoutineLeafCount, toggle, toJson, fromJson) без изменений ...
 
   int get totalLeaves {
     if (excludeFromHistory) return 0;
