@@ -3,8 +3,22 @@ import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
 
-class PickTaskForTrackingScreen extends StatelessWidget {
+class PickTaskForTrackingScreen extends StatefulWidget {
   const PickTaskForTrackingScreen({super.key});
+
+  @override
+  State<PickTaskForTrackingScreen> createState() => _PickTaskForTrackingScreenState();
+}
+
+class _PickTaskForTrackingScreenState extends State<PickTaskForTrackingScreen> {
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<Node> _collectLeafNodesFromPlans(List<Node> nodes) {
     final List<Node> result = [];
@@ -25,26 +39,57 @@ class PickTaskForTrackingScreen extends StatelessWidget {
     final plans = appState.plans;
     final allLeafNodes = _collectLeafNodesFromPlans(plans);
 
-    // Группируем по trackingId (постоянный идентификатор)
+    // Группируем по trackingId
     final uniqueMap = <String, Node>{};
     for (var node in allLeafNodes) {
       if (!uniqueMap.containsKey(node.trackingId)) {
         uniqueMap[node.trackingId] = node;
       }
     }
-    final uniqueNodes = uniqueMap.values.toList();
-    uniqueNodes.sort((a, b) => a.name.compareTo(b.name));
+    final allUniqueNodes = uniqueMap.values.toList();
+    allUniqueNodes.sort((a, b) => a.name.compareTo(b.name));
+
+    // Фильтрация по поисковому запросу
+    final filteredNodes = _searchQuery.isEmpty
+        ? allUniqueNodes
+        : allUniqueNodes.where((node) =>
+        node.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Выберите задачу')),
-      body: uniqueNodes.isEmpty
+      appBar: AppBar(
+        title: const Text('Выберите задачу'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: SearchBar(
+              controller: _searchController,
+              hintText: 'Поиск задач...',
+              leading: const Icon(Icons.search),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+              elevation: MaterialStateProperty.all(0),
+              shape: MaterialStateProperty.all(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      body: filteredNodes.isEmpty
           ? const Center(
-        child: Text('Нет доступных задач. Создайте не-рутинные задачи в планах.'),
+        child: Text('Нет доступных задач.\nСоздайте не-рутинные задачи в планах.'),
       )
           : ListView.builder(
-        itemCount: uniqueNodes.length,
+        itemCount: filteredNodes.length,
         itemBuilder: (ctx, index) {
-          final node = uniqueNodes[index];
+          final node = filteredNodes[index];
           return ListTile(
             title: Text(node.name),
             subtitle: Text(
