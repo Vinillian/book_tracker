@@ -23,13 +23,14 @@ class TrackedActivityAdapter extends TypeAdapter<TrackedActivity> {
       colorValue: fields[3] as int,
       stepType: fields[4] as String,
       isActive: fields[5] as bool,
+      isRoutine: fields[6] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, TrackedActivity obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class TrackedActivityAdapter extends TypeAdapter<TrackedActivity> {
       ..writeByte(4)
       ..write(obj.stepType)
       ..writeByte(5)
-      ..write(obj.isActive);
+      ..write(obj.isActive)
+      ..writeByte(6)
+      ..write(obj.isRoutine);
   }
 
   @override

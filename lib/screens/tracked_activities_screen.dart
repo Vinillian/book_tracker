@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/node.dart';
 import '../models/tracked_activity.dart';
 import '../providers/app_state.dart';
+import 'pick_task_for_tracking_screen.dart';
 
 class TrackedActivitiesScreen extends StatefulWidget {
   const TrackedActivitiesScreen({super.key});
@@ -11,21 +13,56 @@ class TrackedActivitiesScreen extends StatefulWidget {
 }
 
 class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
-  void _addActivity() {
-    // Заглушка для будущей реализации
-    showDialog(
+  final List<Color> _presetColors = [
+    Colors.red,
+    Colors.green,
+    Colors.blue,
+    Colors.orange,
+    Colors.purple,
+    Colors.teal,
+    Colors.pink,
+    Colors.indigo,
+  ];
+
+  Future<void> _addActivity() async {
+    final Node? selectedNode = await Navigator.push<Node>(
+      context,
+      MaterialPageRoute(builder: (_) => const PickTaskForTrackingScreen()),
+    );
+    if (!mounted) return;
+    if (selectedNode == null) return;
+
+    Color? selectedColor = await showDialog<Color>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Добавить задачу'),
-        content: const Text('Выбор задачи будет реализован в следующей версии.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
-          ),
-        ],
+        title: const Text('Выберите цвет'),
+        content: Wrap(
+          spacing: 8,
+          children: _presetColors.map((color) {
+            return GestureDetector(
+              onTap: () => Navigator.pop(ctx, color),
+              child: CircleAvatar(
+                backgroundColor: color,
+                radius: 20,
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
+    if (!mounted) return;
+    if (selectedColor == null) return;
+
+    final newActivity = TrackedActivity(
+      nodeId: selectedNode.id,
+      name: selectedNode.name,
+      colorValue: selectedColor.toARGB32(), // замена .value
+      stepType: selectedNode.stepType,
+      isActive: true,
+    );
+
+    Provider.of<AppState>(context, listen: false).addTrackedActivity(newActivity);
+    setState(() {});
   }
 
   void _toggleActive(TrackedActivity activity, bool value) {
@@ -59,7 +96,8 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
         ],
       ),
     );
-    if (confirmed == true && mounted) {
+    if (!mounted) return;
+    if (confirmed == true) {
       Provider.of<AppState>(context, listen: false).deleteTrackedActivity(activity.id);
       setState(() {});
     }

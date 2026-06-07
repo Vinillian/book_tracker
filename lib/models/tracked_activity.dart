@@ -23,6 +23,9 @@ class TrackedActivity {
   @HiveField(5)
   bool isActive;
 
+  @HiveField(6)
+  bool isRoutine; // добавляем поле рутины
+
   TrackedActivity({
     String? id,
     required this.nodeId,
@@ -30,6 +33,7 @@ class TrackedActivity {
     required this.colorValue,
     required this.stepType,
     this.isActive = true,
+    this.isRoutine = false,
   }) : id = id ?? const Uuid().v4();
 
   Map<String, dynamic> toJson() => {
@@ -39,6 +43,7 @@ class TrackedActivity {
     'colorValue': colorValue,
     'stepType': stepType,
     'isActive': isActive,
+    'isRoutine': isRoutine,
   };
 
   factory TrackedActivity.fromJson(Map<String, dynamic> json) => TrackedActivity(
@@ -48,5 +53,6 @@ class TrackedActivity {
     colorValue: json['colorValue'],
     stepType: json['stepType'],
     isActive: json['isActive'] ?? true,
+    isRoutine: json['isRoutine'] ?? false,
   );
 }
