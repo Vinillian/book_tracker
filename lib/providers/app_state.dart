@@ -33,10 +33,7 @@ class AppState extends ChangeNotifier {
     HistoryService.init(historyBox);
 
     _noteService = NoteService(notesBox);
-    _nodeService = NodeService(
-      templatesBox,
-      _noteService,
-    );
+    _nodeService = NodeService(templatesBox, _noteService);
 
     // Обновляем UI при изменении истории
     _historyBox.watch().listen((_) {
@@ -52,23 +49,15 @@ class AppState extends ChangeNotifier {
   // ---------- Геттеры для боксов ----------
 
   Box<Node> get templatesBox => _nodeService.box;
-
   Box<Note> get notesBox => _noteService.box;
-
   Box<HistoryEntry> get historyBox => _historyBox;
-
-  Box<StandardTask> get standardTasksBox =>
-      _standardTasksBox;
-
-  Box<TrackedActivity> get trackedActivitiesBox =>
-      _trackedActivitiesBox;
+  Box<StandardTask> get standardTasksBox => _standardTasksBox;
+  Box<TrackedActivity> get trackedActivitiesBox => _trackedActivitiesBox;
 
   // ---------- Прокси к NodeService ----------
 
   List<Node> get books => _nodeService.books;
-
   List<Node> get plans => _nodeService.plans;
-
   List<Node> get templates => _nodeService.templates;
 
   void addNode(Node node) {
@@ -88,119 +77,100 @@ class AppState extends ChangeNotifier {
 
   Node addEmptyDay(DateTime date) {
     final day = _nodeService.addEmptyDay(date);
-
     notifyListeners();
-
     return day;
   }
 
-  Node addDayFromTemplate(
-      Node template,
-      DateTime date,
-      ) {
-    final day = _nodeService.addDayFromTemplate(
-      template,
-      date,
-    );
-
+  Node addDayFromTemplate(Node template, DateTime date) {
+    final day = _nodeService.addDayFromTemplate(template, date);
     notifyListeners();
-
     return day;
   }
 
-  bool planExistsForDate(DateTime date) =>
-      _nodeService.planExistsForDate(date);
-
-  Node? getNodeById(String id) =>
-      _nodeService.getById(id);
-
-  dynamic getKeyForNode(Node node) =>
-      _nodeService.getKey(node);
+  bool planExistsForDate(DateTime date) => _nodeService.planExistsForDate(date);
+  Node? getNodeById(String id) => _nodeService.getById(id);
+  dynamic getKeyForNode(Node node) => _nodeService.getKey(node);
 
   // ---------- Прокси к NoteService ----------
 
-  Note? getNoteForDay(String linkedNodeId) =>
-      _noteService.getNoteForDay(linkedNodeId);
+  Note? getNoteForDay(String linkedNodeId) => _noteService.getNoteForDay(linkedNodeId);
 
   void createNoteForDay(String linkedNodeId) {
     _noteService.createNoteForDay(linkedNodeId);
-
     notifyListeners();
   }
 
   void saveNote(Note note) {
     _noteService.save(note);
-
     notifyListeners();
   }
 
   void deleteNote(String id) {
     _noteService.delete(id);
-
     notifyListeners();
   }
 
-  List<Note> get inboxNotes =>
-      _noteService.inboxNotes;
+  List<Note> get inboxNotes => _noteService.inboxNotes;
 
   // ---------- Стандартные задачи ----------
 
-  List<StandardTask> get standardTasks =>
-      _standardTasksBox.values.toList();
+  List<StandardTask> get standardTasks => _standardTasksBox.values.toList();
 
   void addStandardTask(StandardTask task) {
     _standardTasksBox.put(task.id, task);
-
     notifyListeners();
   }
 
-  void updateStandardTask(
-      String id,
-      StandardTask task,
-      ) {
+  void updateStandardTask(String id, StandardTask task) {
     _standardTasksBox.put(id, task);
-
     notifyListeners();
   }
 
   void deleteStandardTask(String id) {
     _standardTasksBox.delete(id);
-
     notifyListeners();
   }
 
-  // ---------- Отслеживаемые задачи ----------
+  // ---------- Отслеживаемые задачи (исправлено удаление/обновление по полю id) ----------
 
-  List<TrackedActivity> get trackedActivities =>
-      _trackedActivitiesBox.values.toList();
+  List<TrackedActivity> get trackedActivities => _trackedActivitiesBox.values.toList();
 
-  void addTrackedActivity(
-      TrackedActivity activity,
-      ) {
-    _trackedActivitiesBox.put(
-      activity.id,
-      activity,
-    );
-
+  void addTrackedActivity(TrackedActivity activity) {
+    // Используем id объекта как ключ
+    _trackedActivitiesBox.put(activity.id, activity);
     notifyListeners();
   }
 
-  void updateTrackedActivity(
-      String id,
-      TrackedActivity activity,
-      ) {
-    _trackedActivitiesBox.put(
-      id,
-      activity,
-    );
-
-    notifyListeners();
+  void updateTrackedActivity(String id, TrackedActivity activity) {
+    // Ищем ключ по полю id
+    dynamic keyToUpdate;
+    for (var key in _trackedActivitiesBox.keys) {
+      final existing = _trackedActivitiesBox.get(key);
+      if (existing != null && existing.id == id) {
+        keyToUpdate = key;
+        break;
+      }
+    }
+    if (keyToUpdate != null) {
+      _trackedActivitiesBox.put(keyToUpdate, activity);
+      notifyListeners();
+    }
   }
 
   void deleteTrackedActivity(String id) {
-    _trackedActivitiesBox.delete(id);
-
-    notifyListeners();
+    // Ищем ключ по полю id
+    dynamic keyToDelete;
+    for (var key in _trackedActivitiesBox.keys) {
+      final activity = _trackedActivitiesBox.get(key);
+      if (activity != null && activity.id == id) {
+        keyToDelete = key;
+        break;
+      }
+    }
+    if (keyToDelete != null) {
+      _trackedActivitiesBox.delete(keyToDelete);
+      notifyListeners();
+    }
   }
 
   // ---------- Внешнее уведомление ----------
