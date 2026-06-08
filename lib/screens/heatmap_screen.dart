@@ -26,7 +26,8 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   final ScrollController _horizontalController = ScrollController();
 
   bool _initialScrollDone = false;
-  int _monthsToShow = 3;
+  int _monthsToShow = 0; // 0 = 2 недели, 1 = 1 мес, 3 = 3 мес, 6 = 6 мес, 12 = 1 год
+  bool _isTwoWeeks = true; // по умолчанию 2 недели
 
   @override
   void dispose() {
@@ -76,7 +77,14 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
         final today = DateTime.now();
         final end = DateTime(today.year, today.month, today.day);
-        final start = DateTime(end.year, end.month - _monthsToShow, end.day);
+
+        DateTime start;
+        if (_isTwoWeeks) {
+          start = end.subtract(const Duration(days: 14));
+        } else {
+          start = DateTime(end.year, end.month - _monthsToShow, end.day);
+        }
+
         final days = heatmapService.getDateRange(start, end);
 
         if (!_initialScrollDone) {
@@ -85,7 +93,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
         if (trackedActivities.isEmpty) {
           return Scaffold(
-            key: _scaffoldKey, // добавляем ключ для открытия меню
+            key: _scaffoldKey,
             appBar: AppBar(
               title: const Text('Тепловая карта активности'),
               actions: [
@@ -104,7 +112,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                 ),
               ],
             ),
-            endDrawer: AppDrawerMenu(  // добавляем endDrawer
+            endDrawer: AppDrawerMenu(
               currentThemeMode: widget.currentThemeMode,
               onThemeChanged: widget.onThemeChanged,
             ),
@@ -124,8 +132,9 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
             actions: [
               DropdownButtonHideUnderline(
                 child: DropdownButton<int>(
-                  value: _monthsToShow,
+                  value: _isTwoWeeks ? 0 : _monthsToShow,
                   items: const [
+                    DropdownMenuItem(value: 0, child: Text('2 недели')),
                     DropdownMenuItem(value: 1, child: Text('1 мес')),
                     DropdownMenuItem(value: 3, child: Text('3 мес')),
                     DropdownMenuItem(value: 6, child: Text('6 мес')),
@@ -134,7 +143,12 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                   onChanged: (value) {
                     if (value == null) return;
                     setState(() {
-                      _monthsToShow = value;
+                      if (value == 0) {
+                        _isTwoWeeks = true;
+                      } else {
+                        _isTwoWeeks = false;
+                        _monthsToShow = value;
+                      }
                       _initialScrollDone = false;
                     });
                   },
