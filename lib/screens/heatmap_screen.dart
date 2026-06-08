@@ -26,8 +26,8 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   final ScrollController _horizontalController = ScrollController();
 
   bool _initialScrollDone = false;
-  int _monthsToShow = 0; // 0 = 2 недели, 1 = 1 мес, 3 = 3 мес, 6 = 6 мес, 12 = 1 год
-  bool _isTwoWeeks = true; // по умолчанию 2 недели
+  int _monthsToShow = 0; // 0 = 2 недели
+  bool _isTwoWeeks = true;
 
   @override
   void dispose() {
@@ -90,6 +90,10 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
         if (!_initialScrollDone) {
           _scrollToToday();
         }
+
+        const double cellSize = 17.0;      // уменьшено с 20 до 17
+        const double rowHeight = 20.0;      // уменьшено с 24 до 20
+        const double leftColumnWidth = 100; // уменьшено со 120 до 100
 
         if (trackedActivities.isEmpty) {
           return Scaffold(
@@ -176,185 +180,173 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
           body: RawScrollbar(
             controller: _verticalController,
             thumbVisibility: true,
-            trackVisibility: true,
-            interactive: true,
-            thickness: 12,
-            radius: const Radius.circular(6),
             child: SingleChildScrollView(
               controller: _verticalController,
-              child: RawScrollbar(
-                controller: _horizontalController,
-                thumbVisibility: true,
-                trackVisibility: true,
-                interactive: true,
-                thickness: 12,
-                radius: const Radius.circular(6),
-                scrollbarOrientation: ScrollbarOrientation.bottom,
-                child: SingleChildScrollView(
-                  controller: _horizontalController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 180,
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 78,
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: const Text(
-                                'Задача',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Левая колонка с названиями задач (фиксированная)
+                  SizedBox(
+                    width: leftColumnWidth,
+                    child: Column(
+                      children: [
+                        // Заглушка для выравнивания по высоте (строки месяцев и дней)
+                        const SizedBox(height: 56),
+                        ...trackedActivities.map(
+                              (activity) => SizedBox(
+                            height: rowHeight,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                              child: Text(
+                                activity.name,
+                                style: const TextStyle(fontSize: 9),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Правая часть с горизонтальной прокруткой
+                  Expanded(
+                    child: RawScrollbar(
+                      controller: _horizontalController,
+                      thumbVisibility: true,
+                      interactive: true,
+                      child: SingleChildScrollView(
+                        controller: _horizontalController,
+                        scrollDirection: Axis.horizontal,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Строка месяцев
+                            SizedBox(
+                              height: 28,
+                              child: Row(
+                                children: days.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final date = entry.value;
+                                  final showMonth = index == 0 || date.month != days[index - 1].month;
+                                  return Container(
+                                    width: cellSize + 2,
+                                    height: 28,
+                                    alignment: Alignment.centerLeft,
+                                    child: showMonth
+                                        ? Padding(
+                                      padding: const EdgeInsets.only(left: 2),
+                                      child: Text(
+                                        _monthName(date.month),
+                                        style: const TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                        : null,
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            // Строка дней недели и чисел
+                            SizedBox(
+                              height: 28,
+                              child: Row(
+                                children: days.map((date) {
+                                  final isToday = date.year == today.year &&
+                                      date.month == today.month &&
+                                      date.day == today.day;
+                                  return Container(
+                                    width: cellSize + 2,
+                                    height: 28,
+                                    decoration: isToday
+                                        ? BoxDecoration(
+                                      border: Border.all(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(3),
+                                    )
+                                        : null,
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          '${date.day}',
+                                          style: const TextStyle(fontSize: 7),
+                                        ),
+                                        Text(
+                                          _weekDayName(date.weekday),
+                                          style: const TextStyle(fontSize: 6),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            // Строки задач
                             ...trackedActivities.map(
-                                  (activity) => Container(
-                                height: 42,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: Text(
-                                  activity.name,
-                                  overflow: TextOverflow.ellipsis,
+                                  (activity) => SizedBox(
+                                height: rowHeight,
+                                child: Row(
+                                  children: days.map(
+                                        (date) {
+                                      final normalizedDate = DateTime(
+                                        date.year,
+                                        date.month,
+                                        date.day,
+                                      );
+                                      final intensity = data[normalizedDate]?[activity.nodeId] ?? 0;
+                                      final color = Color(activity.colorValue);
+                                      final isToday = normalizedDate.year == today.year &&
+                                          normalizedDate.month == today.month &&
+                                          normalizedDate.day == today.day;
+
+                                      return Container(
+                                        width: cellSize,
+                                        height: rowHeight - 2,
+                                        margin: const EdgeInsets.all(1),
+                                        decoration: BoxDecoration(
+                                          color: intensity == 0
+                                              ? Colors.grey.shade200
+                                              : color.withValues(
+                                            alpha: (0.25 + intensity * 0.15).clamp(0.25, 1.0),
+                                          ),
+                                          borderRadius: BorderRadius.circular(2),
+                                          border: isToday
+                                              ? Border.all(
+                                            color: Theme.of(context).colorScheme.primary,
+                                            width: 1,
+                                          )
+                                              : null,
+                                        ),
+                                        child: intensity > 0
+                                            ? Center(
+                                          child: Text(
+                                            intensity.toString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 7,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        )
+                                            : null,
+                                      );
+                                    },
+                                  ).toList(),
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 10),
                           ],
                         ),
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Column(
-                            children: [
-                              SizedBox(
-                                height: 28,
-                                child: Row(
-                                  children: [
-                                    for (int i = 0; i < days.length; i++)
-                                      if (i == 0 || days[i].month != days[i - 1].month)
-                                        Container(
-                                          width: (42 *
-                                              days
-                                                  .skip(i)
-                                                  .takeWhile((d) => d.month == days[i].month)
-                                                  .length)
-                                              .toDouble(),
-                                          height: 28,
-                                          alignment: Alignment.centerLeft,
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          child: Text(
-                                            _monthName(days[i].month),
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(
-                                height: 50,
-                                child: Row(
-                                  children: days.map((date) {
-                                    final isToday = date.year == today.year &&
-                                        date.month == today.month &&
-                                        date.day == today.day;
-                                    return Container(
-                                      width: 42,
-                                      height: 50,
-                                      decoration: isToday
-                                          ? BoxDecoration(
-                                        border: Border.all(
-                                          color: Theme.of(context).colorScheme.primary,
-                                          width: 2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      )
-                                          : null,
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            '${date.day}',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          Text(
-                                            _weekDayName(date.weekday),
-                                            style: const TextStyle(fontSize: 9),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ],
-                          ),
-                          ...trackedActivities.map(
-                                (activity) {
-                              return Row(
-                                children: days.map(
-                                      (date) {
-                                    final normalizedDate = DateTime(
-                                      date.year,
-                                      date.month,
-                                      date.day,
-                                    );
-                                    final intensity = data[normalizedDate]?[activity.nodeId] ?? 0;
-                                    final color = Color(activity.colorValue);
-                                    final isToday = normalizedDate.year == today.year &&
-                                        normalizedDate.month == today.month &&
-                                        normalizedDate.day == today.day;
-
-                                    return Container(
-                                      width: 40,
-                                      height: 40,
-                                      margin: const EdgeInsets.all(1),
-                                      decoration: BoxDecoration(
-                                        color: intensity == 0
-                                            ? Colors.grey.shade200
-                                            : color.withValues(
-                                          alpha: (0.25 + intensity * 0.15).clamp(0.25, 1.0),
-                                        ),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: isToday
-                                            ? Border.all(
-                                          color: Theme.of(context).colorScheme.primary,
-                                          width: 2,
-                                        )
-                                            : null,
-                                      ),
-                                      child: intensity > 0
-                                          ? Center(
-                                        child: Text(
-                                          intensity.toString(),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      )
-                                          : null,
-                                    );
-                                  },
-                                ).toList(),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
