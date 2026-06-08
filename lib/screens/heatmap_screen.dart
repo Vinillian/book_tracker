@@ -91,9 +91,9 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
           _scrollToToday();
         }
 
-        const double cellSize = 17.0;      // уменьшено с 20 до 17
-        const double rowHeight = 20.0;      // уменьшено с 24 до 20
-        const double leftColumnWidth = 100; // уменьшено со 120 до 100
+        const double cellSize = 17.0;
+        const double rowHeight = 20.0;
+        const double leftColumnWidth = 110; // чуть шире для текста "Задачи"
 
         if (trackedActivities.isEmpty) {
           return Scaffold(
@@ -190,8 +190,18 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                     width: leftColumnWidth,
                     child: Column(
                       children: [
-                        // Заглушка для выравнивания по высоте (строки месяцев и дней)
-                        const SizedBox(height: 56),
+                        // Заголовок "Задачи" на высоте заголовков месяцев+дней
+                        Container(
+                          height: 56,
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Задачи',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
                         ...trackedActivities.map(
                               (activity) => SizedBox(
                             height: rowHeight,
