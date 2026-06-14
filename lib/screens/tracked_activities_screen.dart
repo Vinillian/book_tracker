@@ -32,6 +32,43 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
     if (!mounted) return;
     if (selectedNode == null) return;
 
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    // Проверяем, есть ли уже задача с таким trackingId (в любом состоянии)
+    TrackedActivity? existing;
+    for (final a in appState.trackedActivities) {
+      if (a.nodeId == selectedNode.trackingId) {
+        existing = a;
+        break;
+      }
+    }
+
+    if (existing != null) {
+      // Уже есть – активируем, если была выключена
+      if (!existing.isActive) {
+        final updated = TrackedActivity(
+          id: existing.id,
+          nodeId: existing.nodeId,
+          name: existing.name,
+          colorValue: existing.colorValue,
+          stepType: existing.stepType,
+          isActive: true,
+          isRoutine: existing.isRoutine,
+        );
+        appState.updateTrackedActivity(existing.id, updated);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Задача включена обратно')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Задача уже отслеживается')),
+        );
+      }
+      setState(() {});
+      return;
+    }
+
+    // Новая задача – выбрать цвет
     Color? selectedColor = await showDialog<Color>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -53,20 +90,21 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
     if (!mounted) return;
     if (selectedColor == null) return;
 
-    // ВАЖНО: используем trackingId вместо node.id
     final newActivity = TrackedActivity(
-      nodeId: selectedNode.trackingId,   // ← постоянный идентификатор
+      nodeId: selectedNode.trackingId,
       name: selectedNode.name,
       colorValue: selectedColor.toARGB32(),
       stepType: selectedNode.stepType,
       isActive: true,
     );
 
-    Provider.of<AppState>(context, listen: false).addTrackedActivity(newActivity);
+    appState.addTrackedActivity(newActivity);
     setState(() {});
   }
 
   void _toggleActive(TrackedActivity activity, bool value) {
+    final appState = Provider.of<AppState>(context, listen: false);
+    // Обновляем только существующую запись
     final updated = TrackedActivity(
       id: activity.id,
       nodeId: activity.nodeId,
@@ -74,9 +112,9 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       colorValue: activity.colorValue,
       stepType: activity.stepType,
       isActive: value,
+      isRoutine: activity.isRoutine,
     );
-    Provider.of<AppState>(context, listen: false)
-        .updateTrackedActivity(activity.id, updated);
+    appState.updateTrackedActivity(activity.id, updated);
     setState(() {});
   }
 
@@ -100,8 +138,8 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
     );
     if (!mounted) return;
     if (confirmed == true) {
-      Provider.of<AppState>(context, listen: false)
-          .deleteTrackedActivity(activity.id);
+      final appState = Provider.of<AppState>(context, listen: false);
+      appState.deleteTrackedActivity(activity.id);
       setState(() {});
     }
   }

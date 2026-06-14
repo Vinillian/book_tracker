@@ -33,7 +33,9 @@ class NodeService {
     final node = _box.get(key);
     if (node != null) {
       final notes = _noteService.getNotesForNode(node.id);
-      for (final note in notes) _noteService.delete(note.id);
+      for (final note in notes) {
+        _noteService.delete(note.id);
+      }
     }
     _box.delete(key);
   }
