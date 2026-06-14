@@ -1,56 +1,50 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'history_entry.dart';
+part of 'tracked_activity.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class HistoryEntryAdapter extends TypeAdapter<HistoryEntry> {
+class TrackedActivityAdapter extends TypeAdapter<TrackedActivity> {
   @override
-  final int typeId = 2;
+  final int typeId = 5;
 
   @override
-  HistoryEntry read(BinaryReader reader) {
+  TrackedActivity read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return HistoryEntry(
+    return TrackedActivity(
       id: fields[0] as String?,
-      bookId: fields[1] as String,
-      nodeId: fields[2] as String,
-      date: fields[3] as DateTime,
-      nodeName: fields[4] as String,
-      stepType: fields[5] as String,
-      completed: fields[6] as bool?,
-      completedSteps: fields[7] as int?,
-      trackingId: fields[8] as String,
+      nodeId: fields[1] as String,
+      name: fields[2] as String,
+      colorValue: fields[3] as int,
+      stepType: fields[4] as String,
+      isActive: fields[5] as bool,
+      isRoutine: fields[6] as bool,
     );
   }
 
   @override
-  void write(BinaryWriter writer, HistoryEntry obj) {
+  void write(BinaryWriter writer, TrackedActivity obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.bookId)
-      ..writeByte(2)
       ..write(obj.nodeId)
+      ..writeByte(2)
+      ..write(obj.name)
       ..writeByte(3)
-      ..write(obj.date)
+      ..write(obj.colorValue)
       ..writeByte(4)
-      ..write(obj.nodeName)
-      ..writeByte(5)
       ..write(obj.stepType)
+      ..writeByte(5)
+      ..write(obj.isActive)
       ..writeByte(6)
-      ..write(obj.completed)
-      ..writeByte(7)
-      ..write(obj.completedSteps)
-      ..writeByte(8)
-      ..write(obj.trackingId);
+      ..write(obj.isRoutine);
   }
 
   @override
@@ -59,7 +53,7 @@ class HistoryEntryAdapter extends TypeAdapter<HistoryEntry> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is HistoryEntryAdapter &&
+      other is TrackedActivityAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

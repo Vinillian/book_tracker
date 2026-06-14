@@ -8,6 +8,7 @@ import '../models/node.dart';
 import '../models/note.dart';
 import '../models/history_entry.dart';
 import '../models/standard_task.dart';
+import '../models/tracked_activity.dart';
 
 class FileTransfer {
   // ======================= Общие утилиты =======================
@@ -149,6 +150,7 @@ class FileTransfer {
     required Box notesBox,
     required Box historyBox,
     required Box standardTasksBox,
+    required Box trackedActivitiesBox,
     String? suggestedName,
   }) async {
     final all = {
@@ -156,6 +158,7 @@ class FileTransfer {
       'notes': notesBox.values.map((e) => (e as dynamic).toJson()).toList(),
       'history': historyBox.values.map((e) => (e as dynamic).toJson()).toList(),
       'standardTasks': standardTasksBox.values.map((e) => (e as dynamic).toJson()).toList(),
+      'trackedActivities': trackedActivitiesBox.values.map((e) => (e as dynamic).toJson()).toList(),
     };
     final jsonString = jsonEncode(all);
     final bytes = Uint8List.fromList(utf8.encode('\uFEFF$jsonString'));
@@ -169,6 +172,7 @@ class FileTransfer {
     required Box notesBox,
     required Box historyBox,
     required Box standardTasksBox,
+    required Box trackedActivitiesBox,
   }) async {
     final bytes = await _importFile();
     if (bytes == null) return false;
@@ -187,8 +191,8 @@ class FileTransfer {
     await templatesBox.clear();
     await notesBox.clear();
     await historyBox.clear();
-    // Для standardTasks очищаем всегда (даже если поля нет)
     await standardTasksBox.clear();
+    await trackedActivitiesBox.clear(); // очищаем и отслеживаемые задачи
 
     // Импорт templates
     for (final t in data['templates']) {
@@ -206,6 +210,12 @@ class FileTransfer {
     if (data['standardTasks'] is List) {
       for (final st in data['standardTasks']) {
         await standardTasksBox.add(StandardTask.fromJson(Map<String, dynamic>.from(st)));
+      }
+    }
+    // Импорт trackedActivities, если есть
+    if (data['trackedActivities'] is List) {
+      for (final ta in data['trackedActivities']) {
+        await trackedActivitiesBox.add(TrackedActivity.fromJson(Map<String, dynamic>.from(ta)));
       }
     }
 

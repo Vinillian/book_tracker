@@ -4,6 +4,7 @@ import '../models/node.dart';
 import '../models/note.dart';
 import '../models/history_entry.dart';
 import '../models/standard_task.dart';
+import '../models/tracked_activity.dart';
 import '../providers/app_state.dart';
 import '../utils/file_transfer.dart';
 
@@ -69,7 +70,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     fromJson: HistoryEntry.fromJson,
   );
 
-  // Новые методы для стандартных задач
+  // Стандартные задачи
   Future<bool> _exportStandardTasks() => FileTransfer.exportBox(
     box: _appState.standardTasksBox,
     suggestedName: 'standard_tasks',
@@ -79,17 +80,29 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     fromJson: StandardTask.fromJson,
   );
 
+  // Отслеживаемые задачи
+  Future<bool> _exportTrackedActivities() => FileTransfer.exportBox(
+    box: _appState.trackedActivitiesBox,
+    suggestedName: 'tracked_activities',
+  );
+  Future<int> _importTrackedActivities() => FileTransfer.importIntoBox(
+    box: _appState.trackedActivitiesBox,
+    fromJson: TrackedActivity.fromJson,
+  );
+
   Future<bool> _exportAll() => FileTransfer.exportAll(
     templatesBox: _appState.templatesBox,
     notesBox: _appState.notesBox,
     historyBox: _appState.historyBox,
     standardTasksBox: _appState.standardTasksBox,
+    trackedActivitiesBox: _appState.trackedActivitiesBox,
   );
   Future<bool> _importAll() => FileTransfer.importAll(
     templatesBox: _appState.templatesBox,
     notesBox: _appState.notesBox,
     historyBox: _appState.historyBox,
     standardTasksBox: _appState.standardTasksBox,
+    trackedActivitiesBox: _appState.trackedActivitiesBox,
   );
 
   // ========== Вспомогательные методы для SnackBar ==========
@@ -272,6 +285,23 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 () => _runImport(
               _importStandardTasks,
               'Импортировано стандартных задач',
+              'Файл не выбран или нет данных',
+            ),
+          ),
+          _sectionHeader('Отслеживаемые задачи'),
+          _buildTile(
+            'Экспорт отслеживаемых задач',
+                () => _runExport(
+              _exportTrackedActivities,
+              'Отслеживаемые задачи экспортированы',
+              'Нет задач для экспорта или отменено',
+            ),
+          ),
+          _buildTile(
+            'Импорт отслеживаемых задач',
+                () => _runImport(
+              _importTrackedActivities,
+              'Импортировано отслеживаемых задач',
               'Файл не выбран или нет данных',
             ),
           ),

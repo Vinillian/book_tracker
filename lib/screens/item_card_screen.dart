@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../models/standard_task.dart';
+import '../providers/app_state.dart';
 import 'editor_screen.dart';
 import 'standard_tasks_picker_screen.dart';
 
@@ -57,7 +60,12 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   }
 
   void _saveOnDispose() {
-    _workingCopy.name = _nameController.text.trim();
+    final name = _nameController.text.trim();
+    if (widget.isNew && name.isNotEmpty) {
+      final existingId = _findExistingTrackingId(name);
+      _workingCopy.trackingId = existingId;
+    }
+    _workingCopy.name = name;
     _workingCopy.stepType = _stepType;
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
@@ -172,15 +180,47 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
       MaterialPageRoute(builder: (_) => const StandardTasksPickerScreen()),
     );
     if (selected != null) {
+      final name = selected.name;
+      final existingId = _findExistingTrackingId(name);
       setState(() {
-        _nameController.text = selected.name;
+        _nameController.text = name;
         _stepType = selected.stepType;
         _totalSteps = selected.stepType == 'stepByStep' ? selected.totalSteps : 1;
         _excludeFromHistory = selected.excludeFromHistory;
         _totalStepsController.text = _totalSteps.toString();
         _completedSteps = 0;
+        _workingCopy.trackingId = existingId;
       });
     }
+  }
+
+  /// Поиск существующего trackingId для задачи с таким же именем
+  String _findExistingTrackingId(String name) {
+    final appState = context.read<AppState>();
+    final allNodes = <Node>[];
+    allNodes.addAll(appState.books);
+    allNodes.addAll(appState.plans);
+    allNodes.addAll(appState.templates);
+
+    List<Node> collectLeaves(List<Node> nodes) {
+      final leaves = <Node>[];
+      for (var node in nodes) {
+        if (node.children.isEmpty && node.stepType != 'folder') {
+          leaves.add(node);
+        } else {
+          leaves.addAll(collectLeaves(node.children));
+        }
+      }
+      return leaves;
+    }
+
+    final allLeaves = collectLeaves(allNodes);
+    for (var node in allLeaves) {
+      if (node.name.toLowerCase() == name.toLowerCase() && node.trackingId.isNotEmpty) {
+        return node.trackingId;
+      }
+    }
+    return const Uuid().v4();
   }
 
   @override
@@ -214,6 +254,12 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 labelText: 'Название',
                 border: OutlineInputBorder(),
               ),
+              onChanged: (value) {
+                if (widget.isNew && value.trim().isNotEmpty) {
+                  final existingId = _findExistingTrackingId(value.trim());
+                  _workingCopy.trackingId = existingId;
+                }
+              },
             ),
             const SizedBox(height: 16),
             if (isFolder) ...[

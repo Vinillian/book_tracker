@@ -12,11 +12,7 @@ class HistoryService {
   static Box<HistoryEntry> get _box =>
       _customBox ?? Hive.box<HistoryEntry>('history');
 
-  // ========== Уникальная запись с поддержкой удаления ==========
-
-  /// Для одиночных чекбоксов:
-  /// - если newValue == true: удаляем старую запись за сегодня и добавляем новую (выполнено)
-  /// - если newValue == false: удаляем старую запись за сегодня (если есть)
+  // Для одиночных чекбоксов
   static void recordUniqueToggle({
     required String bookId,
     required Node node,
@@ -31,7 +27,7 @@ class HistoryService {
     for (var key in _box.keys) {
       final entry = _box.get(key);
       if (entry != null &&
-          entry.nodeId == node.id &&
+          entry.trackingId == node.trackingId &&   // сравниваем по trackingId
           entry.date.compareTo(startOfDay) >= 0 &&
           entry.date.compareTo(endOfDay) < 0) {
         existingKey = key;
@@ -49,15 +45,14 @@ class HistoryService {
         nodeId: node.id,
         nodeName: node.name,
         completed: true,
+        trackingId: node.trackingId,
         date: eventDate,
       );
       _box.add(newEntry);
     }
   }
 
-  /// Для пошаговых задач:
-  /// - если newSteps > 0: удаляем старую запись за сегодня и добавляем новую с newSteps
-  /// - если newSteps == 0: удаляем старую запись за сегодня (если есть)
+  // Для пошаговых задач
   static void recordUniqueProgress({
     required String bookId,
     required Node node,
@@ -72,7 +67,7 @@ class HistoryService {
     for (var key in _box.keys) {
       final entry = _box.get(key);
       if (entry != null &&
-          entry.nodeId == node.id &&
+          entry.trackingId == node.trackingId &&
           entry.date.compareTo(startOfDay) >= 0 &&
           entry.date.compareTo(endOfDay) < 0) {
         existingKey = key;
@@ -90,13 +85,12 @@ class HistoryService {
         nodeId: node.id,
         nodeName: node.name,
         completedSteps: newSteps,
+        trackingId: node.trackingId,
         date: eventDate,
       );
       _box.add(newEntry);
     }
   }
-
-  // ========== Прочие методы ==========
 
   static List<HistoryEntry> getEntriesForDay(DateTime day) {
     final start = DateTime(day.year, day.month, day.day);

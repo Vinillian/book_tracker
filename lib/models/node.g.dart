@@ -28,13 +28,14 @@ class NodeAdapter extends TypeAdapter<Node> {
       id: fields[8] as String?,
       category: fields[9] as String?,
       excludeFromHistory: fields[10] as bool,
+      trackingId: fields[11] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Node obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class NodeAdapter extends TypeAdapter<Node> {
       ..writeByte(9)
       ..write(obj.category)
       ..writeByte(10)
-      ..write(obj.excludeFromHistory);
+      ..write(obj.excludeFromHistory)
+      ..writeByte(11)
+      ..write(obj.trackingId);
   }
 
   @override
