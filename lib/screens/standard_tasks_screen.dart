@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../models/standard_task.dart';
+import '../models/node.dart';
 import '../providers/app_state.dart';
 
 class StandardTasksScreen extends StatefulWidget {
@@ -139,6 +141,34 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
     super.dispose();
   }
 
+  /// Поиск существующего trackingId для задачи с таким же именем (из всех книг, планов, шаблонов)
+  String _findExistingTrackingId(String name, AppState appState) {
+    final allNodes = <Node>[];
+    allNodes.addAll(appState.books);
+    allNodes.addAll(appState.plans);
+    allNodes.addAll(appState.templates);
+
+    List<Node> collectLeaves(List<Node> nodes) {
+      final leaves = <Node>[];
+      for (var node in nodes) {
+        if (node.children.isEmpty && node.stepType != 'folder') {
+          leaves.add(node);
+        } else {
+          leaves.addAll(collectLeaves(node.children));
+        }
+      }
+      return leaves;
+    }
+
+    final allLeaves = collectLeaves(allNodes);
+    for (var node in allLeaves) {
+      if (node.name.toLowerCase() == name.toLowerCase() && node.trackingId.isNotEmpty) {
+        return node.trackingId;
+      }
+    }
+    return const Uuid().v4();
+  }
+
   void _save() {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
@@ -147,14 +177,35 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       );
       return;
     }
+
+    final appState = context.read<AppState>();
+
+    // Проверка на дубликат имени (регистронезависимая)
+    bool duplicateExists = false;
+    for (final task in appState.standardTasks) {
+      if (task.name.toLowerCase() == name.toLowerCase() && task.id != widget.task.id) {
+        duplicateExists = true;
+        break;
+      }
+    }
+    if (duplicateExists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Задача с таким именем уже существует')),
+      );
+      return;
+    }
+
+    // Поиск существующего trackingId
+    final trackingId = _findExistingTrackingId(name, appState);
+
     final updatedTask = StandardTask(
       id: widget.task.id,
       name: name,
       stepType: _stepType,
       totalSteps: _stepType == 'stepByStep' ? _totalSteps : 1,
       excludeFromHistory: _excludeFromHistory,
+      trackingId: trackingId,
     );
-    final appState = context.read<AppState>();
     if (widget.isNew) {
       appState.addStandardTask(updatedTask);
     } else {

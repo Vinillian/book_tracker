@@ -112,7 +112,7 @@ class AppState extends ChangeNotifier {
 
   List<Note> get inboxNotes => _noteService.inboxNotes;
 
-  // ---------- Стандартные задачи ----------
+  // ---------- Стандартные задачи (исправлено для Issue #50) ----------
 
   List<StandardTask> get standardTasks => _standardTasksBox.values.toList();
 
@@ -122,21 +122,41 @@ class AppState extends ChangeNotifier {
   }
 
   void updateStandardTask(String id, StandardTask task) {
-    _standardTasksBox.put(id, task);
-    notifyListeners();
+    // Ищем реальный Hive-ключ по полю id
+    dynamic keyToUpdate;
+    for (var key in _standardTasksBox.keys) {
+      final existing = _standardTasksBox.get(key);
+      if (existing != null && existing.id == id) {
+        keyToUpdate = key;
+        break;
+      }
+    }
+    if (keyToUpdate != null) {
+      _standardTasksBox.put(keyToUpdate, task);
+      notifyListeners();
+    }
   }
 
   void deleteStandardTask(String id) {
-    _standardTasksBox.delete(id);
-    notifyListeners();
+    dynamic keyToDelete;
+    for (var key in _standardTasksBox.keys) {
+      final task = _standardTasksBox.get(key);
+      if (task != null && task.id == id) {
+        keyToDelete = key;
+        break;
+      }
+    }
+    if (keyToDelete != null) {
+      _standardTasksBox.delete(keyToDelete);
+      notifyListeners();
+    }
   }
 
-  // ---------- Отслеживаемые задачи (исправлено удаление/обновление по полю id) ----------
+  // ---------- Отслеживаемые задачи ----------
 
   List<TrackedActivity> get trackedActivities => _trackedActivitiesBox.values.toList();
 
   void addTrackedActivity(TrackedActivity activity) {
-    // Используем id объекта как ключ
     _trackedActivitiesBox.put(activity.id, activity);
     notifyListeners();
   }
@@ -158,7 +178,6 @@ class AppState extends ChangeNotifier {
   }
 
   void deleteTrackedActivity(String id) {
-    // Ищем ключ по полю id
     dynamic keyToDelete;
     for (var key in _trackedActivitiesBox.keys) {
       final activity = _trackedActivitiesBox.get(key);
