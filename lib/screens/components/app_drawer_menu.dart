@@ -6,6 +6,8 @@ import '../notes_screen.dart';
 import '../template_manager_screen.dart';
 import '../backup_restore_screen.dart';
 import '../settings_screen.dart';
+import '../standard_tasks_screen.dart';
+import '../heatmap_screen.dart';
 
 class AppDrawerMenu extends StatelessWidget {
   final String currentThemeMode;
@@ -108,6 +110,22 @@ class AppDrawerMenu extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.heat_pump),
+            title: const Text('Тепловая карта'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HeatmapScreen(
+                    currentThemeMode: currentThemeMode,
+                    onThemeChanged: onThemeChanged,
+                  ),
+                ),
+              );
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.note),
             title: const Text('Inbox'),
             onTap: () {
@@ -125,6 +143,18 @@ class AppDrawerMenu extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.star),
+            title: const Text('Стандартные задачи'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const StandardTasksScreen()),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.folder),
             title: const Text('Управление шаблонами'),
             onTap: () {
@@ -132,8 +162,7 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      const TemplateManagerScreen(selectionMode: false),
+                  builder: (_) => const TemplateManagerScreen(selectionMode: false),
                 ),
               );
             },

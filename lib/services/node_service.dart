@@ -9,19 +9,11 @@ class NodeService {
 
   NodeService(this._box, this._noteService);
 
-  // ---------- Публичный доступ к боксу (для ValueListenableBuilder) ----------
   Box<Node> get box => _box;
 
-  // ---------- CRUD ----------
-
-  List<Node> get books =>
-      _box.values.where((n) => n.category == 'book').toList();
-
-  List<Node> get plans =>
-      _box.values.where((n) => n.category == 'planner').toList();
-
-  List<Node> get templates =>
-      _box.values.where((n) => n.category == 'template').toList();
+  List<Node> get books => _box.values.where((n) => n.category == 'book').toList();
+  List<Node> get plans => _box.values.where((n) => n.category == 'planner').toList();
+  List<Node> get templates => _box.values.where((n) => n.category == 'template').toList();
 
   Node? getById(String id) {
     try {
@@ -35,29 +27,17 @@ class NodeService {
     return _box.keys.firstWhere((k) => _box.get(k) == node);
   }
 
-  void add(Node node) {
-    _box.add(node);
-  }
-
-  void update(dynamic key, Node node) {
-    _box.put(key, node);
-  }
-
+  void add(Node node) => _box.add(node);
+  void update(dynamic key, Node node) => _box.put(key, node);
   void delete(dynamic key) async {
     final node = _box.get(key);
     if (node != null) {
-      // Удаляем связанные заметки (если план)
       final notes = _noteService.getNotesForNode(node.id);
-      for (final note in notes) {
-        _noteService.delete(note.id);
-      }
+      for (final note in notes) _noteService.delete(note.id);
     }
     _box.delete(key);
   }
 
-  // ---------- Специфичные методы ----------
-
-  /// Создать пустой план на дату (возвращает созданный Node)
   Node addEmptyDay(DateTime date) {
     final dateStr = _formatDate(date);
     final newDay = Node(
@@ -67,12 +47,10 @@ class NodeService {
       stepType: 'folder',
     );
     add(newDay);
-    // Создать пустую заметку дня
     _noteService.createNoteForDay(newDay.id);
     return newDay;
   }
 
-  /// Создать план из шаблона на дату
   Node addDayFromTemplate(Node template, DateTime date) {
     final dateStr = _formatDate(date);
     final copy = _copyAndReset(template);
@@ -83,13 +61,11 @@ class NodeService {
     return copy;
   }
 
-  /// Существует ли план с таким именем (датой)
   bool planExistsForDate(DateTime date) {
     final dateStr = _formatDate(date);
     return plans.any((n) => n.name == dateStr);
   }
 
-  /// Поиск плана по имени (дате)
   Node? getPlanByName(String name) {
     try {
       return plans.firstWhere((n) => n.name == name);
@@ -97,8 +73,6 @@ class NodeService {
       return null;
     }
   }
-
-  // ---------- Вспомогательные ----------
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}'
@@ -108,7 +82,8 @@ class NodeService {
 
   Node _copyAndReset(Node node) {
     final copy = node.deepCopy();
-    copy.id = const Uuid().v4(); // ← гарантированно уникальный ID
+    copy.id = const Uuid().v4();          // новый ID для экземпляра
+    // trackingId НЕ меняем – оставляем тот же, что у шаблона
     if (copy.children.isEmpty) {
       copy.completed = false;
       copy.completedSteps = 0;

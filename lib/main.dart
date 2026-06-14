@@ -8,6 +8,8 @@ import 'models/node.dart';
 import 'models/settings.dart';
 import 'models/history_entry.dart';
 import 'models/note.dart';
+import 'models/standard_task.dart';
+import 'models/tracked_activity.dart';
 import 'screens/home_screen.dart';
 import 'providers/app_state.dart';
 import 'services/node_service.dart';
@@ -21,14 +23,16 @@ void main() async {
   Hive.registerAdapter(AppSettingsAdapter());
   Hive.registerAdapter(HistoryEntryAdapter());
   Hive.registerAdapter(NoteAdapter());
+  Hive.registerAdapter(StandardTaskAdapter());
+  Hive.registerAdapter(TrackedActivityAdapter());
 
-  // Открываем все боксы
   Box<Node> templatesBox = await _openBox<Node>('templates');
-  await _openBox<AppSettings>('settings'); // ← больше не сохраняем в переменную
+  await _openBox<AppSettings>('settings');
   Box<HistoryEntry> historyBox = await _openBox<HistoryEntry>('history');
   Box<Note> notesBox = await _openBox<Note>('notes');
+  Box<StandardTask> standardTasksBox = await _openBox<StandardTask>('standard_tasks');
+  Box<TrackedActivity> trackedActivitiesBox = await _openBox<TrackedActivity>('tracked_activities');
 
-  // Миграция старых планов
   _migrateExistingPlans(templatesBox, notesBox);
 
   runApp(
@@ -37,6 +41,8 @@ void main() async {
         templatesBox: templatesBox,
         notesBox: notesBox,
         historyBox: historyBox,
+        standardTasksBox: standardTasksBox,
+        trackedActivitiesBox: trackedActivitiesBox,
       ),
       child: const MyApp(),
     ),

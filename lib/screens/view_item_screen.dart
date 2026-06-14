@@ -6,12 +6,14 @@ class ViewItemScreen extends StatefulWidget {
   final String bookId;
   final Node node;
   final VoidCallback onNodeUpdated;
+  final DateTime? targetDate;
 
   const ViewItemScreen({
     super.key,
     required this.bookId,
     required this.node,
     required this.onNodeUpdated,
+    this.targetDate,
   });
 
   @override
@@ -20,22 +22,26 @@ class ViewItemScreen extends StatefulWidget {
 
 class _ViewItemScreenState extends State<ViewItemScreen> {
   late Node _node;
+  late int _tempSteps;
 
   @override
   void initState() {
     super.initState();
     _node = widget.node;
+    _tempSteps = _node.completedSteps;
   }
 
   void _onToggle(bool? value) {
+    final newValue = value ?? false;
     setState(() {
-      _node.completed = value!;
+      _node.completed = newValue;
     });
     if (!_node.excludeFromHistory) {
-      HistoryService.recordToggle(
+      HistoryService.recordUniqueToggle(
         bookId: widget.bookId,
         node: _node,
-        newValue: _node.completed,
+        newValue: newValue,
+        targetDate: widget.targetDate,
       );
     }
     widget.onNodeUpdated();
@@ -43,19 +49,28 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   void _onSliderChanged(double value) {
     setState(() {
-      _node.completedSteps = value.round();
+      _tempSteps = value.round();
     });
   }
 
   void _onSliderChangeEnd(double value) {
-    if (!_node.excludeFromHistory) {
-      HistoryService.recordStepChange(
-        bookId: widget.bookId,
-        node: _node,
-        newSteps: _node.completedSteps,
-      );
+    final newSteps = value.round();
+    final oldSteps = _node.completedSteps;
+    if (newSteps != oldSteps) {
+      setState(() {
+        _node.completedSteps = newSteps;
+        _tempSteps = newSteps;
+      });
+      if (!_node.excludeFromHistory) {
+        HistoryService.recordUniqueProgress(
+          bookId: widget.bookId,
+          node: _node,
+          newSteps: newSteps,
+          targetDate: widget.targetDate,
+        );
+      }
+      widget.onNodeUpdated();
     }
-    widget.onNodeUpdated();
   }
 
   @override
@@ -116,7 +131,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                 children: [
                   Expanded(
                     child: Slider(
-                      value: _node.completedSteps.toDouble(),
+                      value: _tempSteps.toDouble(),
                       min: 0,
                       max: _node.totalSteps.toDouble(),
                       divisions: _node.totalSteps,
@@ -124,7 +139,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                       onChangeEnd: _onSliderChangeEnd,
                     ),
                   ),
-                  Text('${_node.completedSteps}/${_node.totalSteps}'),
+                  Text('$_tempSteps/${_node.totalSteps}'),
                 ],
               ),
             ] else if (!isLeaf) ...[

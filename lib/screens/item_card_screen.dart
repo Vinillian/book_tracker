@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+import 'package:provider/provider.dart';
 import '../models/node.dart';
+import '../models/standard_task.dart';
+import '../providers/app_state.dart';
 import 'editor_screen.dart';
+import 'standard_tasks_picker_screen.dart';
 
 class ItemCardScreen extends StatefulWidget {
   final Node node;
@@ -55,7 +60,12 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   }
 
   void _saveOnDispose() {
-    _workingCopy.name = _nameController.text.trim();
+    final name = _nameController.text.trim();
+    if (widget.isNew && name.isNotEmpty) {
+      final existingId = _findExistingTrackingId(name);
+      _workingCopy.trackingId = existingId;
+    }
+    _workingCopy.name = name;
     _workingCopy.stepType = _stepType;
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
@@ -164,6 +174,55 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     }
   }
 
+  void _pickFromStandard() async {
+    final selected = await Navigator.push<StandardTask>(
+      context,
+      MaterialPageRoute(builder: (_) => const StandardTasksPickerScreen()),
+    );
+    if (selected != null) {
+      final name = selected.name;
+      final existingId = _findExistingTrackingId(name);
+      setState(() {
+        _nameController.text = name;
+        _stepType = selected.stepType;
+        _totalSteps = selected.stepType == 'stepByStep' ? selected.totalSteps : 1;
+        _excludeFromHistory = selected.excludeFromHistory;
+        _totalStepsController.text = _totalSteps.toString();
+        _completedSteps = 0;
+        _workingCopy.trackingId = existingId;
+      });
+    }
+  }
+
+  /// Поиск существующего trackingId для задачи с таким же именем
+  String _findExistingTrackingId(String name) {
+    final appState = context.read<AppState>();
+    final allNodes = <Node>[];
+    allNodes.addAll(appState.books);
+    allNodes.addAll(appState.plans);
+    allNodes.addAll(appState.templates);
+
+    List<Node> collectLeaves(List<Node> nodes) {
+      final leaves = <Node>[];
+      for (var node in nodes) {
+        if (node.children.isEmpty && node.stepType != 'folder') {
+          leaves.add(node);
+        } else {
+          leaves.addAll(collectLeaves(node.children));
+        }
+      }
+      return leaves;
+    }
+
+    final allLeaves = collectLeaves(allNodes);
+    for (var node in allLeaves) {
+      if (node.name.toLowerCase() == name.toLowerCase() && node.trackingId.isNotEmpty) {
+        return node.trackingId;
+      }
+    }
+    return const Uuid().v4();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isFolder = _stepType == 'folder';
@@ -174,10 +233,18 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
         leading: widget.quickAdd
             ? IconButton(icon: const Icon(Icons.close), onPressed: _cancel)
             : null,
-        actions: [IconButton(icon: const Icon(Icons.check), onPressed: _save)],
+        actions: [
+          if (widget.isNew)
+            IconButton(
+              icon: const Icon(Icons.list_alt),
+              onPressed: _pickFromStandard,
+              tooltip: 'Выбрать из стандартных',
+            ),
+          IconButton(icon: const Icon(Icons.check), onPressed: _save),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -187,6 +254,12 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 labelText: 'Название',
                 border: OutlineInputBorder(),
               ),
+              onChanged: (value) {
+                if (widget.isNew && value.trim().isNotEmpty) {
+                  final existingId = _findExistingTrackingId(value.trim());
+                  _workingCopy.trackingId = existingId;
+                }
+              },
             ),
             const SizedBox(height: 16),
             if (isFolder) ...[
@@ -205,21 +278,22 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              RadioGroup<String>(
-                groupValue: _stepType,
-                onChanged: _onStepTypeChanged,
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: Radio<String>(value: 'single'),
-                      title: const Text('Одиночный чекбокс'),
-                    ),
-                    ListTile(
-                      leading: Radio<String>(value: 'stepByStep'),
-                      title: const Text('Пошаговый'),
-                    ),
-                  ],
-                ),
+              Row(
+                children: [
+                  Radio<String>(
+                    value: 'single',
+                    groupValue: _stepType,
+                    onChanged: _onStepTypeChanged,
+                  ),
+                  const Text('Одиночный чекбокс'),
+                  const SizedBox(width: 24),
+                  Radio<String>(
+                    value: 'stepByStep',
+                    groupValue: _stepType,
+                    onChanged: _onStepTypeChanged,
+                  ),
+                  const Text('Пошаговый'),
+                ],
               ),
               if (_stepType == 'stepByStep') ...[
                 const SizedBox(height: 16),

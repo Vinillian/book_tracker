@@ -7,6 +7,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/node.dart';
 import '../models/note.dart';
 import '../models/history_entry.dart';
+import '../models/standard_task.dart';
+import '../models/tracked_activity.dart';
 
 class FileTransfer {
   // ======================= Общие утилиты =======================
@@ -38,10 +40,10 @@ class FileTransfer {
   }
 
   static List<T> _filterItems<T>(
-    Box<T> box, {
-    String? categoryFilter,
-    bool Function(T)? filter,
-  }) {
+      Box<T> box, {
+        String? categoryFilter,
+        bool Function(T)? filter,
+      }) {
     var items = box.values.toList();
     if (filter != null) {
       items = items.where(filter).toList();
@@ -147,14 +149,16 @@ class FileTransfer {
     required Box templatesBox,
     required Box notesBox,
     required Box historyBox,
+    required Box standardTasksBox,
+    required Box trackedActivitiesBox,
     String? suggestedName,
   }) async {
     final all = {
-      'templates': templatesBox.values
-          .map((e) => (e as dynamic).toJson())
-          .toList(),
+      'templates': templatesBox.values.map((e) => (e as dynamic).toJson()).toList(),
       'notes': notesBox.values.map((e) => (e as dynamic).toJson()).toList(),
       'history': historyBox.values.map((e) => (e as dynamic).toJson()).toList(),
+      'standardTasks': standardTasksBox.values.map((e) => (e as dynamic).toJson()).toList(),
+      'trackedActivities': trackedActivitiesBox.values.map((e) => (e as dynamic).toJson()).toList(),
     };
     final jsonString = jsonEncode(all);
     final bytes = Uint8List.fromList(utf8.encode('\uFEFF$jsonString'));
@@ -167,6 +171,8 @@ class FileTransfer {
     required Box templatesBox,
     required Box notesBox,
     required Box historyBox,
+    required Box standardTasksBox,
+    required Box trackedActivitiesBox,
   }) async {
     final bytes = await _importFile();
     if (bytes == null) return false;
@@ -175,6 +181,7 @@ class FileTransfer {
     if (items == null || items.isEmpty) return false;
 
     final data = items.first;
+    // Основные поля должны быть (templates, notes, history)
     if (data['templates'] is! List ||
         data['notes'] is! List ||
         data['history'] is! List) {
@@ -184,16 +191,34 @@ class FileTransfer {
     await templatesBox.clear();
     await notesBox.clear();
     await historyBox.clear();
+    await standardTasksBox.clear();
+    await trackedActivitiesBox.clear(); // очищаем и отслеживаемые задачи
 
+    // Импорт templates
     for (final t in data['templates']) {
       await templatesBox.add(Node.fromJson(Map<String, dynamic>.from(t)));
     }
+    // Импорт notes
     for (final n in data['notes']) {
       await notesBox.add(Note.fromJson(Map<String, dynamic>.from(n)));
     }
+    // Импорт history
     for (final h in data['history']) {
       await historyBox.add(HistoryEntry.fromJson(Map<String, dynamic>.from(h)));
     }
+    // Импорт standardTasks, если есть
+    if (data['standardTasks'] is List) {
+      for (final st in data['standardTasks']) {
+        await standardTasksBox.add(StandardTask.fromJson(Map<String, dynamic>.from(st)));
+      }
+    }
+    // Импорт trackedActivities, если есть
+    if (data['trackedActivities'] is List) {
+      for (final ta in data['trackedActivities']) {
+        await trackedActivitiesBox.add(TrackedActivity.fromJson(Map<String, dynamic>.from(ta)));
+      }
+    }
+
     return true;
   }
 }
