@@ -13,7 +13,7 @@ class StandardTask {
   String name;
 
   @HiveField(2)
-  String stepType; // 'single' or 'stepByStep'
+  String stepType;
 
   @HiveField(3)
   int totalSteps;
@@ -22,7 +22,10 @@ class StandardTask {
   bool excludeFromHistory;
 
   @HiveField(5)
-  int? colorValue; // optional for future heatmap
+  int? colorValue;
+
+  @HiveField(6)
+  String trackingId;   // новый поле
 
   StandardTask({
     String? id,
@@ -31,7 +34,9 @@ class StandardTask {
     this.totalSteps = 1,
     this.excludeFromHistory = false,
     this.colorValue,
-  }) : id = id ?? const Uuid().v4();
+    String? trackingId,
+  }) : id = id ?? const Uuid().v4(),
+        trackingId = trackingId ?? const Uuid().v4();
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -40,6 +45,7 @@ class StandardTask {
     'totalSteps': totalSteps,
     'excludeFromHistory': excludeFromHistory,
     'colorValue': colorValue,
+    'trackingId': trackingId,
   };
 
   factory StandardTask.fromJson(Map<String, dynamic> json) => StandardTask(
@@ -49,6 +55,7 @@ class StandardTask {
     totalSteps: json['totalSteps'] ?? 1,
     excludeFromHistory: json['excludeFromHistory'] ?? false,
     colorValue: json['colorValue'],
+    trackingId: json['trackingId'] ?? const Uuid().v4(),
   );
 
   Node toNode() {
@@ -57,6 +64,7 @@ class StandardTask {
       stepType: stepType,
       totalSteps: totalSteps,
       excludeFromHistory: excludeFromHistory,
+      trackingId: trackingId,   // важно: передаём сохранённый trackingId
     );
   }
 }
