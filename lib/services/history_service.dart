@@ -23,22 +23,10 @@ class HistoryService {
     final startOfDay = DateTime(eventDate.year, eventDate.month, eventDate.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    dynamic existingKey;
-    for (var key in _box.keys) {
-      final entry = _box.get(key);
-      if (entry != null &&
-          entry.trackingId == node.trackingId &&   // сравниваем по trackingId
-          entry.date.compareTo(startOfDay) >= 0 &&
-          entry.date.compareTo(endOfDay) < 0) {
-        existingKey = key;
-        break;
-      }
-    }
+    // Удаляем существующую запись для этого конкретного экземпляра (nodeId)
+    _deleteEntryByNodeId(node.id, startOfDay, endOfDay);
 
-    if (existingKey != null) {
-      _box.delete(existingKey);
-    }
-
+    // Если новое значение true – создаём новую запись
     if (newValue) {
       final newEntry = HistoryEntry.forSingle(
         bookId: bookId,
@@ -63,22 +51,10 @@ class HistoryService {
     final startOfDay = DateTime(eventDate.year, eventDate.month, eventDate.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    dynamic existingKey;
-    for (var key in _box.keys) {
-      final entry = _box.get(key);
-      if (entry != null &&
-          entry.trackingId == node.trackingId &&
-          entry.date.compareTo(startOfDay) >= 0 &&
-          entry.date.compareTo(endOfDay) < 0) {
-        existingKey = key;
-        break;
-      }
-    }
+    // Удаляем существующую запись для этого конкретного экземпляра (nodeId)
+    _deleteEntryByNodeId(node.id, startOfDay, endOfDay);
 
-    if (existingKey != null) {
-      _box.delete(existingKey);
-    }
-
+    // Если прогресс > 0 – создаём новую запись
     if (newSteps > 0) {
       final newEntry = HistoryEntry.forStep(
         bookId: bookId,
@@ -89,6 +65,24 @@ class HistoryService {
         date: eventDate,
       );
       _box.add(newEntry);
+    }
+  }
+
+  // Вспомогательный метод для удаления записи по nodeId
+  static void _deleteEntryByNodeId(String nodeId, DateTime start, DateTime end) {
+    dynamic keyToDelete;
+    for (var key in _box.keys) {
+      final entry = _box.get(key);
+      if (entry != null &&
+          entry.nodeId == nodeId &&
+          entry.date.isAfter(start) &&
+          entry.date.isBefore(end)) {
+        keyToDelete = key;
+        break;
+      }
+    }
+    if (keyToDelete != null) {
+      _box.delete(keyToDelete);
     }
   }
 
