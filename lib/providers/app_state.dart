@@ -19,7 +19,6 @@ class AppState extends ChangeNotifier {
   late final Box<AppSettings> _settingsBox;
 
   String _themeMode = 'system';
-
   String get themeMode => _themeMode;
 
   AppState({
@@ -60,7 +59,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---------- остальные методы без изменений ----------
   Box<Node> get templatesBox => _nodeService.box;
   Box<Note> get notesBox => _noteService.box;
   Box<HistoryEntry> get historyBox => _historyBox;
@@ -73,7 +71,10 @@ class AppState extends ChangeNotifier {
 
   void addNode(Node node) { _nodeService.add(node); notifyListeners(); }
   void updateNode(dynamic key, Node node) { _nodeService.update(key, node); notifyListeners(); }
-  void deleteNode(dynamic key) { _nodeService.delete(key); notifyListeners(); }
+  void deleteNode(dynamic key) {
+    _nodeService.delete(key);
+    notifyListeners();
+  }
 
   Node addEmptyDay(DateTime date) {
     final day = _nodeService.addEmptyDay(date);

@@ -12,6 +12,38 @@ class HistoryService {
   static Box<HistoryEntry> get _box =>
       _customBox ?? Hive.box<HistoryEntry>('history');
 
+  // ===== Удалить все записи для книги/плана =====
+  static void deleteEntriesForNode(String bookId) {
+    final keysToDelete = <dynamic>[];
+    for (var key in _box.keys) {
+      final entry = _box.get(key);
+      if (entry != null && entry.bookId == bookId) {
+        keysToDelete.add(key);
+      }
+    }
+    for (var key in keysToDelete) {
+      _box.delete(key);
+    }
+  }
+
+  // ===== Удалить историю за выбранный день =====
+  static Future<void> deleteHistoryForDate(DateTime date) async {
+    final start = DateTime(date.year, date.month, date.day);
+    final end = start.add(const Duration(days: 1));
+    final keysToDelete = <dynamic>[];
+    for (var key in _box.keys) {
+      final entry = _box.get(key);
+      if (entry != null &&
+          entry.date.compareTo(start) >= 0 &&
+          entry.date.compareTo(end) < 0) {
+        keysToDelete.add(key);
+      }
+    }
+    for (var key in keysToDelete) {
+      await _box.delete(key);
+    }
+  }
+
   // Для одиночных чекбоксов
   static void recordUniqueToggle({
     required String bookId,
@@ -23,10 +55,8 @@ class HistoryService {
     final startOfDay = DateTime(eventDate.year, eventDate.month, eventDate.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    // Удаляем существующую запись для этого конкретного экземпляра (nodeId)
-    _deleteEntryByNodeId(node.id, startOfDay, endOfDay);
+    _deleteEntryByTrackingId(node.trackingId, startOfDay, endOfDay);
 
-    // Если новое значение true – создаём новую запись
     if (newValue) {
       final newEntry = HistoryEntry.forSingle(
         bookId: bookId,
@@ -51,10 +81,8 @@ class HistoryService {
     final startOfDay = DateTime(eventDate.year, eventDate.month, eventDate.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    // Удаляем существующую запись для этого конкретного экземпляра (nodeId)
-    _deleteEntryByNodeId(node.id, startOfDay, endOfDay);
+    _deleteEntryByTrackingId(node.trackingId, startOfDay, endOfDay);
 
-    // Если прогресс > 0 – создаём новую запись
     if (newSteps > 0) {
       final newEntry = HistoryEntry.forStep(
         bookId: bookId,
@@ -68,15 +96,14 @@ class HistoryService {
     }
   }
 
-  // Вспомогательный метод для удаления записи по nodeId
-  static void _deleteEntryByNodeId(String nodeId, DateTime start, DateTime end) {
+  static void _deleteEntryByTrackingId(String trackingId, DateTime start, DateTime end) {
     dynamic keyToDelete;
     for (var key in _box.keys) {
       final entry = _box.get(key);
       if (entry != null &&
-          entry.nodeId == nodeId &&
-          entry.date.isAfter(start) &&
-          entry.date.isBefore(end)) {
+          entry.trackingId == trackingId &&
+          entry.date.compareTo(start) >= 0 &&
+          entry.date.compareTo(end) < 0) {
         keyToDelete = key;
         break;
       }
