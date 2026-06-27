@@ -7,14 +7,7 @@ import '../providers/app_state.dart';
 import 'components/app_drawer_menu.dart';
 
 class NotesScreen extends StatefulWidget {
-  final String currentThemeMode;
-  final Function(String) onThemeChanged;
-
-  const NotesScreen({
-    super.key,
-    required this.currentThemeMode,
-    required this.onThemeChanged,
-  });
+  const NotesScreen({super.key});
 
   @override
   State<NotesScreen> createState() => _NotesScreenState();
@@ -157,10 +150,7 @@ class _NotesScreenState extends State<NotesScreen> {
           ),
         ],
       ),
-      endDrawer: AppDrawerMenu(
-        currentThemeMode: widget.currentThemeMode,
-        onThemeChanged: widget.onThemeChanged,
-      ),
+      endDrawer: const AppDrawerMenu(),
       body: Column(
         children: [
           Padding(
@@ -199,10 +189,10 @@ class _NotesScreenState extends State<NotesScreen> {
                     final filtered = _searchQuery.isEmpty
                         ? notes
                         : notes.where((note) {
-                            final query = _searchQuery.toLowerCase();
-                            return note.title.toLowerCase().contains(query) ||
-                                note.content.toLowerCase().contains(query);
-                          }).toList();
+                      final query = _searchQuery.toLowerCase();
+                      return note.title.toLowerCase().contains(query) ||
+                          note.content.toLowerCase().contains(query);
+                    }).toList();
 
                     if (filtered.isEmpty) {
                       return const Center(child: Text('Ничего не найдено'));

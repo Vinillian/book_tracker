@@ -5,23 +5,13 @@ import '../widgets/activity_calendar.dart';
 import 'components/app_drawer_menu.dart';
 
 class StatisticsScreen extends StatelessWidget {
-  final String currentThemeMode;
-  final Function(String) onThemeChanged;
-
-  const StatisticsScreen({
-    super.key,
-    required this.currentThemeMode,
-    required this.onThemeChanged,
-  });
+  const StatisticsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Статистика')),
-      endDrawer: AppDrawerMenu(
-        currentThemeMode: currentThemeMode,
-        onThemeChanged: onThemeChanged,
-      ),
+      endDrawer: const AppDrawerMenu(),
       body: Consumer<AppState>(
         builder: (context, appState, _) {
           final books = appState.books;
@@ -66,7 +56,7 @@ class StatisticsScreen extends StatelessWidget {
               : 0.0;
 
           allItems.sort(
-            (a, b) => (b['completed'] / b['total']).compareTo(
+                (a, b) => (b['completed'] / b['total']).compareTo(
               a['completed'] / a['total'],
             ),
           );

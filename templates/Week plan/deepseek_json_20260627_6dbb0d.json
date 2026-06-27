@@ -1,0 +1,37 @@
+{
+  "name": "День7",
+  "children": [
+    {
+      "name": "Утро",
+      "children": [
+        { "name": "Тайчи", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d7-m-1", "excludeFromHistory": false, "trackingId": "01735fb7-302d-404e-aa92-85559b78ea34" },
+        { "name": "Махамантра 4 круга", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 4, "completedSteps": 0, "id": "d7-m-2", "excludeFromHistory": false, "trackingId": "1358352b-d8de-4734-80b1-0631bfc555c3" },
+        { "name": "Чтение молитв (1 с.)", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d7-m-3", "excludeFromHistory": false, "trackingId": "2946a332-f566-4605-b1f9-3df427be2b71" },
+        { "name": "Чтение философии (1 с.)", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d7-m-4", "excludeFromHistory": false, "trackingId": "8920f81d-87d0-4654-8d5c-2e2d46809258" },
+        { "name": "Завтрак", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d7-m-5", "excludeFromHistory": true }
+      ],
+      "plannedDate": null, "completed": false, "stepType": "folder", "totalSteps": 1, "completedSteps": 0, "id": "d7-morning"
+    },
+    {
+      "name": "День",
+      "children": [
+        { "name": "JavaScript (2 с.)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "d7-d-1", "excludeFromHistory": false, "trackingId": "63195dd0-12d7-468a-b3a8-9c260bdc4c04" },
+        { "name": "Основы математики", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d7-d-2", "excludeFromHistory": false, "trackingId": "b78cb69a-8254-41de-ad70-dc6f46b4ae03" },
+        { "name": "История", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d7-d-3", "excludeFromHistory": false, "trackingId": "9be08318-3053-415c-8866-6aee533b3760" },
+        { "name": "Заучивание молитв (2 с.)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "d7-d-4", "excludeFromHistory": false, "trackingId": "acd89564-dbbd-446d-b0ce-29d064dee55a" },
+        { "name": "Codewars", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 4, "completedSteps": 0, "id": "d7-d-5", "excludeFromHistory": false, "trackingId": "cddc81e5-55ee-4132-906e-0eeb9b8f86a2" },
+        { "name": "Обед", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d7-d-6", "excludeFromHistory": true }
+      ],
+      "plannedDate": null, "completed": false, "stepType": "folder", "totalSteps": 1, "completedSteps": 0, "id": "d7-day"
+    },
+    {
+      "name": "Вечер",
+      "children": [
+        { "name": "Лес (библиотека закрыта)", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d7-e-1", "excludeFromHistory": false, "trackingId": "faedb1a8-b60d-4855-9be3-018e0e547244" },
+        { "name": "Вечер без еды", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d7-e-2", "excludeFromHistory": false, "trackingId": "53e1ee22-1e49-4d45-ba20-c9f79052a8bc" }
+      ],
+      "plannedDate": null, "completed": false, "stepType": "folder", "totalSteps": 1, "completedSteps": 0, "id": "d7-evening"
+    }
+  ],
+  "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "template-day7", "category": "template"
+}

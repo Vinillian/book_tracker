@@ -10,14 +10,7 @@ import 'book_screen.dart';
 import 'components/app_drawer_menu.dart';
 
 class CalendarScreen extends StatefulWidget {
-  final String currentThemeMode;
-  final Function(String) onThemeChanged;
-
-  const CalendarScreen({
-    super.key,
-    required this.currentThemeMode,
-    required this.onThemeChanged,
-  });
+  const CalendarScreen({super.key});
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -50,7 +43,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final dateStr = DateFormat('dd.MM.yyyy').format(day);
     final appState = context.read<AppState>();
     return appState.plans.cast<Node?>().firstWhere(
-      (n) => n!.name == dateStr,
+          (n) => n!.name == dateStr,
       orElse: () => null,
     );
   }
@@ -104,10 +97,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Календарь прогресса')),
-      endDrawer: AppDrawerMenu(
-        currentThemeMode: widget.currentThemeMode,
-        onThemeChanged: widget.onThemeChanged,
-      ),
+      endDrawer: const AppDrawerMenu(),
       body: Column(
         children: [
           TableCalendar(
@@ -164,16 +154,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
           child: ListTile(
             leading: entry.stepType == 'single'
                 ? Icon(
-                    entry.completed == true
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    color: entry.completed == true ? Colors.green : Colors.grey,
-                  )
+              entry.completed == true
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+              color: entry.completed == true ? Colors.green : Colors.grey,
+            )
                 : const Icon(Icons.list, color: Colors.blue),
             title: Text(entry.nodeName),
-            subtitle: Text(
-              entry.nodeName,
-            ), // теперь показывает имя задачи (а не книги)
+            subtitle: Text(entry.nodeName),
             trailing: entry.stepType == 'stepByStep'
                 ? Text('Шагов: ${entry.completedSteps}')
                 : null,

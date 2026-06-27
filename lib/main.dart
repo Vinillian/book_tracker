@@ -27,7 +27,7 @@ void main() async {
   Hive.registerAdapter(TrackedActivityAdapter());
 
   Box<Node> templatesBox = await _openBox<Node>('templates');
-  await _openBox<AppSettings>('settings');
+  Box<AppSettings> settingsBox = await _openBox<AppSettings>('settings');
   Box<HistoryEntry> historyBox = await _openBox<HistoryEntry>('history');
   Box<Note> notesBox = await _openBox<Note>('notes');
   Box<StandardTask> standardTasksBox = await _openBox<StandardTask>('standard_tasks');
@@ -43,6 +43,7 @@ void main() async {
         historyBox: historyBox,
         standardTasksBox: standardTasksBox,
         trackedActivitiesBox: trackedActivitiesBox,
+        settingsBox: settingsBox,
       ),
       child: const MyApp(),
     ),
@@ -90,75 +91,39 @@ void _migrateExistingPlans(Box<Node> templatesBox, Box<Note> notesBox) {
   }
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  late Box<AppSettings> settingsBox;
-  String _themeMode = 'system';
-
-  @override
-  void initState() {
-    super.initState();
-    settingsBox = Hive.box<AppSettings>('settings');
-    _loadTheme();
-  }
-
-  void _loadTheme() {
-    final settings = settingsBox.get('appSettings');
-    if (settings != null) {
-      _themeMode = settings.themeMode;
-    } else {
-      settingsBox.put('appSettings', AppSettings(themeMode: 'system'));
-    }
-  }
-
-  void _updateTheme(String mode) {
-    setState(() => _themeMode = mode);
-    final settings = settingsBox.get('appSettings');
-    if (settings != null) {
-      settings.themeMode = mode;
-      settingsBox.put('appSettings', settings);
-    } else {
-      settingsBox.put('appSettings', AppSettings(themeMode: mode));
-    }
-  }
-
-  ThemeMode _getThemeMode() {
-    switch (_themeMode) {
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-        return ThemeMode.dark;
-      default:
-        return ThemeMode.system;
+  ThemeMode _getThemeMode(String mode) {
+    switch (mode) {
+      case 'light': return ThemeMode.light;
+      case 'dark': return ThemeMode.dark;
+      default: return ThemeMode.system;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Book Planner',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-        brightness: Brightness.dark,
-      ),
-      themeMode: _getThemeMode(),
-      home: HomeScreen(
-        onThemeChanged: _updateTheme,
-        currentThemeMode: _themeMode,
-      ),
-      debugShowCheckedModeBanner: false,
+    return Consumer<AppState>(
+      builder: (context, appState, _) {
+        final themeMode = _getThemeMode(appState.themeMode);
+        return MaterialApp(
+          title: 'Book Planner',
+          theme: ThemeData(
+            primarySwatch: Colors.blue,
+            useMaterial3: true,
+            brightness: Brightness.light,
+          ),
+          darkTheme: ThemeData(
+            primarySwatch: Colors.blue,
+            useMaterial3: true,
+            brightness: Brightness.dark,
+          ),
+          themeMode: themeMode,
+          home: const HomeScreen(),
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }
