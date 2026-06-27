@@ -1,20 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/app_state.dart';
 import '../services/heatmap_service.dart';
 import 'tracked_activities_screen.dart';
 import 'components/app_drawer_menu.dart';
 
 class HeatmapScreen extends StatefulWidget {
-  final String currentThemeMode;
-  final Function(String) onThemeChanged;
-
-  const HeatmapScreen({
-    super.key,
-    required this.currentThemeMode,
-    required this.onThemeChanged,
-  });
+  const HeatmapScreen({super.key});
 
   @override
   State<HeatmapScreen> createState() => _HeatmapScreenState();
@@ -26,7 +18,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   final ScrollController _horizontalController = ScrollController();
 
   bool _initialScrollDone = false;
-  int _monthsToShow = 0; // 0 = 2 недели
+  int _monthsToShow = 0;
   bool _isTwoWeeks = true;
 
   @override
@@ -93,7 +85,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
         const double cellSize = 17.0;
         const double rowHeight = 20.0;
-        const double leftColumnWidth = 110; // чуть шире для текста "Задачи"
+        const double leftColumnWidth = 110;
 
         if (trackedActivities.isEmpty) {
           return Scaffold(
@@ -116,10 +108,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                 ),
               ],
             ),
-            endDrawer: AppDrawerMenu(
-              currentThemeMode: widget.currentThemeMode,
-              onThemeChanged: widget.onThemeChanged,
-            ),
+            endDrawer: const AppDrawerMenu(),
             body: const Center(
               child: Text(
                 'Нет отслеживаемых задач.\nДобавьте их в настройках.',
@@ -173,10 +162,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
               ),
             ],
           ),
-          endDrawer: AppDrawerMenu(
-            currentThemeMode: widget.currentThemeMode,
-            onThemeChanged: widget.onThemeChanged,
-          ),
+          endDrawer: const AppDrawerMenu(),
           body: RawScrollbar(
             controller: _verticalController,
             thumbVisibility: true,
@@ -185,12 +171,10 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Левая колонка с названиями задач (фиксированная)
                   SizedBox(
                     width: leftColumnWidth,
                     child: Column(
                       children: [
-                        // Заголовок "Задачи" на высоте заголовков месяцев+дней
                         Container(
                           height: 56,
                           alignment: Alignment.center,
@@ -219,7 +203,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                       ],
                     ),
                   ),
-                  // Правая часть с горизонтальной прокруткой
                   Expanded(
                     child: RawScrollbar(
                       controller: _horizontalController,
@@ -231,7 +214,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Строка месяцев
                             SizedBox(
                               height: 28,
                               child: Row(
@@ -259,7 +241,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                 }).toList(),
                               ),
                             ),
-                            // Строка дней недели и чисел
                             SizedBox(
                               height: 28,
                               child: Row(
@@ -296,7 +277,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                 }).toList(),
                               ),
                             ),
-                            // Строки задач
                             ...trackedActivities.map(
                                   (activity) => SizedBox(
                                 height: rowHeight,

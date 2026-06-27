@@ -1,0 +1,37 @@
+{
+  "name": "День6",
+  "children": [
+    {
+      "name": "Утро",
+      "children": [
+        { "name": "Тайчи", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-m-1", "excludeFromHistory": false, "trackingId": "01735fb7-302d-404e-aa92-85559b78ea34" },
+        { "name": "Махамантра 4 круга", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 4, "completedSteps": 0, "id": "d6-m-2", "excludeFromHistory": false, "trackingId": "1358352b-d8de-4734-80b1-0631bfc555c3" },
+        { "name": "Чтение молитв (1 с.)", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-m-3", "excludeFromHistory": false, "trackingId": "2946a332-f566-4605-b1f9-3df427be2b71" },
+        { "name": "Чтение философии (1 с.)", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-m-4", "excludeFromHistory": false, "trackingId": "8920f81d-87d0-4654-8d5c-2e2d46809258" },
+        { "name": "Завтрак", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-m-5", "excludeFromHistory": true }
+      ],
+      "plannedDate": null, "completed": false, "stepType": "folder", "totalSteps": 1, "completedSteps": 0, "id": "d6-morning"
+    },
+    {
+      "name": "День",
+      "children": [
+        { "name": "JavaScript (2 с.)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "d6-d-1", "excludeFromHistory": false, "trackingId": "63195dd0-12d7-468a-b3a8-9c260bdc4c04" },
+        { "name": "Основы математики", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-d-2", "excludeFromHistory": false, "trackingId": "b78cb69a-8254-41de-ad70-dc6f46b4ae03" },
+        { "name": "Физика", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-d-3", "excludeFromHistory": false, "trackingId": "3273b61a-1762-4332-a9c3-871cb1274c52" },
+        { "name": "Основы матанализа (2 с.)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "d6-d-4", "excludeFromHistory": false, "trackingId": "33ca44da-27a8-46af-8b76-171bb3169fe0" },
+        { "name": "Цитология Урок", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-d-5", "excludeFromHistory": false, "trackingId": "ceff5ff7-87d0-464f-957f-13b1a096d0f1" },
+        { "name": "Обед", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-d-6", "excludeFromHistory": true }
+      ],
+      "plannedDate": null, "completed": false, "stepType": "folder", "totalSteps": 1, "completedSteps": 0, "id": "d6-day"
+    },
+    {
+      "name": "Вечер",
+      "children": [
+        { "name": "Библиотека (Матанализ + Философия)", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-e-1", "excludeFromHistory": false, "trackingId": "a15fdc90-2bd8-4689-9aa2-4b980cee3e94" },
+        { "name": "Вечер без еды", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-e-2", "excludeFromHistory": false, "trackingId": "53e1ee22-1e49-4d45-ba20-c9f79052a8bc" }
+      ],
+      "plannedDate": null, "completed": false, "stepType": "folder", "totalSteps": 1, "completedSteps": 0, "id": "d6-evening"
+    }
+  ],
+  "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "template-day6", "category": "template"
+}

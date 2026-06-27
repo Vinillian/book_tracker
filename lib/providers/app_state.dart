@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-
 import '../models/node.dart';
 import '../models/note.dart';
 import '../models/history_entry.dart';
 import '../models/standard_task.dart';
 import '../models/tracked_activity.dart';
-
+import '../models/settings.dart';
 import '../services/node_service.dart';
 import '../services/note_service.dart';
 import '../services/history_service.dart';
@@ -14,10 +13,14 @@ import '../services/history_service.dart';
 class AppState extends ChangeNotifier {
   late final NodeService _nodeService;
   late final NoteService _noteService;
-
   late final Box<HistoryEntry> _historyBox;
   late final Box<StandardTask> _standardTasksBox;
   late final Box<TrackedActivity> _trackedActivitiesBox;
+  late final Box<AppSettings> _settingsBox;
+
+  String _themeMode = 'system';
+
+  String get themeMode => _themeMode;
 
   AppState({
     required Box<Node> templatesBox,
@@ -25,7 +28,11 @@ class AppState extends ChangeNotifier {
     required Box<HistoryEntry> historyBox,
     required Box<StandardTask> standardTasksBox,
     required Box<TrackedActivity> trackedActivitiesBox,
+    required Box<AppSettings> settingsBox,
   }) {
+    _settingsBox = settingsBox;
+    _loadTheme();
+
     _historyBox = historyBox;
     _standardTasksBox = standardTasksBox;
     _trackedActivitiesBox = trackedActivitiesBox;
@@ -35,45 +42,38 @@ class AppState extends ChangeNotifier {
     _noteService = NoteService(notesBox);
     _nodeService = NodeService(templatesBox, _noteService);
 
-    // Обновляем UI при изменении истории
-    _historyBox.watch().listen((_) {
-      notifyListeners();
-    });
-
-    // Обновляем UI при изменении отслеживаемых задач
-    _trackedActivitiesBox.watch().listen((_) {
-      notifyListeners();
-    });
+    _historyBox.watch().listen((_) => notifyListeners());
+    _trackedActivitiesBox.watch().listen((_) => notifyListeners());
   }
 
-  // ---------- Геттеры для боксов ----------
+  void _loadTheme() {
+    final settings = _settingsBox.get('appSettings');
+    _themeMode = settings?.themeMode ?? 'system';
+  }
 
+  void setThemeMode(String mode) {
+    if (_themeMode == mode) return;
+    _themeMode = mode;
+    final settings = _settingsBox.get('appSettings') ?? AppSettings(themeMode: mode);
+    settings.themeMode = mode;
+    _settingsBox.put('appSettings', settings);
+    notifyListeners();
+  }
+
+  // ---------- остальные методы без изменений ----------
   Box<Node> get templatesBox => _nodeService.box;
   Box<Note> get notesBox => _noteService.box;
   Box<HistoryEntry> get historyBox => _historyBox;
   Box<StandardTask> get standardTasksBox => _standardTasksBox;
   Box<TrackedActivity> get trackedActivitiesBox => _trackedActivitiesBox;
 
-  // ---------- Прокси к NodeService ----------
-
   List<Node> get books => _nodeService.books;
   List<Node> get plans => _nodeService.plans;
   List<Node> get templates => _nodeService.templates;
 
-  void addNode(Node node) {
-    _nodeService.add(node);
-    notifyListeners();
-  }
-
-  void updateNode(dynamic key, Node node) {
-    _nodeService.update(key, node);
-    notifyListeners();
-  }
-
-  void deleteNode(dynamic key) {
-    _nodeService.delete(key);
-    notifyListeners();
-  }
+  void addNode(Node node) { _nodeService.add(node); notifyListeners(); }
+  void updateNode(dynamic key, Node node) { _nodeService.update(key, node); notifyListeners(); }
+  void deleteNode(dynamic key) { _nodeService.delete(key); notifyListeners(); }
 
   Node addEmptyDay(DateTime date) {
     final day = _nodeService.addEmptyDay(date);
@@ -91,28 +91,20 @@ class AppState extends ChangeNotifier {
   Node? getNodeById(String id) => _nodeService.getById(id);
   dynamic getKeyForNode(Node node) => _nodeService.getKey(node);
 
-  // ---------- Прокси к NoteService ----------
-
   Note? getNoteForDay(String linkedNodeId) => _noteService.getNoteForDay(linkedNodeId);
-
   void createNoteForDay(String linkedNodeId) {
     _noteService.createNoteForDay(linkedNodeId);
     notifyListeners();
   }
-
   void saveNote(Note note) {
     _noteService.save(note);
     notifyListeners();
   }
-
   void deleteNote(String id) {
     _noteService.delete(id);
     notifyListeners();
   }
-
   List<Note> get inboxNotes => _noteService.inboxNotes;
-
-  // ---------- Стандартные задачи (исправлено для Issue #50) ----------
 
   List<StandardTask> get standardTasks => _standardTasksBox.values.toList();
 
@@ -122,7 +114,6 @@ class AppState extends ChangeNotifier {
   }
 
   void updateStandardTask(String id, StandardTask task) {
-    // Ищем реальный Hive-ключ по полю id
     dynamic keyToUpdate;
     for (var key in _standardTasksBox.keys) {
       final existing = _standardTasksBox.get(key);
@@ -152,8 +143,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // ---------- Отслеживаемые задачи ----------
-
   List<TrackedActivity> get trackedActivities => _trackedActivitiesBox.values.toList();
 
   void addTrackedActivity(TrackedActivity activity) {
@@ -162,7 +151,6 @@ class AppState extends ChangeNotifier {
   }
 
   void updateTrackedActivity(String id, TrackedActivity activity) {
-    // Ищем ключ по полю id
     dynamic keyToUpdate;
     for (var key in _trackedActivitiesBox.keys) {
       final existing = _trackedActivitiesBox.get(key);
@@ -192,9 +180,5 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // ---------- Внешнее уведомление ----------
-
-  void notify() {
-    notifyListeners();
-  }
+  void notify() => notifyListeners();
 }

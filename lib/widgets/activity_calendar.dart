@@ -74,14 +74,13 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
     return weeks;
   }
 
+  // ИСПРАВЛЕННЫЙ МЕТОД – сравниваем только даты
   List<HistoryEntry> _getEntriesForDay(Box<HistoryEntry> box, DateTime day) {
-    final start = DateTime(day.year, day.month, day.day);
-    final end = start
-        .add(const Duration(days: 1))
-        .subtract(const Duration(milliseconds: 1));
-    return box.values
-        .where((e) => e.date.isAfter(start) && e.date.isBefore(end))
-        .toList();
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    return box.values.where((e) {
+      final eDay = DateTime(e.date.year, e.date.month, e.date.day);
+      return eDay == normalizedDay;
+    }).toList();
   }
 
   Color _colorForCount(int count) {
@@ -92,7 +91,6 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
     return const Color(0xFF216E39);
   }
 
-  /// Заголовки месяцев – показываем только если название месяца полностью влезает
   Widget _monthHeaders(List<List<DateTime>> weeks) {
     if (weeks.isEmpty) return const SizedBox.shrink();
     final headers = <Widget>[];
@@ -326,7 +324,7 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
                       // Колонка с днями недели
                       Column(
                         children: [
-                          const SizedBox(height: 18), // компенсация высоты заголовков месяцев
+                          const SizedBox(height: 18),
                           for (final day in ['Пн', '', 'Ср', '', 'Пт', '', 'Вс'])
                             SizedBox(
                               height: _cellSize + _cellMargin * 2,

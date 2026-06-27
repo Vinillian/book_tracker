@@ -10,14 +10,7 @@ import '../standard_tasks_screen.dart';
 import '../heatmap_screen.dart';
 
 class AppDrawerMenu extends StatelessWidget {
-  final String currentThemeMode;
-  final Function(String) onThemeChanged;
-
-  const AppDrawerMenu({
-    super.key,
-    required this.currentThemeMode,
-    required this.onThemeChanged,
-  });
+  const AppDrawerMenu({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -51,11 +44,7 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => HomeScreen(
-                    onThemeChanged: onThemeChanged,
-                    currentThemeMode: currentThemeMode,
-                    initialTab: 0,
-                  ),
+                  builder: (_) => const HomeScreen(initialTab: 0),
                 ),
               );
             },
@@ -67,11 +56,7 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => HomeScreen(
-                    onThemeChanged: onThemeChanged,
-                    currentThemeMode: currentThemeMode,
-                    initialTab: 1,
-                  ),
+                  builder: (_) => const HomeScreen(initialTab: 1),
                 ),
               );
             },
@@ -85,10 +70,7 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => CalendarScreen(
-                    currentThemeMode: currentThemeMode,
-                    onThemeChanged: onThemeChanged,
-                  ),
+                  builder: (_) => const CalendarScreen(),
                 ),
               );
             },
@@ -101,10 +83,7 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => StatisticsScreen(
-                    currentThemeMode: currentThemeMode,
-                    onThemeChanged: onThemeChanged,
-                  ),
+                  builder: (_) => const StatisticsScreen(),
                 ),
               );
             },
@@ -117,10 +96,7 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => HeatmapScreen(
-                    currentThemeMode: currentThemeMode,
-                    onThemeChanged: onThemeChanged,
-                  ),
+                  builder: (_) => const HeatmapScreen(),
                 ),
               );
             },
@@ -133,10 +109,7 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => NotesScreen(
-                    currentThemeMode: currentThemeMode,
-                    onThemeChanged: onThemeChanged,
-                  ),
+                  builder: (_) => const NotesScreen(),
                 ),
               );
             },
@@ -188,10 +161,7 @@ class AppDrawerMenu extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => SettingsScreen(
-                    currentThemeMode: currentThemeMode,
-                    onThemeChanged: onThemeChanged,
-                  ),
+                  builder: (_) => const SettingsScreen(),
                 ),
               );
             },
