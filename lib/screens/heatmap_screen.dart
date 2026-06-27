@@ -62,10 +62,16 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
           appState.trackedActivitiesBox,
         );
 
-        final data = heatmapService.getIntensityData();
+        // Сортируем активные задачи по order (если order одинаковый — по имени)
         final trackedActivities = appState.trackedActivities
             .where((t) => t.isActive)
-            .toList();
+            .toList()
+          ..sort((a, b) {
+            if (a.order != b.order) return a.order.compareTo(b.order);
+            return a.name.compareTo(b.name);
+          });
+
+        final data = heatmapService.getIntensityData();
 
         final today = DateTime.now();
         final end = DateTime(today.year, today.month, today.day);
@@ -171,6 +177,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Левая колонка
                   SizedBox(
                     width: leftColumnWidth,
                     child: Column(
@@ -203,6 +210,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                       ],
                     ),
                   ),
+                  // Правая часть
                   Expanded(
                     child: RawScrollbar(
                       controller: _horizontalController,
@@ -214,6 +222,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Месяцы
                             SizedBox(
                               height: 28,
                               child: Row(
@@ -241,6 +250,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                 }).toList(),
                               ),
                             ),
+                            // Дни
                             SizedBox(
                               height: 28,
                               child: Row(
@@ -277,6 +287,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                 }).toList(),
                               ),
                             ),
+                            // Строки задач
                             ...trackedActivities.map(
                                   (activity) => SizedBox(
                                 height: rowHeight,

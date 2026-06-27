@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../models/node.dart';
 import 'note_service.dart';
+import 'history_service.dart';
 
 class NodeService {
   final Box<Node> _box;
@@ -29,15 +30,22 @@ class NodeService {
 
   void add(Node node) => _box.add(node);
   void update(dynamic key, Node node) => _box.put(key, node);
-  void delete(dynamic key) async {
+
+  void delete(dynamic key) {
     final node = _box.get(key);
     if (node != null) {
+      // Удаляем заметки
       final notes = _noteService.getNotesForNode(node.id);
       for (final note in notes) {
         _noteService.delete(note.id);
       }
+
+      // Удаляем историю для этой книги/плана
+      HistoryService.deleteEntriesForNode(node.id);
+
+      // Удаляем сам узел
+      _box.delete(key);
     }
-    _box.delete(key);
   }
 
   Node addEmptyDay(DateTime date) {
@@ -84,8 +92,7 @@ class NodeService {
 
   Node _copyAndReset(Node node) {
     final copy = node.deepCopy();
-    copy.id = const Uuid().v4();          // новый ID для экземпляра
-    // trackingId НЕ меняем – оставляем тот же, что у шаблона
+    copy.id = const Uuid().v4();
     if (copy.children.isEmpty) {
       copy.completed = false;
       copy.completedSteps = 0;
