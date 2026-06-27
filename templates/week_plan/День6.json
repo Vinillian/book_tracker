@@ -1,0 +1,40 @@
+{
+  "name": "День6",
+  "children": [
+    {
+      "name": "Утро",
+      "children": [
+        { "name": "Самочувствие", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 10, "completedSteps": 0, "id": "d6-m-s", "excludeFromHistory": true, "trackingId": "6336e7c4-ecc7-452d-850d-a4285687cef7" },
+        { "name": "Тайчи", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-m-1", "excludeFromHistory": false, "trackingId": "1b4b1099-0dac-4888-a884-3a0843e430d6" },
+        { "name": "Махамантра 4 круга", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 4, "completedSteps": 0, "id": "d6-m-2", "excludeFromHistory": false, "trackingId": "1358352b-d8de-4734-80b1-0631bfc555c3" },
+        { "name": "Чтение молитв (2 сессии)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "d6-m-3", "excludeFromHistory": false, "trackingId": "2946a332-f566-4605-b1f9-3df427be2b71" },
+        { "name": "Чтение философии (2 сессии)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "d6-m-4", "excludeFromHistory": false, "trackingId": "8920f81d-87d0-4654-8d5c-2e2d46809258" },
+        { "name": "Завтрак", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-m-5", "excludeFromHistory": true }
+      ],
+      "plannedDate": null, "completed": false, "stepType": "folder", "totalSteps": 1, "completedSteps": 0, "id": "d6-morning"
+    },
+    {
+      "name": "День",
+      "children": [
+        { "name": "Самочувствие", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 10, "completedSteps": 0, "id": "d6-d-s", "excludeFromHistory": true, "trackingId": "6336e7c4-ecc7-452d-850d-a4285687cef7" },
+        { "name": "Чтение JavaScript (2 сессии)", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "d6-d-1", "excludeFromHistory": false, "trackingId": "63195dd0-12d7-468a-b3a8-9c260bdc4c04" },
+        { "name": "Основы математики", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-d-2", "excludeFromHistory": false, "trackingId": "c3d4e5f6-a7b8-90c1-d2e3-f4567890abcd" },
+        { "name": "Основы Физики урок", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-d-3", "excludeFromHistory": false, "trackingId": "2dfff2b0-15a1-437e-8b06-772776953479" },
+        { "name": "Основы Матанализа", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 2, "completedSteps": 0, "id": "d6-d-4", "excludeFromHistory": false, "trackingId": "33ca44da-27a8-46af-8b76-171bb3169fe0" },
+        { "name": "Цитология Урок", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-d-5", "excludeFromHistory": false, "trackingId": "ceff5ff7-87d0-464f-957f-13b1a096d0f1" },
+        { "name": "Обед", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-d-6", "excludeFromHistory": true }
+      ],
+      "plannedDate": null, "completed": false, "stepType": "folder", "totalSteps": 1, "completedSteps": 0, "id": "d6-day"
+    },
+    {
+      "name": "Вечер",
+      "children": [
+        { "name": "Самочувствие", "children": [], "plannedDate": null, "completed": false, "stepType": "stepByStep", "totalSteps": 10, "completedSteps": 0, "id": "d6-e-s", "excludeFromHistory": true, "trackingId": "6336e7c4-ecc7-452d-850d-a4285687cef7" },
+        { "name": "Библиотека (1 час)", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-e-1", "excludeFromHistory": false, "trackingId": "c53bf70b-1fbe-4e29-abd4-6af407e4f08b" },
+        { "name": "Вечер без еды", "children": [], "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "d6-e-2", "excludeFromHistory": false, "trackingId": "53e1ee22-1e49-4d45-ba20-c9f79052a8bc" }
+      ],
+      "plannedDate": null, "completed": false, "stepType": "folder", "totalSteps": 1, "completedSteps": 0, "id": "d6-evening"
+    }
+  ],
+  "plannedDate": null, "completed": false, "stepType": "single", "totalSteps": 1, "completedSteps": 0, "id": "template-day6", "category": "template"
+}
