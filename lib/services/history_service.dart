@@ -55,7 +55,11 @@ class HistoryService {
     final startOfDay = DateTime(eventDate.year, eventDate.month, eventDate.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    _deleteEntryByTrackingId(node.trackingId, startOfDay, endOfDay);
+    // ВАЖНО: удаляем запись именно ЭТОГО экземпляра узла (по nodeId),
+    // а не любую запись с тем же trackingId — иначе два разных узла
+    // с одинаковым именем (напр. "Тайчи" утром и вечером) стирают
+    // записи друг друга вместо того, чтобы суммироваться на heatmap.
+    _deleteEntryByNodeId(node.id, startOfDay, endOfDay);
 
     if (newValue) {
       final newEntry = HistoryEntry.forSingle(
@@ -81,7 +85,7 @@ class HistoryService {
     final startOfDay = DateTime(eventDate.year, eventDate.month, eventDate.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    _deleteEntryByTrackingId(node.trackingId, startOfDay, endOfDay);
+    _deleteEntryByNodeId(node.id, startOfDay, endOfDay);
 
     if (newSteps > 0) {
       final newEntry = HistoryEntry.forStep(
@@ -96,12 +100,16 @@ class HistoryService {
     }
   }
 
-  static void _deleteEntryByTrackingId(String trackingId, DateTime start, DateTime end) {
+  /// Удаляет запись, ранее созданную ЭТИМ ЖЕ узлом (nodeId) за указанный день.
+  /// Так каждый экземпляр задачи (напр. утренний и вечерний "Тайчи")
+  /// ведёт свою запись независимо, а суммирование по trackingId
+  /// происходит уже в HeatmapService.getIntensityData().
+  static void _deleteEntryByNodeId(String nodeId, DateTime start, DateTime end) {
     dynamic keyToDelete;
     for (var key in _box.keys) {
       final entry = _box.get(key);
       if (entry != null &&
-          entry.trackingId == trackingId &&
+          entry.nodeId == nodeId &&
           entry.date.compareTo(start) >= 0 &&
           entry.date.compareTo(end) < 0) {
         keyToDelete = key;
