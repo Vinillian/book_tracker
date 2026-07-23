@@ -12,7 +12,6 @@ class HistoryService {
   static Box<HistoryEntry> get _box =>
       _customBox ?? Hive.box<HistoryEntry>('history');
 
-  // ===== Удалить все записи для книги/плана =====
   static void deleteEntriesForNode(String bookId) {
     final keysToDelete = <dynamic>[];
     for (var key in _box.keys) {
@@ -26,7 +25,6 @@ class HistoryService {
     }
   }
 
-  // ===== Удалить историю за выбранный день =====
   static Future<void> deleteHistoryForDate(DateTime date) async {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
@@ -44,7 +42,6 @@ class HistoryService {
     }
   }
 
-  // Для одиночных чекбоксов
   static void recordUniqueToggle({
     required String bookId,
     required Node node,
@@ -52,14 +49,11 @@ class HistoryService {
     DateTime? targetDate,
   }) {
     final eventDate = targetDate ?? DateTime.now();
-    final startOfDay = DateTime(eventDate.year, eventDate.month, eventDate.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    // ВАЖНО: удаляем запись именно ЭТОГО экземпляра узла (по nodeId),
-    // а не любую запись с тем же trackingId — иначе два разных узла
-    // с одинаковым именем (напр. "Тайчи" утром и вечером) стирают
-    // записи друг друга вместо того, чтобы суммироваться на heatmap.
-    _deleteEntryByNodeId(node.id, startOfDay, endOfDay);
+    // Один nodeId — одна запись, независимо от того, на какую дату она
+    // была записана раньше (защита от рассинхрона дат, а не только от
+    // повторных тогглов в один и тот же день).
+    _deleteEntryByNodeId(node.id);
 
     if (newValue) {
       final newEntry = HistoryEntry.forSingle(
@@ -74,7 +68,6 @@ class HistoryService {
     }
   }
 
-  // Для пошаговых задач
   static void recordUniqueProgress({
     required String bookId,
     required Node node,
@@ -82,10 +75,8 @@ class HistoryService {
     DateTime? targetDate,
   }) {
     final eventDate = targetDate ?? DateTime.now();
-    final startOfDay = DateTime(eventDate.year, eventDate.month, eventDate.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    _deleteEntryByNodeId(node.id, startOfDay, endOfDay);
+    _deleteEntryByNodeId(node.id);
 
     if (newSteps > 0) {
       final newEntry = HistoryEntry.forStep(
@@ -100,18 +91,14 @@ class HistoryService {
     }
   }
 
-  /// Удаляет запись, ранее созданную ЭТИМ ЖЕ узлом (nodeId) за указанный день.
-  /// Так каждый экземпляр задачи (напр. утренний и вечерний "Тайчи")
-  /// ведёт свою запись независимо, а суммирование по trackingId
-  /// происходит уже в HeatmapService.getIntensityData().
-  static void _deleteEntryByNodeId(String nodeId, DateTime start, DateTime end) {
+  /// Удаляет любую существующую запись для данного nodeId, независимо от
+  /// её даты. Один экземпляр задачи (nodeId) не может законно иметь
+  /// больше одной актуальной записи в истории.
+  static void _deleteEntryByNodeId(String nodeId) {
     dynamic keyToDelete;
     for (var key in _box.keys) {
       final entry = _box.get(key);
-      if (entry != null &&
-          entry.nodeId == nodeId &&
-          entry.date.compareTo(start) >= 0 &&
-          entry.date.compareTo(end) < 0) {
+      if (entry != null && entry.nodeId == nodeId) {
         keyToDelete = key;
         break;
       }
