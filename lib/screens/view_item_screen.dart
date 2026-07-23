@@ -31,6 +31,29 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     _tempSteps = _node.completedSteps;
   }
 
+  /// Возвращает дату/время для записи в историю: если план на сегодня —
+  /// текущий момент как есть (сохраняет реальное время суток, а не
+  /// полночь). Если план на другой день — дата самого плана, но с
+  /// текущим временем суток, чтобы отметка попадала на правильный
+  /// календарный день (важно для heatmap/статистики), а не на "сегодня".
+  DateTime _resolveEventDate() {
+    final now = DateTime.now();
+    final target = widget.targetDate;
+    if (target == null) return now;
+    final isToday = target.year == now.year &&
+        target.month == now.month &&
+        target.day == now.day;
+    if (isToday) return now;
+    return DateTime(
+      target.year,
+      target.month,
+      target.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+  }
+
   void _onToggle(bool? value) {
     final newValue = value ?? false;
     setState(() {
@@ -41,7 +64,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         bookId: widget.bookId,
         node: _node,
         newValue: newValue,
-        // targetDate intentionally omitted – uses DateTime.now()
+        targetDate: _resolveEventDate(),
       );
     }
     widget.onNodeUpdated();
@@ -66,7 +89,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
           bookId: widget.bookId,
           node: _node,
           newSteps: newSteps,
-          // targetDate intentionally omitted – uses DateTime.now()
+          targetDate: _resolveEventDate(),
         );
       }
       widget.onNodeUpdated();
