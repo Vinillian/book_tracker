@@ -15,6 +15,11 @@ import 'providers/app_state.dart';
 import 'services/node_service.dart';
 import 'services/note_service.dart';
 
+// Имена боксов, которые не удалось открыть штатно и пришлось пересоздать
+// из-за повреждения файла. Заполняется в _openBox, читается в main() для
+// передачи в MyApp, который покажет пользователю уведомление.
+final List<String> _corruptedBoxNames = [];
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
@@ -45,7 +50,7 @@ void main() async {
         trackedActivitiesBox: trackedActivitiesBox,
         settingsBox: settingsBox,
       ),
-      child: const MyApp(),
+      child: MyApp(corruptedBoxNames: List.unmodifiable(_corruptedBoxNames)),
     ),
   );
 }
@@ -58,16 +63,23 @@ Future<Box<T>> _openBox<T>(String name) async {
     await Hive.close();
     final appDir = await getApplicationDocumentsDirectory();
     final hiveDir = Directory('${appDir.path}/app_flutter');
-    final filesToDelete = [
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    // Переименовываем повреждённые файлы вместо удаления — оригинал
+    // остаётся на устройстве на случай, если данные понадобится
+    // восстанавливать вручную.
+    final filesToPreserve = [
       '${hiveDir.path}/$name.hive',
       '${hiveDir.path}/$name.lock',
     ];
-    for (final filePath in filesToDelete) {
+    for (final filePath in filesToPreserve) {
       try {
         final file = File(filePath);
-        if (await file.exists()) await file.delete();
+        if (await file.exists()) {
+          await file.rename('$filePath.corrupted-$timestamp');
+        }
       } catch (_) {}
     }
+    _corruptedBoxNames.add(name);
     return await Hive.openBox<T>(name);
   }
 }
@@ -91,8 +103,50 @@ void _migrateExistingPlans(Box<Node> templatesBox, Box<Note> notesBox) {
   }
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+  final List<String> corruptedBoxNames;
+
+  const MyApp({super.key, this.corruptedBoxNames = const []});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.corruptedBoxNames.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showCorruptionNotice());
+    }
+  }
+
+  void _showCorruptionNotice() {
+    final context = _navigatorKey.currentContext;
+    if (context == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Обнаружено повреждение данных'),
+        content: Text(
+          'Не удалось открыть часть локальных данных '
+              '(${widget.corruptedBoxNames.join(", ")}) — файл, похоже, был '
+              'повреждён. Для этого раздела создано новое пустое хранилище, '
+              'чтобы приложение могло продолжить работу. Повреждённая копия '
+              'сохранена рядом на устройстве на случай, если данные нужно '
+              'будет восстановить вручную.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Понятно'),
+          ),
+        ],
+      ),
+    );
+  }
 
   ThemeMode _getThemeMode(String mode) {
     switch (mode) {
@@ -108,6 +162,7 @@ class MyApp extends StatelessWidget {
       builder: (context, appState, _) {
         final themeMode = _getThemeMode(appState.themeMode);
         return MaterialApp(
+          navigatorKey: _navigatorKey,
           title: 'Book Planner',
           theme: ThemeData(
             primarySwatch: Colors.blue,
