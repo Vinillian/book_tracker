@@ -15,6 +15,7 @@ class _EditorScreenState extends State<EditorScreen> {
   late Node _workingCopy;
   late TextEditingController _nameController;
   String? _category;
+  bool _didSave = false;
 
   Set<int> _selectedIndices = {};
   bool _multiSelect = false;
@@ -30,11 +31,17 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _saveOnDispose();
+    // Автосохранение при выходе срабатывает только если пользователь
+    // ещё не сохранил через кнопку check — иначе получим двойной
+    // Navigator.pop на одном и том же переходе.
+    if (!_didSave) {
+      _saveOnDispose();
+    }
     super.dispose();
   }
 
   void _saveOnDispose() {
+    _didSave = true;
     _workingCopy.name = _nameController.text.trim();
     _workingCopy.category = _category;
     Navigator.pop(context, _workingCopy);
@@ -149,11 +156,7 @@ class _EditorScreenState extends State<EditorScreen> {
           if (!_multiSelect)
             IconButton(
               icon: const Icon(Icons.check),
-              onPressed: () {
-                _workingCopy.name = _nameController.text.trim();
-                _workingCopy.category = _category;
-                Navigator.pop(context, _workingCopy);
-              },
+              onPressed: _saveOnDispose,
             ),
         ],
       ),
@@ -225,99 +228,99 @@ class _EditorScreenState extends State<EditorScreen> {
           Expanded(
             child: _workingCopy.children.isEmpty
                 ? const Center(
-                    child: Text(
-                      'Нет дочерних элементов. Нажмите "+" для создания.',
-                    ),
-                  )
+              child: Text(
+                'Нет дочерних элементов. Нажмите "+" для создания.',
+              ),
+            )
                 : ReorderableListView.builder(
-                    itemCount: _workingCopy.children.length,
-                    onReorder: (oldIndex, newIndex) {
-                      if (_multiSelect) return;
-                      setState(() {
-                        if (newIndex > oldIndex) newIndex--;
-                        final item = _workingCopy.children.removeAt(oldIndex);
-                        _workingCopy.children.insert(newIndex, item);
-                      });
+              itemCount: _workingCopy.children.length,
+              onReorder: (oldIndex, newIndex) {
+                if (_multiSelect) return;
+                setState(() {
+                  if (newIndex > oldIndex) newIndex--;
+                  final item = _workingCopy.children.removeAt(oldIndex);
+                  _workingCopy.children.insert(newIndex, item);
+                });
+              },
+              itemBuilder: (context, index) {
+                final child = _workingCopy.children[index];
+                final isSelected = _selectedIndices.contains(index);
+                return Card(
+                  key: ValueKey(child),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: ListTile(
+                    leading: _multiSelect
+                        ? Checkbox(
+                      value: isSelected,
+                      onChanged: (val) {
+                        setState(() {
+                          if (val == true) {
+                            _selectedIndices.add(index);
+                          } else {
+                            _selectedIndices.remove(index);
+                          }
+                        });
+                      },
+                    )
+                        : ReorderableDragStartListener(
+                      index: index,
+                      child: const Icon(Icons.drag_handle),
+                    ),
+                    title: Text(
+                      child.name.isEmpty ? '[Без названия]' : child.name,
+                    ),
+                    subtitle: child.children.isNotEmpty
+                        ? Text('${child.children.length} подэлементов')
+                        : child.stepType == 'stepByStep'
+                        ? Text(
+                      '${child.completedSteps}/${child.totalSteps}',
+                    )
+                        : child.stepType == 'single'
+                        ? const Text('Одиночный чекбокс')
+                        : const Text('Папка'),
+                    trailing: _multiSelect
+                        ? null
+                        : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _editChild(index),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _deleteChild(index),
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      if (_multiSelect) {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedIndices.remove(index);
+                          } else {
+                            _selectedIndices.add(index);
+                          }
+                        });
+                      } else {
+                        _editChild(index);
+                      }
                     },
-                    itemBuilder: (context, index) {
-                      final child = _workingCopy.children[index];
-                      final isSelected = _selectedIndices.contains(index);
-                      return Card(
-                        key: ValueKey(child),
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
-                        ),
-                        child: ListTile(
-                          leading: _multiSelect
-                              ? Checkbox(
-                                  value: isSelected,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      if (val == true) {
-                                        _selectedIndices.add(index);
-                                      } else {
-                                        _selectedIndices.remove(index);
-                                      }
-                                    });
-                                  },
-                                )
-                              : ReorderableDragStartListener(
-                                  index: index,
-                                  child: const Icon(Icons.drag_handle),
-                                ),
-                          title: Text(
-                            child.name.isEmpty ? '[Без названия]' : child.name,
-                          ),
-                          subtitle: child.children.isNotEmpty
-                              ? Text('${child.children.length} подэлементов')
-                              : child.stepType == 'stepByStep'
-                              ? Text(
-                                  '${child.completedSteps}/${child.totalSteps}',
-                                )
-                              : child.stepType == 'single'
-                              ? const Text('Одиночный чекбокс')
-                              : const Text('Папка'),
-                          trailing: _multiSelect
-                              ? null
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () => _editChild(index),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () => _deleteChild(index),
-                                    ),
-                                  ],
-                                ),
-                          onTap: () {
-                            if (_multiSelect) {
-                              setState(() {
-                                if (isSelected) {
-                                  _selectedIndices.remove(index);
-                                } else {
-                                  _selectedIndices.add(index);
-                                }
-                              });
-                            } else {
-                              _editChild(index);
-                            }
-                          },
-                          onLongPress: () {
-                            if (!_multiSelect) {
-                              setState(() {
-                                _multiSelect = true;
-                                _selectedIndices = {index};
-                              });
-                            }
-                          },
-                        ),
-                      );
+                    onLongPress: () {
+                      if (!_multiSelect) {
+                        setState(() {
+                          _multiSelect = true;
+                          _selectedIndices = {index};
+                        });
+                      }
                     },
                   ),
+                );
+              },
+            ),
           ),
           if (_multiSelect)
             Container(
