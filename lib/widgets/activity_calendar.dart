@@ -74,7 +74,7 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
     return weeks;
   }
 
-  // ИСПРАВЛЕННЫЙ МЕТОД – теперь использует compareTo вместо isAfter/isBefore
+// ИСПРАВЛЕННЫЙ МЕТОД – использует compareTo вместо isAfter/isBefore
   List<HistoryEntry> _getEntriesForDay(Box<HistoryEntry> box, DateTime day) {
     final start = DateTime(day.year, day.month, day.day);
     final end = start.add(const Duration(days: 1));

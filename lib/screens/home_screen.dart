@@ -10,16 +10,9 @@ import 'components/planner_tab_view.dart';
 import 'components/app_drawer_menu.dart';
 
 class HomeScreen extends StatefulWidget {
-  final Function(String) onThemeChanged;
-  final String currentThemeMode;
-  final int initialTab; // 0 – книги, 1 – планы
+  const HomeScreen({super.key, this.initialTab = 0});
 
-  const HomeScreen({
-    super.key,
-    required this.onThemeChanged,
-    required this.currentThemeMode,
-    this.initialTab = 0,
-  });
+  final int initialTab;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -121,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final appState = context.read<AppState>();
       Node copyAndReset(Node node) {
         final copy = node.deepCopy();
-        copy.id = const Uuid().v4(); // ← гарантированно уникальный ID
+        copy.id = const Uuid().v4();
         copy.category = 'book';
         if (copy.children.isEmpty) {
           copy.completed = false;
@@ -252,15 +245,12 @@ class _HomeScreenState extends State<HomeScreen> {
         title: _selectedIndex == 0 ? const Text('Книги') : const Text('Планы'),
         actions: _buildAppBarActions(),
       ),
-      endDrawer: AppDrawerMenu(
-        currentThemeMode: widget.currentThemeMode,
-        onThemeChanged: widget.onThemeChanged,
-      ),
+      endDrawer: const AppDrawerMenu(),
       body: _selectedIndex == 0
           ? BooksTabView(
-              searchQuery: _searchQuery,
-              onSearchChanged: (value) => setState(() => _searchQuery = value),
-            )
+        searchQuery: _searchQuery,
+        onSearchChanged: (value) => setState(() => _searchQuery = value),
+      )
           : const PlannerTabView(),
     );
   }
@@ -289,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) =>
-                    const TemplateManagerScreen(selectionMode: false),
+                const TemplateManagerScreen(selectionMode: false),
               ),
             );
           },

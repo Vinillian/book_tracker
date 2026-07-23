@@ -188,35 +188,56 @@ class FileTransfer {
       return false;
     }
 
+    // Сначала парсим ВСЁ в память и ничего не трогаем в боксах.
+    // Если хоть один элемент не распарсится — выходим здесь, до clear(),
+    // и текущие данные пользователя остаются нетронутыми.
+    late final List<Node> parsedTemplates;
+    late final List<Note> parsedNotes;
+    late final List<HistoryEntry> parsedHistory;
+    late final List<StandardTask> parsedStandardTasks;
+    late final List<TrackedActivity> parsedTrackedActivities;
+    try {
+      parsedTemplates = (data['templates'] as List)
+          .map((t) => Node.fromJson(Map<String, dynamic>.from(t)))
+          .toList();
+      parsedNotes = (data['notes'] as List)
+          .map((n) => Note.fromJson(Map<String, dynamic>.from(n)))
+          .toList();
+      parsedHistory = (data['history'] as List)
+          .map((h) => HistoryEntry.fromJson(Map<String, dynamic>.from(h)))
+          .toList();
+      parsedStandardTasks = (data['standardTasks'] as List? ?? [])
+          .map((st) => StandardTask.fromJson(Map<String, dynamic>.from(st)))
+          .toList();
+      parsedTrackedActivities = (data['trackedActivities'] as List? ?? [])
+          .map((ta) => TrackedActivity.fromJson(Map<String, dynamic>.from(ta)))
+          .toList();
+    } catch (e) {
+      debugPrint('Файл бэкапа повреждён, восстановление отменено: $e');
+      return false;
+    }
+
+    // Файл валиден целиком — теперь можно безопасно очищать и записывать.
     await templatesBox.clear();
     await notesBox.clear();
     await historyBox.clear();
     await standardTasksBox.clear();
-    await trackedActivitiesBox.clear(); // очищаем и отслеживаемые задачи
+    await trackedActivitiesBox.clear();
 
-    // Импорт templates
-    for (final t in data['templates']) {
-      await templatesBox.add(Node.fromJson(Map<String, dynamic>.from(t)));
+    for (final t in parsedTemplates) {
+      await templatesBox.add(t);
     }
-    // Импорт notes
-    for (final n in data['notes']) {
-      await notesBox.add(Note.fromJson(Map<String, dynamic>.from(n)));
+    for (final n in parsedNotes) {
+      await notesBox.add(n);
     }
-    // Импорт history
-    for (final h in data['history']) {
-      await historyBox.add(HistoryEntry.fromJson(Map<String, dynamic>.from(h)));
+    for (final h in parsedHistory) {
+      await historyBox.add(h);
     }
-    // Импорт standardTasks, если есть
-    if (data['standardTasks'] is List) {
-      for (final st in data['standardTasks']) {
-        await standardTasksBox.add(StandardTask.fromJson(Map<String, dynamic>.from(st)));
-      }
+    for (final st in parsedStandardTasks) {
+      await standardTasksBox.add(st);
     }
-    // Импорт trackedActivities, если есть
-    if (data['trackedActivities'] is List) {
-      for (final ta in data['trackedActivities']) {
-        await trackedActivitiesBox.add(TrackedActivity.fromJson(Map<String, dynamic>.from(ta)));
-      }
+    for (final ta in parsedTrackedActivities) {
+      await trackedActivitiesBox.add(ta);
     }
 
     return true;

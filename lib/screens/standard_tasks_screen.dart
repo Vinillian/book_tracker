@@ -13,6 +13,15 @@ class StandardTasksScreen extends StatefulWidget {
 }
 
 class _StandardTasksScreenState extends State<StandardTasksScreen> {
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _addTask() {
     final newTask = StandardTask(name: '', stepType: 'single');
     Navigator.push(
@@ -59,7 +68,13 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    final tasks = appState.standardTasks;
+    final allTasks = appState.standardTasks;
+
+    final filteredTasks = _searchQuery.isEmpty
+        ? allTasks
+        : allTasks.where((task) =>
+        task.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -71,15 +86,42 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
             tooltip: 'Добавить задачу',
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: SearchBar(
+              controller: _searchController,
+              hintText: 'Поиск задач...',
+              leading: const Icon(Icons.search),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+              elevation: MaterialStateProperty.all(0),
+              shape: MaterialStateProperty.all(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
-      body: tasks.isEmpty
-          ? const Center(
-        child: Text('Нет стандартных задач. Нажмите + для создания.'),
+      body: filteredTasks.isEmpty
+          ? Center(
+        child: Text(
+          allTasks.isEmpty
+              ? 'Нет стандартных задач. Нажмите + для создания.'
+              : 'Ничего не найдено',
+        ),
       )
           : ListView.builder(
-        itemCount: tasks.length,
+        itemCount: filteredTasks.length,
         itemBuilder: (ctx, index) {
-          final task = tasks[index];
+          final task = filteredTasks[index];
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: ListTile(
@@ -110,6 +152,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
   }
 }
 
+// Оставляем StandardTaskEditorScreen без изменений (он уже был)
 class StandardTaskEditorScreen extends StatefulWidget {
   final StandardTask task;
   final bool isNew;
@@ -141,7 +184,6 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
     super.dispose();
   }
 
-  /// Поиск существующего trackingId для задачи с таким же именем (из всех книг, планов, шаблонов)
   String _findExistingTrackingId(String name, AppState appState) {
     final allNodes = <Node>[];
     allNodes.addAll(appState.books);
@@ -180,7 +222,6 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
 
     final appState = context.read<AppState>();
 
-    // Проверка на дубликат имени (регистронезависимая)
     bool duplicateExists = false;
     for (final task in appState.standardTasks) {
       if (task.name.toLowerCase() == name.toLowerCase() && task.id != widget.task.id) {
@@ -195,7 +236,6 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       return;
     }
 
-    // Поиск существующего trackingId
     final trackingId = _findExistingTrackingId(name, appState);
 
     final updatedTask = StandardTask(

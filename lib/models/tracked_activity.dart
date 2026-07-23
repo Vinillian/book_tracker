@@ -24,7 +24,10 @@ class TrackedActivity {
   bool isActive;
 
   @HiveField(6)
-  bool isRoutine; // добавляем поле рутины
+  bool isRoutine;
+
+  @HiveField(7, defaultValue: 0)   // <-- новое поле с дефолтом
+  int order;
 
   TrackedActivity({
     String? id,
@@ -34,6 +37,7 @@ class TrackedActivity {
     required this.stepType,
     this.isActive = true,
     this.isRoutine = false,
+    this.order = 0,
   }) : id = id ?? const Uuid().v4();
 
   Map<String, dynamic> toJson() => {
@@ -44,6 +48,7 @@ class TrackedActivity {
     'stepType': stepType,
     'isActive': isActive,
     'isRoutine': isRoutine,
+    'order': order,
   };
 
   factory TrackedActivity.fromJson(Map<String, dynamic> json) => TrackedActivity(
@@ -54,5 +59,6 @@ class TrackedActivity {
     stepType: json['stepType'],
     isActive: json['isActive'] ?? true,
     isRoutine: json['isRoutine'] ?? false,
+    order: json['order'] ?? 0,
   );
 }

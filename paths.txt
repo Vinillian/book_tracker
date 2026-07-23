@@ -1,0 +1,6 @@
+C:/Users/user/AndroidStudioProjects/book_planner/lib
+C:/Users/user/AndroidStudioProjects/book_planner/analysis_options.yaml
+C:/Users/user/AndroidStudioProjects/book_planner/devtools_options.yaml
+C:/Users/user/AndroidStudioProjects/book_planner/pubspec.yaml
+C:/Users/user/AndroidStudioProjects/book_planner/SECURITY.md
+C:/Users/user/AndroidStudioProjects/book_planner/README.md

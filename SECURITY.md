@@ -6,9 +6,8 @@ The following versions of Book Planner are currently receiving security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.0.x   | :white_check_mark: |
-| 1.0.x   | :white_check_mark: |
-| < 1.0.2 | :x:                |
+| 1.1.x   | :white_check_mark: |
+| < 1.1.0 | :x:                |
 
 ## Reporting a Vulnerability
 

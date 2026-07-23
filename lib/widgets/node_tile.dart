@@ -53,9 +53,7 @@ class NodeTile extends StatelessWidget {
             Checkbox(
               value: node.completed,
               onChanged: (_) {
-                // Родитель сам переключает состояние через onCheckboxChanged
                 onCheckboxChanged?.call();
-                // После переключения записываем историю (если задача не рутина)
                 if (!node.excludeFromHistory) {
                   HistoryService.recordUniqueToggle(
                     bookId: bookId,
