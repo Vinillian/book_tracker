@@ -41,7 +41,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         bookId: widget.bookId,
         node: _node,
         newValue: newValue,
-        targetDate: widget.targetDate,
+        // targetDate intentionally omitted – uses DateTime.now()
       );
     }
     widget.onNodeUpdated();
@@ -66,7 +66,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
           bookId: widget.bookId,
           node: _node,
           newSteps: newSteps,
-          targetDate: widget.targetDate,
+          // targetDate intentionally omitted – uses DateTime.now()
         );
       }
       widget.onNodeUpdated();

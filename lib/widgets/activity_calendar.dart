@@ -74,13 +74,13 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
     return weeks;
   }
 
-  // ИСПРАВЛЕННЫЙ МЕТОД – сравниваем только даты
+// ИСПРАВЛЕННЫЙ МЕТОД – использует compareTo вместо isAfter/isBefore
   List<HistoryEntry> _getEntriesForDay(Box<HistoryEntry> box, DateTime day) {
-    final normalizedDay = DateTime(day.year, day.month, day.day);
-    return box.values.where((e) {
-      final eDay = DateTime(e.date.year, e.date.month, e.date.day);
-      return eDay == normalizedDay;
-    }).toList();
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    return box.values
+        .where((e) => e.date.compareTo(start) >= 0 && e.date.compareTo(end) < 0)
+        .toList();
   }
 
   Color _colorForCount(int count) {
