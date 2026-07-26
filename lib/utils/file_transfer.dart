@@ -375,6 +375,141 @@ class FileTransfer {
     return ImportResult(status: ImportStatus.success, count: imported);
   }
 
+  /// #94 — импорт Планов и Истории одной связанной операцией (не отдельные
+  /// кнопки). Запрашивает два файла подряд (сначала Планы, потом Историю).
+  ///
+  /// Диапазон замены берётся из `exportedRange` файла Планов:
+  /// - если диапазон есть — заменяются только те существующие Планы, чья
+  ///   дата (см. planDateFromNode) попадает в этот диапазон
+  /// - если диапазона нет (старый bare-array файл или экспорт "без фильтра") —
+  ///   заменяются вообще все Планы, как раньше вело себя replaceWholeList
+  ///
+  /// История удаляется ТОЧНО по дереву удаляемых Планов, а не по дате:
+  /// собираются id всех узлов (включая вложенные) каждого удаляемого Плана,
+  /// и удаляются только те HistoryEntry, чей nodeId входит в этот набор.
+  /// Так не задеваются записи Истории от других Планов/Книг, у которых
+  /// случайно совпала дата.
+  ///
+  /// Оба файла парсятся полностью в память до того, как box'ы будут тронуты —
+  /// если что-то одно повреждено, ничего не меняется.
+  static Future<ImportResult> importPlansWithHistory({
+    required Box<Node> templatesBox,
+    required Box<HistoryEntry> historyBox,
+  }) async {
+    // --- Файл Планов ---
+    final plansBytes = await _importFile();
+    if (plansBytes == null) return const ImportResult(status: ImportStatus.empty);
+    final plansEnvelope = parseCategoryEnvelope(plansBytes);
+    if (plansEnvelope == null) {
+      return const ImportResult(status: ImportStatus.malformed);
+    }
+    if (plansEnvelope.category != null && plansEnvelope.category != 'planner') {
+      return ImportResult(
+        status: ImportStatus.categoryMismatch,
+        expectedCategory: 'planner',
+        actualCategory: plansEnvelope.category,
+      );
+    }
+
+    final List<Node> parsedPlans;
+    try {
+      parsedPlans = plansEnvelope.items.map((j) {
+        final n = Node.fromJson(j);
+        n.category = 'planner';
+        return n;
+      }).toList();
+    } catch (e) {
+      debugPrint('Ошибка парсинга файла планов: $e');
+      return const ImportResult(status: ImportStatus.malformed);
+    }
+    if (parsedPlans.isEmpty) {
+      return const ImportResult(status: ImportStatus.empty);
+    }
+
+    // --- Файл Истории ---
+    final historyBytes = await _importFile();
+    if (historyBytes == null) return const ImportResult(status: ImportStatus.empty);
+    final historyEnvelope = parseCategoryEnvelope(historyBytes);
+    if (historyEnvelope == null) {
+      return const ImportResult(status: ImportStatus.malformed);
+    }
+    if (historyEnvelope.category != null && historyEnvelope.category != 'history') {
+      return ImportResult(
+        status: ImportStatus.categoryMismatch,
+        expectedCategory: 'history',
+        actualCategory: historyEnvelope.category,
+      );
+    }
+
+    final List<HistoryEntry> parsedHistory;
+    try {
+      parsedHistory =
+          historyEnvelope.items.map((j) => HistoryEntry.fromJson(j)).toList();
+    } catch (e) {
+      debugPrint('Ошибка парсинга файла истории: $e');
+      return const ImportResult(status: ImportStatus.malformed);
+    }
+
+    // Оба файла целиком распарсены — теперь безопасно трогать box'ы.
+
+    // --- Какие существующие Планы попадают под замену ---
+    final range = plansEnvelope.exportedRange;
+    final existingPlanKeys = <dynamic>[];
+    final plansToRemove = <Node>[];
+    for (final key in templatesBox.keys) {
+      final n = templatesBox.get(key);
+      if (n == null || n.category != 'planner') continue;
+      if (range == null) {
+        existingPlanKeys.add(key);
+        plansToRemove.add(n);
+      } else {
+        final d = planDateFromNode(n);
+        if (d != null && range.contains(d)) {
+          existingPlanKeys.add(key);
+          plansToRemove.add(n);
+        }
+      }
+    }
+
+    // --- id всех узлов (включая дочерние) удаляемых Планов ---
+    final deletedNodeIds = <String>{};
+    void collectIds(Node n) {
+      deletedNodeIds.add(n.id);
+      for (final c in n.children) {
+        collectIds(c);
+      }
+    }
+    for (final p in plansToRemove) {
+      collectIds(p);
+    }
+
+    // --- Удаляем старые Планы ---
+    await templatesBox.deleteAll(existingPlanKeys);
+
+    // --- Удаляем связанную Историю — точно по nodeId, не по дате ---
+    final historyKeysToDelete = <dynamic>[];
+    for (final key in historyBox.keys) {
+      final h = historyBox.get(key);
+      if (h != null && deletedNodeIds.contains(h.nodeId)) {
+        historyKeysToDelete.add(key);
+      }
+    }
+    await historyBox.deleteAll(historyKeysToDelete);
+
+    // --- Записываем новые Планы и Историю ---
+    for (final p in parsedPlans) {
+      await templatesBox.add(p);
+    }
+    for (final h in parsedHistory) {
+      await historyBox.add(h);
+    }
+
+    return ImportResult(
+      status: ImportStatus.success,
+      count: parsedPlans.length + parsedHistory.length,
+    );
+  }
+
   // ======================= Полный бэкап и восстановление =======================
   // Не затронуто #92 — формат полного бэкапа отдельный от per-category envelope.
 
