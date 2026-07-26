@@ -24,6 +24,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   ExportDateRange? _plansRange;
   ExportDateRange? _historyRange;
 
+  // Merge-стратегия для импорта — выбирается заранее, до нажатия "Импорт".
+  // Только для StandardTasks/TrackedActivities (см. design table в #93);
+  // Books/Templates/Notes всегда addOnly, Plans/History получат свою
+  // scoped-по-диапазону стратегию в #94.
+  ImportMergeStrategy _standardTasksMergeStrategy = ImportMergeStrategy.addOnly;
+  ImportMergeStrategy _trackedActivitiesMergeStrategy = ImportMergeStrategy.addOnly;
+
   @override
   void initState() {
     super.initState();
@@ -37,9 +44,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     categoryFilter: 'book',
     suggestedName: 'books',
   );
-  Future<int> _importBooks() => FileTransfer.importIntoBox(
+  Future<ImportResult> _importBooks() => FileTransfer.importIntoBox(
     box: _appState.templatesBox,
     fromJson: Node.fromJson,
+    expectedCategory: 'book',
     setCategory: 'book',
   );
 
@@ -51,9 +59,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     dateExtractor: FileTransfer.planDateFromNode,
     suggestedName: 'plans',
   );
-  Future<int> _importPlans() => FileTransfer.importIntoBox(
+  Future<ImportResult> _importPlans() => FileTransfer.importIntoBox(
     box: _appState.templatesBox,
     fromJson: Node.fromJson,
+    expectedCategory: 'planner',
     setCategory: 'planner',
   );
 
@@ -63,9 +72,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     categoryFilter: 'template',
     suggestedName: 'templates',
   );
-  Future<int> _importTemplates() => FileTransfer.importIntoBox(
+  Future<ImportResult> _importTemplates() => FileTransfer.importIntoBox(
     box: _appState.templatesBox,
     fromJson: Node.fromJson,
+    expectedCategory: 'template',
     setCategory: 'template',
   );
 
@@ -77,9 +87,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     filter: (n) => n.linkedNodeId == null,
     suggestedName: 'notes',
   );
-  Future<int> _importNotes() => FileTransfer.importIntoBox(
+  Future<ImportResult> _importNotes() => FileTransfer.importIntoBox(
     box: _appState.notesBox,
     fromJson: Note.fromJson,
+    expectedCategory: 'note',
     filterJson: (json) => json['linkedNodeId'] == null,
   );
 
@@ -90,9 +101,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     dateExtractor: (h) => h.date,
     suggestedName: 'history',
   );
-  Future<int> _importHistory() => FileTransfer.importIntoBox(
+  Future<ImportResult> _importHistory() => FileTransfer.importIntoBox(
     box: _appState.historyBox,
     fromJson: HistoryEntry.fromJson,
+    expectedCategory: 'history',
   );
 
   // Стандартные задачи
@@ -101,9 +113,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     category: 'standardTask',
     suggestedName: 'standard_tasks',
   );
-  Future<int> _importStandardTasks() => FileTransfer.importIntoBox(
+  Future<ImportResult> _importStandardTasks() => FileTransfer.importIntoBox(
     box: _appState.standardTasksBox,
     fromJson: StandardTask.fromJson,
+    expectedCategory: 'standardTask',
+    mergeStrategy: _standardTasksMergeStrategy,
   );
 
   // Отслеживаемые задачи
@@ -112,9 +126,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     category: 'trackedActivity',
     suggestedName: 'tracked_activities',
   );
-  Future<int> _importTrackedActivities() => FileTransfer.importIntoBox(
+  Future<ImportResult> _importTrackedActivities() => FileTransfer.importIntoBox(
     box: _appState.trackedActivitiesBox,
     fromJson: TrackedActivity.fromJson,
+    expectedCategory: 'trackedActivity',
+    mergeStrategy: _trackedActivitiesMergeStrategy,
   );
 
   Future<bool> _exportAll() => FileTransfer.exportAll(
@@ -157,23 +173,33 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   Future<void> _runImport(
-      Future<int> Function() action,
+      Future<ImportResult> Function() action,
       String successMsg,
       String emptyMsg,
       ) async {
-    int result;
+    ImportResult result;
     try {
       result = await action();
     } catch (e) {
       _showSnackBar('Ошибка: $e');
       return;
     }
-    if (result == -1) {
-      _showSnackBar('Ошибка чтения файла. Проверьте формат JSON.');
-    } else if (result == 0) {
-      _showSnackBar(emptyMsg);
-    } else {
-      _showSnackBar('$successMsg: $result');
+    switch (result.status) {
+      case ImportStatus.malformed:
+        _showSnackBar('Ошибка чтения файла. Проверьте формат JSON.');
+        break;
+      case ImportStatus.empty:
+        _showSnackBar(emptyMsg);
+        break;
+      case ImportStatus.categoryMismatch:
+        _showSnackBar(
+          'Файл содержит категорию "${result.actualCategory}", '
+              'а ожидалась "${result.expectedCategory}" — импорт отменён',
+        );
+        break;
+      case ImportStatus.success:
+        _showSnackBar('$successMsg: ${result.count}');
+        break;
     }
   }
 
@@ -273,6 +299,34 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               'Без фильтра — экспортируется всё',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMergeStrategySelector({
+    required ImportMergeStrategy current,
+    required ValueChanged<ImportMergeStrategy> onChanged,
+  }) {
+    String label(ImportMergeStrategy s) => switch (s) {
+      ImportMergeStrategy.addOnly => 'Добавить новые',
+      ImportMergeStrategy.replaceWholeList => 'Заменить весь список',
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          const Text('При импорте: ', style: TextStyle(fontSize: 13)),
+          DropdownButton<ImportMergeStrategy>(
+            value: current,
+            items: ImportMergeStrategy.values
+                .map((s) => DropdownMenuItem(value: s, child: Text(label(s))))
+                .toList(),
+            onChanged: (s) {
+              if (s != null) onChanged(s);
+            },
+          ),
         ],
       ),
     );
@@ -380,6 +434,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ),
           ),
           _sectionHeader('Стандартные задачи'),
+          _buildMergeStrategySelector(
+            current: _standardTasksMergeStrategy,
+            onChanged: (s) => setState(() => _standardTasksMergeStrategy = s),
+          ),
           _buildTile(
             'Экспорт стандартных задач',
                 () => _runExport(
@@ -397,6 +455,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ),
           ),
           _sectionHeader('Отслеживаемые задачи'),
+          _buildMergeStrategySelector(
+            current: _trackedActivitiesMergeStrategy,
+            onChanged: (s) => setState(() => _trackedActivitiesMergeStrategy = s),
+          ),
           _buildTile(
             'Экспорт отслеживаемых задач',
                 () => _runExport(

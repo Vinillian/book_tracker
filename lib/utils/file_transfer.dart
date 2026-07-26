@@ -48,6 +48,31 @@ class ExportDateRange {
   }
 }
 
+/// Стратегия слияния при импорте одной категории.
+/// Какие категории вообще позволяют выбор — решает экран (см. design table
+/// в milestone v1.2.0): Books/Templates/Notes всегда addOnly без UI-выбора,
+/// StandardTasks/TrackedActivities дают пользователю выбор, Plans/History
+/// получат отдельную scoped-по-диапазону стратегию в #94.
+enum ImportMergeStrategy { addOnly, replaceWholeList }
+
+/// Итог одной попытки импорта — вместо магических int-кодов (-1/0/N),
+/// которые были раньше.
+enum ImportStatus { success, empty, malformed, categoryMismatch }
+
+class ImportResult {
+  final ImportStatus status;
+  final int count;
+  final String? expectedCategory;
+  final String? actualCategory;
+
+  const ImportResult({
+    required this.status,
+    this.count = 0,
+    this.expectedCategory,
+    this.actualCategory,
+  });
+}
+
 /// Результат разбора файла категории: как envelope-формата (schemaVersion 1+),
 /// так и старого "голого массива" (schemaVersion 0, для обратной совместимости).
 class CategoryEnvelope {
@@ -259,46 +284,95 @@ class FileTransfer {
 
   /// Импорт одной категории. Понимает оба формата файла (см. parseCategoryEnvelope).
   ///
-  /// ВАЖНО: атомарность записи, валидация category envelope-а и выбор
-  /// merge-стратегии (replace/add) — вне рамок этой функции, это #93.
-  /// Здесь только замена источника парсинга (envelope вместо голого массива) —
-  /// поведение самого import-цикла (skipDuplicates) не менялось.
-  static Future<int> importIntoBox<T>({
+  /// [expectedCategory] — категория, которую ожидает данный экран (например
+  /// 'standardTask'). Если файл несёт метаданные envelope и его `category`
+  /// не совпадает — импорт отклоняется до записи (categoryMismatch).
+  /// Старые bare-array файлы (envelope.category == null) метаданных не несут,
+  /// поэтому валидация в этом случае не применяется — иначе мы бы сломали
+  /// обратную совместимость, которую сознательно сохранили в #92.
+  ///
+  /// Двухфазно: сначала весь `fromJson` в память (Phase 1), и только если
+  /// ВСЕ элементы распарсились успешно — запись в box (Phase 2). Если файл
+  /// повреждён посередине, текущие данные пользователя не тронуты.
+  static Future<ImportResult> importIntoBox<T>({
     required Box<T> box,
     required T Function(Map<String, dynamic>) fromJson,
+    required String expectedCategory,
     String? setCategory,
-    bool skipDuplicates = true,
+    ImportMergeStrategy mergeStrategy = ImportMergeStrategy.addOnly,
     bool Function(Map<String, dynamic>)? filterJson,
   }) async {
     final bytes = await _importFile();
-    if (bytes == null) return 0;
-    final envelope = parseCategoryEnvelope(bytes);
-    if (envelope == null) return -1;
+    if (bytes == null) return const ImportResult(status: ImportStatus.empty);
 
-    int imported = 0;
-    for (final item in envelope.items) {
-      if (filterJson != null && !filterJson(item)) continue;
-      final obj = fromJson(item);
-      if (setCategory != null) {
-        try {
-          (obj as dynamic).category = setCategory;
-        } catch (_) {}
-      }
-      final objId = (obj as dynamic).id;
-      if (skipDuplicates && objId != null) {
-        bool exists = box.values.any((e) {
-          try {
-            return (e as dynamic).id == objId;
-          } catch (_) {
-            return false;
-          }
-        });
-        if (exists) continue;
-      }
-      await box.add(obj);
-      imported++;
+    final envelope = parseCategoryEnvelope(bytes);
+    if (envelope == null) {
+      return const ImportResult(status: ImportStatus.malformed);
     }
-    return imported;
+
+    if (envelope.category != null && envelope.category != expectedCategory) {
+      return ImportResult(
+        status: ImportStatus.categoryMismatch,
+        expectedCategory: expectedCategory,
+        actualCategory: envelope.category,
+      );
+    }
+
+    // Phase 1: парсинг всего файла в память. Box пока не тронут.
+    final List<T> parsed = [];
+    try {
+      for (final item in envelope.items) {
+        if (filterJson != null && !filterJson(item)) continue;
+        final obj = fromJson(item);
+        if (setCategory != null) {
+          try {
+            (obj as dynamic).category = setCategory;
+          } catch (_) {}
+        }
+        parsed.add(obj);
+      }
+    } catch (e) {
+      debugPrint('Ошибка парсинга элементов импорта ($expectedCategory): $e');
+      return const ImportResult(status: ImportStatus.malformed);
+    }
+
+    if (parsed.isEmpty) {
+      return const ImportResult(status: ImportStatus.empty);
+    }
+
+    // Phase 2: запись. Только теперь данные в box реально меняются.
+    int imported = 0;
+    if (mergeStrategy == ImportMergeStrategy.replaceWholeList) {
+      await box.clear();
+      for (final obj in parsed) {
+        await box.add(obj);
+        imported++;
+      }
+    } else {
+      final existingIds = box.values
+          .map((e) {
+        try {
+          return (e as dynamic).id as String?;
+        } catch (_) {
+          return null;
+        }
+      })
+          .whereType<String>()
+          .toSet();
+
+      for (final obj in parsed) {
+        String? objId;
+        try {
+          objId = (obj as dynamic).id as String?;
+        } catch (_) {}
+        if (objId != null && existingIds.contains(objId)) continue;
+        await box.add(obj);
+        if (objId != null) existingIds.add(objId);
+        imported++;
+      }
+    }
+
+    return ImportResult(status: ImportStatus.success, count: imported);
   }
 
   // ======================= Полный бэкап и восстановление =======================
