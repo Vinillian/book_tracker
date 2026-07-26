@@ -4,3 +4,5 @@ C:/Users/user/AndroidStudioProjects/book_planner/devtools_options.yaml
 C:/Users/user/AndroidStudioProjects/book_planner/pubspec.yaml
 C:/Users/user/AndroidStudioProjects/book_planner/SECURITY.md
 C:/Users/user/AndroidStudioProjects/book_planner/README.md
+C:/Users/user/AndroidStudioProjects/book_planner/.gitignore.txt
+C:/Users/user/AndroidStudioProjects/book_planner/CHANGELOG.md
