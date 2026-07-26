@@ -59,12 +59,14 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     dateExtractor: FileTransfer.planDateFromNode,
     suggestedName: 'plans',
   );
-  Future<ImportResult> _importPlans() => FileTransfer.importIntoBox(
-    box: _appState.templatesBox,
-    fromJson: Node.fromJson,
-    expectedCategory: 'planner',
-    setCategory: 'planner',
-  );
+  // #94: импорт Планов теперь всегда тянет за собой связанную Историю
+  // одной операцией (запросит два файла подряд: Планы, затем Историю).
+  // Отдельной кнопки "Импорт истории" в UI больше нет.
+  Future<ImportResult> _importPlansWithHistory() =>
+      FileTransfer.importPlansWithHistory(
+        templatesBox: _appState.templatesBox,
+        historyBox: _appState.historyBox,
+      );
 
   Future<bool> _exportTemplates() => FileTransfer.exportCategory(
     box: _appState.templatesBox,
@@ -101,11 +103,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     dateExtractor: (h) => h.date,
     suggestedName: 'history',
   );
-  Future<ImportResult> _importHistory() => FileTransfer.importIntoBox(
-    box: _appState.historyBox,
-    fromJson: HistoryEntry.fromJson,
-    expectedCategory: 'history',
-  );
+  // Импорт Истории отдельной кнопкой больше не существует — см. #94,
+  // _importPlansWithHistory выше. Экспорт остаётся отдельным (у него
+  // свой диапазон дат, _historyRange).
 
   // Стандартные задачи
   Future<bool> _exportStandardTasks() => FileTransfer.exportCategory(
@@ -371,11 +371,20 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ),
           ),
           _buildTile(
-            'Импорт планов',
+            'Импорт планов (+ история)',
                 () => _runImport(
-              _importPlans,
-              'Импортировано планов',
+              _importPlansWithHistory,
+              'Импортировано (планы + история)',
               'Файл не выбран или нет данных',
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Импорт запросит два файла подряд: сначала Планы, потом '
+                  'Историю. Заменяются только те Планы (и связанная с ними '
+                  'История), что попадают в диапазон импортируемого файла.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
           _sectionHeader('Шаблоны'),
@@ -425,12 +434,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               'Нет истории для экспорта в выбранном диапазоне или отменено',
             ),
           ),
-          _buildTile(
-            'Импорт истории',
-                () => _runImport(
-              _importHistory,
-              'Импортировано записей истории',
-              'Файл не выбран или нет данных',
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Импорт истории — часть импорта Планов, см. секцию выше.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
           _sectionHeader('Стандартные задачи'),
