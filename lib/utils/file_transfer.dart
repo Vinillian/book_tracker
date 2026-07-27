@@ -92,7 +92,27 @@ class CategoryEnvelope {
 class FileTransfer {
   // ======================= Общие утилиты =======================
 
+  /// Магические байты gzip-потока (RFC 1952). Используются, чтобы отличить
+  /// сжатый файл (#100) от старого plain-JSON/BOM файла на импорте —
+  /// без привязки к расширению файла (оно всегда остаётся .json).
+  static const int _gzipMagic0 = 0x1f;
+  static const int _gzipMagic1 = 0x8b;
+
+  static bool _looksGzipped(Uint8List bytes) =>
+      bytes.length >= 2 && bytes[0] == _gzipMagic0 && bytes[1] == _gzipMagic1;
+
   static String? _bytesToJsonString(Uint8List bytes) {
+    // #100: если файл gzip-сжат — сначала распаковать. Старые (несжатые)
+    // бэкапы magic bytes не имеют и идут дальше без изменений (обратная
+    // совместимость сохраняется автоматически).
+    if (_looksGzipped(bytes)) {
+      try {
+        bytes = Uint8List.fromList(gzip.decode(bytes));
+      } catch (e) {
+        debugPrint('Ошибка распаковки gzip: $e');
+        return null;
+      }
+    }
     try {
       if (bytes.length >= 3 &&
           bytes[0] == 0xEF &&
@@ -211,20 +231,33 @@ class FileTransfer {
   }
 
   static Future<bool> _exportFile(Uint8List bytes, String fileName) async {
+    // #100: сжимаем перед записью на диск — JSON с повторяющимися ключами и
+    // похожими строками обычно ужимается на 70-85%. Файл теперь получает
+    // честное расширение .gz поверх .json (например history_123.json.gz) —
+    // если оставить .json, а внутри бинарный gzip, некоторые Android-провайдеры
+    // сами определяют реальный тип по содержимому и показывают файл серым/
+    // некликабельным в системном диалоге выбора (расширение обещает JSON,
+    // а по факту бинарные данные — несовпадение).
+    final compressed = Uint8List.fromList(gzip.encode(bytes));
+    final compressedName = '$fileName.gz';
     final result = await FilePicker.platform.saveFile(
       dialogTitle: 'Сохранить файл',
-      fileName: fileName,
-      bytes: bytes,
+      fileName: compressedName,
+      bytes: compressed,
       type: FileType.custom,
-      allowedExtensions: ['json'],
+      allowedExtensions: ['gz'],
     );
     return result != null;
   }
 
   static Future<Uint8List?> _importFile() async {
+    // Разрешаем оба расширения: json — старые несжатые бэкапы (до #100),
+    // gz — новые сжатые. Реальный формат содержимого всё равно определяется
+    // по magic bytes в _bytesToJsonString, расширение здесь влияет только
+    // на то, какие файлы система вообще позволит выбрать в диалоге.
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['json'],
+      allowedExtensions: ['json', 'gz'],
     );
     if (result == null || result.files.isEmpty) return null;
     final file = result.files.first;

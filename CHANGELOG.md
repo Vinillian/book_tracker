@@ -20,6 +20,8 @@
 ### Changed
 - Notes export/import is now scoped to inbox notes only; day-linked notes are out of scope for this operation (#92)
 - The standalone "Import History" action has been removed — importing History is no longer a separate user choice, it's part of importing Plans (#94)
-- - Plans and History export now share a single date range instead of two independently selectable ranges, removing the possibility of exporting them with diverging dates (#64)
+- - Backup and category export files are now gzip-compressed to reduce file size, saved with a `.gz` extension so the system file picker recognizes them correctly; import auto-detects gzip vs. plain-JSON and old uncompressed backups still work (#100)
+- Plans and History export now share a single date range instead of two independently selectable ranges, removing the possibility of exporting them with diverging dates (#64)
 - Item detail screen (ViewItemScreen) now shows whether a task is tracked on the heatmap, with a quick action to add or re-enable tracking directly from there instead of only via the Tracked Activities screen (#95)
-- - Backup/Restore screen redesigned around a single category dropdown instead of a button grid, with context-sensitive controls (date range for Plans/History, merge strategy for Standard Tasks/Tracked Activities) shown per selected category (#64)
+- Backup/Restore screen redesigned around a single category dropdown instead of a button grid, with context-sensitive controls (date range for Plans/History, merge strategy for Standard Tasks/Tracked Activities) shown per selected category (#64)
+- Backup and category export files are now gzip-compressed to reduce file size, with automatic detection and fallback so older uncompressed backups still import correctly (#100)
