@@ -9,6 +9,34 @@ import '../models/tracked_activity.dart';
 import '../providers/app_state.dart';
 import '../utils/file_transfer.dart';
 
+/// Категории данных, между которыми переключается выпадающий список
+/// на экране Backup/Restore. Plans и History объединены в одну категорию:
+/// они и так экспортируются/импортируются в связке (см. #94) и делят
+/// один диапазон дат (см. #64 — раньше были два независимых диапазона,
+/// _plansRange/_historyRange, что могло приводить к рассинхрону при
+/// экспорте с разными датами).
+enum _BackupCategory {
+  books,
+  plansHistory,
+  templates,
+  notes,
+  standardTasks,
+  trackedActivities,
+  fullBackup,
+}
+
+extension on _BackupCategory {
+  String get label => switch (this) {
+    _BackupCategory.books => 'Книги',
+    _BackupCategory.plansHistory => 'Планы и история',
+    _BackupCategory.templates => 'Шаблоны',
+    _BackupCategory.notes => 'Заметки (inbox)',
+    _BackupCategory.standardTasks => 'Стандартные задачи',
+    _BackupCategory.trackedActivities => 'Отслеживаемые задачи',
+    _BackupCategory.fullBackup => 'Полный бэкап',
+  };
+}
+
 class BackupRestoreScreen extends StatefulWidget {
   const BackupRestoreScreen({super.key});
 
@@ -19,15 +47,19 @@ class BackupRestoreScreen extends StatefulWidget {
 class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   late final AppState _appState;
 
-  // Диапазоны дат для экспорта Plans/History — применяются только к экспорту,
-  // независимы друг от друга (см. #92). null = экспортировать всё, без фильтра.
-  ExportDateRange? _plansRange;
-  ExportDateRange? _historyRange;
+  _BackupCategory _selectedCategory = _BackupCategory.books;
+
+  // Единый диапазон дат для Plans и History — применяется только к экспорту.
+  // Раньше был раздельным (_plansRange/_historyRange), что позволяло
+  // экспортировать их с разными датами и потенциально рассинхронизировать
+  // импорт (History-диапазон при импорте всегда берётся из Plans-файла,
+  // см. #94). Объединено в рамках #64. null = экспортировать всё, без фильтра.
+  ExportDateRange? _plansHistoryRange;
 
   // Merge-стратегия для импорта — выбирается заранее, до нажатия "Импорт".
   // Только для StandardTasks/TrackedActivities (см. design table в #93);
-  // Books/Templates/Notes всегда addOnly, Plans/History получат свою
-  // scoped-по-диапазону стратегию в #94.
+  // Books/Templates/Notes всегда addOnly, Plans/History — scoped-по-диапазону
+  // стратегия из #94.
   ImportMergeStrategy _standardTasksMergeStrategy = ImportMergeStrategy.addOnly;
   ImportMergeStrategy _trackedActivitiesMergeStrategy = ImportMergeStrategy.addOnly;
 
@@ -55,7 +87,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     box: _appState.templatesBox,
     category: 'planner',
     categoryFilter: 'planner',
-    dateRange: _plansRange,
+    dateRange: _plansHistoryRange,
     dateExtractor: FileTransfer.planDateFromNode,
     suggestedName: 'plans',
   );
@@ -99,13 +131,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   Future<bool> _exportHistory() => FileTransfer.exportCategory(
     box: _appState.historyBox,
     category: 'history',
-    dateRange: _historyRange,
+    dateRange: _plansHistoryRange,
     dateExtractor: (h) => h.date,
     suggestedName: 'history',
   );
   // Импорт Истории отдельной кнопкой больше не существует — см. #94,
-  // _importPlansWithHistory выше. Экспорт остаётся отдельным (у него
-  // свой диапазон дат, _historyRange).
+  // _importPlansWithHistory выше. Экспорт остаётся отдельным (та же кнопка,
+  // тот же диапазон _plansHistoryRange, что и у Plans).
 
   // Стандартные задачи
   Future<bool> _exportStandardTasks() => FileTransfer.exportCategory(
@@ -332,15 +364,12 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
   }
 
-  // ========== UI ==========
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Импорт и экспорт')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _sectionHeader('Книги'),
+  // ========== Контент по выбранной категории ==========
+
+  List<Widget> _buildCategoryContent(_BackupCategory category) {
+    switch (category) {
+      case _BackupCategory.books:
+        return [
           _buildTile(
             'Экспорт книг',
                 () => _runExport(
@@ -357,10 +386,21 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               'Файл не выбран или нет данных',
             ),
           ),
-          _sectionHeader('Планы'),
+        ];
+
+      case _BackupCategory.plansHistory:
+        return [
           _buildRangeSelector(
-            current: _plansRange,
-            onChanged: (r) => setState(() => _plansRange = r),
+            current: _plansHistoryRange,
+            onChanged: (r) => setState(() => _plansHistoryRange = r),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Один диапазон дат применяется и к Планам, и к Истории — '
+                  'они экспортируются и импортируются вместе.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ),
           _buildTile(
             'Экспорт планов',
@@ -368,6 +408,14 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               _exportPlans,
               'Планы экспортированы',
               'Нет планов для экспорта в выбранном диапазоне или отменено',
+            ),
+          ),
+          _buildTile(
+            'Экспорт истории',
+                () => _runExport(
+              _exportHistory,
+              'История экспортирована',
+              'Нет истории для экспорта в выбранном диапазоне или отменено',
             ),
           ),
           _buildTile(
@@ -379,7 +427,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ),
           ),
           const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8, top: 4),
             child: Text(
               'Импорт запросит два файла подряд: сначала Планы, потом '
                   'Историю. Заменяются только те Планы (и связанная с ними '
@@ -387,7 +435,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
-          _sectionHeader('Шаблоны'),
+        ];
+
+      case _BackupCategory.templates:
+        return [
           _buildTile(
             'Экспорт шаблонов',
                 () => _runExport(
@@ -404,7 +455,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               'Файл не выбран или нет данных',
             ),
           ),
-          _sectionHeader('Заметки (inbox)'),
+        ];
+
+      case _BackupCategory.notes:
+        return [
           _buildTile(
             'Экспорт заметок',
                 () => _runExport(
@@ -421,27 +475,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               'Файл не выбран или нет данных',
             ),
           ),
-          _sectionHeader('История'),
-          _buildRangeSelector(
-            current: _historyRange,
-            onChanged: (r) => setState(() => _historyRange = r),
-          ),
-          _buildTile(
-            'Экспорт истории',
-                () => _runExport(
-              _exportHistory,
-              'История экспортирована',
-              'Нет истории для экспорта в выбранном диапазоне или отменено',
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text(
-              'Импорт истории — часть импорта Планов, см. секцию выше.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ),
-          _sectionHeader('Стандартные задачи'),
+        ];
+
+      case _BackupCategory.standardTasks:
+        return [
           _buildMergeStrategySelector(
             current: _standardTasksMergeStrategy,
             onChanged: (s) => setState(() => _standardTasksMergeStrategy = s),
@@ -462,7 +499,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               'Файл не выбран или нет данных',
             ),
           ),
-          _sectionHeader('Отслеживаемые задачи'),
+        ];
+
+      case _BackupCategory.trackedActivities:
+        return [
           _buildMergeStrategySelector(
             current: _trackedActivitiesMergeStrategy,
             onChanged: (s) => setState(() => _trackedActivitiesMergeStrategy = s),
@@ -483,8 +523,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               'Файл не выбран или нет данных',
             ),
           ),
-          const Divider(height: 32),
-          _sectionHeader('Полный бэкап'),
+        ];
+
+      case _BackupCategory.fullBackup:
+        return [
           _buildTile(
             'Экспорт всего',
                 () => _runExport(
@@ -494,17 +536,37 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ),
           ),
           _buildTile('Восстановление из бэкапа', _runRestore),
-        ],
-      ),
-    );
+        ];
+    }
   }
 
-  Widget _sectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  // ========== UI ==========
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Импорт и экспорт')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: DropdownButtonFormField<_BackupCategory>(
+              initialValue: _selectedCategory,
+              decoration: const InputDecoration(
+                labelText: 'Раздел',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              items: _BackupCategory.values
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c.label)))
+                  .toList(),
+              onChanged: (c) {
+                if (c != null) setState(() => _selectedCategory = c);
+              },
+            ),
+          ),
+          ..._buildCategoryContent(_selectedCategory),
+        ],
       ),
     );
   }
