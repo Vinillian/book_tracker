@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/node.dart';
+import '../models/tracked_activity.dart';
+import '../providers/app_state.dart';
 import '../services/history_service.dart';
 
 class ViewItemScreen extends StatefulWidget {
@@ -96,10 +99,64 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     }
   }
 
+  /// Ищет запись TrackedActivity для этого узла по trackingId
+  /// (TrackedActivity.nodeId исторически хранит именно trackingId, см. #79).
+  TrackedActivity? _findTrackedActivity(AppState appState) {
+    for (final a in appState.trackedActivities) {
+      if (a.nodeId == _node.trackingId) {
+        return a;
+      }
+    }
+    return null;
+  }
+
+  void _quickAddToTracking(AppState appState, TrackedActivity? existing) {
+    if (existing != null) {
+      // Уже была запись, но неактивна (снята с отслеживания ранее) — включаем обратно.
+      final updated = TrackedActivity(
+        id: existing.id,
+        nodeId: existing.nodeId,
+        name: existing.name,
+        colorValue: existing.colorValue,
+        stepType: existing.stepType,
+        isActive: true,
+        isRoutine: existing.isRoutine,
+        order: existing.order,
+      );
+      appState.updateTrackedActivity(existing.id, updated);
+    } else {
+      final activities = appState.trackedActivities;
+      final maxOrder = activities.isEmpty
+          ? 0
+          : activities.map((a) => a.order).reduce((a, b) => a > b ? a : b);
+      final newActivity = TrackedActivity(
+        nodeId: _node.trackingId,
+        name: _node.name,
+        colorValue: Colors.blue.toARGB32(),
+        stepType: _node.stepType,
+        isActive: true,
+        order: maxOrder + 1,
+      );
+      appState.addTrackedActivity(newActivity);
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Добавлено в отслеживаемые (heatmap). Цвет можно изменить в разделе "Отслеживаемые задачи".',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isLeaf = _node.children.isEmpty;
     final bool isSingle = _node.stepType == 'single';
+    final bool isTrackable = isLeaf && !_node.excludeFromHistory;
+
+    final appState = context.watch<AppState>();
+    final trackedActivity = isTrackable ? _findTrackedActivity(appState) : null;
+    final bool isTracked = trackedActivity != null && trackedActivity.isActive;
 
     return Scaffold(
       appBar: AppBar(title: Text(_node.name)),
@@ -128,6 +185,38 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                         ' (не учитывается в прогрессе)',
                         style: TextStyle(fontSize: 14, color: Colors.orange),
                       ),
+                    if (isTrackable) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(
+                            isTracked ? Icons.show_chart : Icons.visibility_off,
+                            size: 18,
+                            color: isTracked ? Colors.green : Colors.grey,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            isTracked
+                                ? 'Отслеживается на heatmap'
+                                : 'Не отслеживается на heatmap',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isTracked ? Colors.green : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (!isTracked)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () =>
+                                _quickAddToTracking(appState, trackedActivity),
+                            icon: const Icon(Icons.add_chart, size: 18),
+                            label: const Text('Добавить в отслеживаемые'),
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ),
