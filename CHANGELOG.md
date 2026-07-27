@@ -20,3 +20,4 @@
 ### Changed
 - Notes export/import is now scoped to inbox notes only; day-linked notes are out of scope for this operation (#92)
 - The standalone "Import History" action has been removed — importing History is no longer a separate user choice, it's part of importing Plans (#94)
+- Item detail screen (ViewItemScreen) now shows whether a task is tracked on the heatmap, with a quick action to add or re-enable tracking directly from there instead of only via the Tracked Activities screen (#95)
