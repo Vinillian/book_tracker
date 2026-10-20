@@ -31,16 +31,13 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    // Автосохранение при выходе срабатывает только если пользователь
-    // ещё не сохранил через кнопку check — иначе получим двойной
-    // Navigator.pop на одном и том же переходе.
-    if (!_didSave) {
-      _saveOnDispose();
-    }
     super.dispose();
   }
 
-  void _saveOnDispose() {
+  // Сохранение должно происходить ДО закрытия экрана: в dispose() маршрут
+  // уже снят, и Navigator.pop оттуда ничего не возвращает вызывающему коду.
+  void _saveAndClose() {
+    if (_didSave) return;
     _didSave = true;
     _workingCopy.name = _nameController.text.trim();
     _workingCopy.category = _category;
@@ -139,6 +136,17 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Системная «назад» и стрелка в AppBar тоже сохраняют правки.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _saveAndClose();
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final bool isRoot = widget.node.category != null;
 
     return Scaffold(
@@ -156,7 +164,7 @@ class _EditorScreenState extends State<EditorScreen> {
           if (!_multiSelect)
             IconButton(
               icon: const Icon(Icons.check),
-              onPressed: _saveOnDispose,
+              onPressed: _saveAndClose,
             ),
         ],
       ),
