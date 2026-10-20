@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 import '../models/node.dart';
 import '../models/note.dart';
 import '../models/history_entry.dart';
@@ -65,14 +66,46 @@ class AppState extends ChangeNotifier {
   Box<StandardTask> get standardTasksBox => _standardTasksBox;
   Box<TrackedActivity> get trackedActivitiesBox => _trackedActivitiesBox;
 
-  List<Node> get books => _nodeService.books;
-  List<Node> get plans => _nodeService.plans;
-  List<Node> get templates => _nodeService.templates;
+  // Узлы, скрытые из списков на время окна «Отменить». Физически они
+  // остаются в Hive до commitNodeDeletion, так что закрытие приложения
+  // в этот момент ничего не теряет.
+  final Set<String> _pendingDeleteIds = {};
+
+  List<Node> _visible(List<Node> nodes) =>
+      nodes.where((n) => !_pendingDeleteIds.contains(n.id)).toList();
+
+  List<Node> get books => _visible(_nodeService.books);
+  List<Node> get plans => _visible(_nodeService.plans);
+  List<Node> get templates => _visible(_nodeService.templates);
 
   void addNode(Node node) { _nodeService.add(node); notifyListeners(); }
   void updateNode(dynamic key, Node node) { _nodeService.update(key, node); notifyListeners(); }
   void deleteNode(dynamic key) {
     _nodeService.delete(key);
+    notifyListeners();
+  }
+
+  /// Шаг 1 удаления с «Отменить»: убрать узел из списков, ничего не стирая.
+  void hideNodeForDeletion(Node node) {
+    _pendingDeleteIds.add(node.id);
+    notifyListeners();
+  }
+
+  /// «Отменить»: вернуть скрытый узел в списки.
+  void restoreNode(Node node) {
+    if (_pendingDeleteIds.remove(node.id)) notifyListeners();
+  }
+
+  /// Окно «Отменить» закрылось: удалить узел, его заметки и History.
+  void commitNodeDeletion(Node node) {
+    if (!_pendingDeleteIds.remove(node.id)) return;
+    dynamic key;
+    try {
+      key = _nodeService.getKey(node);
+    } on StateError {
+      key = null; // уже удалён
+    }
+    if (key != null) _nodeService.delete(key);
     notifyListeners();
   }
 
@@ -88,7 +121,10 @@ class AppState extends ChangeNotifier {
     return day;
   }
 
-  bool planExistsForDate(DateTime date) => _nodeService.planExistsForDate(date);
+  bool planExistsForDate(DateTime date) {
+    final name = DateFormat('dd.MM.yyyy').format(date);
+    return plans.any((n) => n.name == name);
+  }
   Node? getNodeById(String id) => _nodeService.getById(id);
   dynamic getKeyForNode(Node node) => _nodeService.getKey(node);
 
