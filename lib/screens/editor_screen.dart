@@ -101,6 +101,9 @@ class _EditorScreenState extends State<EditorScreen> {
     final first = removed.first.$2.name;
     messenger.showSnackBar(
       SnackBar(
+        duration: const Duration(seconds: 6),
+        // With an action, SnackBar defaults to persist = true and never closes.
+        persist: false,
         content: Text(
           removed.length == 1
               ? 'Удалено: ${first.isEmpty ? "[Без названия]" : first}'
