@@ -49,17 +49,10 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   void dispose() {
     _nameController.dispose();
     _totalStepsController.dispose();
-    if (!_didSave) {
-      if (widget.quickAdd) {
-        Navigator.pop(context, null);
-      } else {
-        _saveOnDispose();
-      }
-    }
     super.dispose();
   }
 
-  void _saveOnDispose() {
+  void _applyAndPop() {
     final name = _nameController.text.trim();
     if (widget.isNew && name.isNotEmpty) {
       final existingId = _findExistingTrackingId(name);
@@ -80,11 +73,14 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   }
 
   void _save() {
+    if (_didSave) return;
     _didSave = true;
-    _saveOnDispose();
+    _applyAndPop();
   }
 
   void _cancel() {
+    if (_didSave) return;
+    _didSave = true;
     Navigator.pop(context, null);
   }
 
@@ -225,6 +221,20 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Системная «назад»: быстрое добавление отменяется, редактирование
+    // существующей задачи сохраняется (раньше это делалось в dispose(),
+    // когда результат уже некуда вернуть).
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        widget.quickAdd ? _cancel() : _save();
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final bool isFolder = _stepType == 'folder';
 
     return Scaffold(
