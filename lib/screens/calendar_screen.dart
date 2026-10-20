@@ -8,6 +8,9 @@ import '../providers/app_state.dart';
 import '../services/history_service.dart';
 import 'book_screen.dart';
 import 'components/app_drawer_menu.dart';
+import 'template_manager_screen.dart';
+
+enum _NewDayChoice { empty, template }
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -48,53 +51,85 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Future<void> _createOrOpenPlan(DateTime day) async {
-    final appState = context.read<AppState>();
-    final dateStr = DateFormat('dd.MM.yyyy').format(day);
+  Future<void> _openDay(DateTime day) async {
     final existing = _existingPlanForDay(day);
-
     if (existing != null) {
-      final key = appState.getKeyForNode(existing);
-      Navigator.push(
+      await _showDay(existing);
+      return;
+    }
+
+    final choice = await _askHowToCreate(day);
+    if (choice == null || !mounted) return;
+
+    final appState = context.read<AppState>();
+    Node? created;
+    if (choice == _NewDayChoice.empty) {
+      created = appState.addEmptyDay(day);
+    } else {
+      final template = await Navigator.push<Node>(
         context,
         MaterialPageRoute(
-          builder: (_) => BookScreen(
-            node: existing,
-            onNodeUpdated: () => appState.updateNode(key, existing),
+          builder: (_) => const TemplateManagerScreen(
+            selectionMode: true,
+            filterCategory: 'planner',
           ),
         ),
       );
-    } else {
-      final newPlan = Node(
-        name: dateStr,
-        children: [],
-        category: 'planner',
-        stepType: 'folder',
-      );
-      appState.addNode(newPlan);
-      appState.createNoteForDay(newPlan.id);
-
-      if (mounted) {
-        final key = appState.getKeyForNode(newPlan);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BookScreen(
-              node: newPlan,
-              onNodeUpdated: () => appState.updateNode(key, newPlan),
-            ),
-          ),
-        );
-      }
+      if (template == null || !mounted) return;
+      created = appState.addDayFromTemplate(template, day);
     }
+    if (!mounted) return;
+    await _showDay(created);
+  }
+
+  Future<_NewDayChoice?> _askHowToCreate(DateTime day) {
+    final dateStr = DateFormat('dd.MM.yyyy').format(day);
+    return showModalBottomSheet<_NewDayChoice>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Плана на $dateStr нет',
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text('Пустой день'),
+              onTap: () => Navigator.pop(ctx, _NewDayChoice.empty),
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy_all),
+              title: const Text('Из шаблона'),
+              onTap: () => Navigator.pop(ctx, _NewDayChoice.template),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDay(Node plan) async {
+    final appState = context.read<AppState>();
+    final key = appState.getKeyForNode(plan);
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BookScreen(
+          node: plan,
+          onNodeUpdated: () => appState.updateNode(key, plan),
+        ),
+      ),
+    );
+    if (mounted) _loadEvents();
   }
 
   @override
   Widget build(BuildContext context) {
-    final existingPlan = _selectedDay != null
-        ? _existingPlanForDay(_selectedDay!)
-        : null;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Календарь прогресса')),
       endDrawer: const AppDrawerMenu(),
@@ -110,6 +145,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
               });
+              _openDay(selectedDay);
             },
             eventLoader: _getEventsForDay,
             calendarStyle: const CalendarStyle(
@@ -121,18 +157,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(child: _buildEventList()),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton.icon(
-              onPressed: _selectedDay == null
-                  ? null
-                  : () => _createOrOpenPlan(_selectedDay!),
-              icon: Icon(existingPlan != null ? Icons.edit : Icons.add),
-              label: Text(
-                existingPlan != null ? 'Открыть план' : 'Создать план',
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -161,7 +185,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             )
                 : const Icon(Icons.list, color: Colors.blue),
             title: Text(entry.nodeName),
-            subtitle: Text(entry.nodeName),
+            subtitle: entry.stepType == 'single'
+                ? Text(entry.completed == true ? 'Выполнено' : 'Не выполнено')
+                : null,
             trailing: entry.stepType == 'stepByStep'
                 ? Text('Шагов: ${entry.completedSteps}')
                 : null,
