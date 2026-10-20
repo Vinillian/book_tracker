@@ -41,18 +41,85 @@ class _EditorScreenState extends State<EditorScreen> {
     _didSave = true;
     _workingCopy.name = _nameController.text.trim();
     _workingCopy.category = _category;
+    // «Отменить» от удаления не должен пережить экран редактора.
+    ScaffoldMessenger.of(context).clearSnackBars();
     Navigator.pop(context, _workingCopy);
   }
 
-  void _deleteSelected() {
-    final sorted = _selectedIndices.toList()..sort((a, b) => b.compareTo(a));
-    for (final i in sorted) {
-      _workingCopy.children.removeAt(i);
-    }
+  void _deleteSelected() => _deleteWithConfirm(_selectedIndices.toList());
+
+  /// Подтверждение нужно только если среди удаляемых есть задачи с подзадачами.
+  Future<bool> _confirmSubtreeDelete(List<Node> nodes) async {
+    final withChildren = nodes.where((n) => n.children.isNotEmpty).toList();
+    if (withChildren.isEmpty) return true;
+    final text = nodes.length == 1
+        ? '«${withChildren.first.name}» содержит подэлементов: '
+            '${withChildren.first.children.length}. Удалить вместе с ними?'
+        : 'Среди выбранных есть элементы с подэлементами. Удалить их вместе '
+            'с содержимым?';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить?'),
+        content: Text(text),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<void> _deleteWithConfirm(List<int> indices) async {
+    final nodes = [for (final i in indices) _workingCopy.children[i]];
+    if (!await _confirmSubtreeDelete(nodes)) return;
+    if (!mounted) return;
+    _removeWithUndo(indices);
+  }
+
+  /// Удаляет из рабочей копии и показывает snackbar «Отменить».
+  /// История не трогается: правки применяются только при сохранении редактора.
+  void _removeWithUndo(List<int> indices) {
+    final sorted = indices.toList()..sort();
+    final removed = [for (final i in sorted) (i, _workingCopy.children[i])];
     setState(() {
+      for (final e in removed.reversed) {
+        _workingCopy.children.removeAt(e.$1);
+      }
       _multiSelect = false;
       _selectedIndices.clear();
     });
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    final first = removed.first.$2.name;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          removed.length == 1
+              ? 'Удалено: ${first.isEmpty ? "[Без названия]" : first}'
+              : 'Удалено элементов: ${removed.length}',
+        ),
+        action: SnackBarAction(
+          label: 'Отменить',
+          onPressed: () {
+            if (!mounted) return;
+            setState(() {
+              for (final e in removed) {
+                final at = e.$1.clamp(0, _workingCopy.children.length);
+                _workingCopy.children.insert(at, e.$2);
+              }
+            });
+          },
+        ),
+      ),
+    );
   }
 
   void _cancelSelection() {
@@ -109,12 +176,6 @@ class _EditorScreenState extends State<EditorScreen> {
     final newNode = Node(name: '', children: [], stepType: 'folder');
     setState(() {
       _workingCopy.children.add(newNode);
-    });
-  }
-
-  void _deleteChild(int index) {
-    setState(() {
-      _workingCopy.children.removeAt(index);
     });
   }
 
@@ -253,8 +314,24 @@ class _EditorScreenState extends State<EditorScreen> {
               itemBuilder: (context, index) {
                 final child = _workingCopy.children[index];
                 final isSelected = _selectedIndices.contains(index);
-                return Card(
+                return Dismissible(
                   key: ValueKey(child),
+                  direction: _multiSelect
+                      ? DismissDirection.none
+                      : DismissDirection.endToStart,
+                  background: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    padding: const EdgeInsets.only(right: 20),
+                    alignment: Alignment.centerRight,
+                    color: Colors.red,
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  confirmDismiss: (_) => _confirmSubtreeDelete([child]),
+                  onDismissed: (_) => _removeWithUndo([index]),
+                  child: Card(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 4,
@@ -300,7 +377,7 @@ class _EditorScreenState extends State<EditorScreen> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteChild(index),
+                          onPressed: () => _deleteWithConfirm([index]),
                         ),
                       ],
                     ),
@@ -325,6 +402,7 @@ class _EditorScreenState extends State<EditorScreen> {
                         });
                       }
                     },
+                  ),
                   ),
                 );
               },
