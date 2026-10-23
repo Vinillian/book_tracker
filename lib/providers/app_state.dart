@@ -129,6 +129,9 @@ class AppState extends ChangeNotifier {
   dynamic getKeyForNode(Node node) => _nodeService.getKey(node);
 
   Note? getNoteForDay(String linkedNodeId) => _noteService.getNoteForDay(linkedNodeId);
+  /// Silent on purpose (no notifyListeners): called from DayNoteCard.initState.
+  Note getOrCreateNoteForDay(String linkedNodeId) =>
+      _noteService.getOrCreateNoteForDay(linkedNodeId);
   void createNoteForDay(String linkedNodeId) {
     _noteService.createNoteForDay(linkedNodeId);
     notifyListeners();
