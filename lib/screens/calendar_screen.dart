@@ -32,13 +32,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    _loadEvents();
-  }
-
-  void _loadEvents() {
-    setState(() {
-      _events = HistoryService.getAllEntriesGroupedByDate();
-    });
   }
 
   List<HistoryEntry> _getEventsForDay(DateTime day) {
@@ -170,12 +163,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
     );
-    if (mounted) _loadEvents();
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final planDays = _planDays(context.watch<AppState>().plans);
+    // Re-read History on every build: it changes elsewhere (deleting a plan,
+    // ticking tasks), and AppState notifications rebuild this screen.
+    _events = HistoryService.getAllEntriesGroupedByDate();
     List<Object> markersForDay(DateTime day) => [
       ..._getEventsForDay(day),
       if (planDays.contains(_dayKey(day))) _planMarker,
