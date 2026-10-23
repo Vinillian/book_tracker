@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/node.dart';
 import 'note_service.dart';
 import 'history_service.dart';
+import '../utils/plan_date.dart';
 
 class NodeService {
   final Box<Node> _box;
@@ -52,6 +53,7 @@ class NodeService {
     final dateStr = _formatDate(date);
     final newDay = Node(
       name: dateStr,
+      plannedDate: _dateOnly(date),
       children: [],
       category: 'planner',
       stepType: 'folder',
@@ -65,16 +67,43 @@ class NodeService {
     final dateStr = _formatDate(date);
     final copy = _copyAndReset(template);
     copy.name = dateStr;
+    copy.plannedDate = _dateOnly(date);
     copy.category = 'planner';
     add(copy);
     _noteService.createNoteForDay(copy.id);
     return copy;
   }
 
-  bool planExistsForDate(DateTime date) {
-    final dateStr = _formatDate(date);
-    return plans.any((n) => n.name == dateStr);
+  bool planExistsForDate(DateTime date) => planForDate(date) != null;
+
+  /// The day plan for [date], found by `plannedDate` (legacy name as fallback).
+  Node? planForDate(DateTime date) {
+    final key = _dateOnly(date);
+    for (final plan in plans) {
+      if (planDateOf(plan) == key) return plan;
+    }
+    return null;
   }
+
+  /// One-time lazy migration (#114): fills `plannedDate` for day plans that
+  /// only carry their date in the name. Returns how many plans were updated.
+  int migratePlannedDates() {
+    var updated = 0;
+    for (final key in _box.keys.toList()) {
+      final node = _box.get(key);
+      if (node == null || node.category != 'planner' || node.plannedDate != null) {
+        continue;
+      }
+      final date = parseLegacyPlanName(node.name);
+      if (date == null) continue;
+      node.plannedDate = _dateOnly(date);
+      _box.put(key, node);
+      updated++;
+    }
+    return updated;
+  }
+
+  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   Node? getPlanByName(String name) {
     try {

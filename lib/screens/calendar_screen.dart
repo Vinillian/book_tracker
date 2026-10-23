@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/history_entry.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
+import '../utils/plan_date.dart';
 import '../services/history_service.dart';
 import 'book_screen.dart';
 import 'components/app_drawer_menu.dart';
@@ -42,14 +43,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _dayKey(DateTime d) => DateTime(d.year, d.month, d.day);
 
   Set<DateTime> _planDays(List<Node> plans) {
-    final fmt = DateFormat('dd.MM.yyyy');
     final days = <DateTime>{};
     for (final plan in plans) {
-      try {
-        days.add(_dayKey(fmt.parseStrict(plan.name)));
-      } on FormatException {
-        continue; // a plan whose name is not a date
-      }
+      final date = planDateOf(plan);
+      if (date != null) days.add(_dayKey(date));
     }
     return days;
   }
@@ -80,14 +77,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Node? _existingPlanForDay(DateTime day) {
-    final dateStr = DateFormat('dd.MM.yyyy').format(day);
-    final appState = context.read<AppState>();
-    return appState.plans.cast<Node?>().firstWhere(
-          (n) => n!.name == dateStr,
-      orElse: () => null,
-    );
-  }
+  Node? _existingPlanForDay(DateTime day) =>
+      context.read<AppState>().planForDate(day);
 
   Future<void> _openDay(DateTime day) async {
     final existing = _existingPlanForDay(day);

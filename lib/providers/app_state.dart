@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:intl/intl.dart';
 import '../models/node.dart';
 import '../models/note.dart';
 import '../models/history_entry.dart';
@@ -10,6 +9,7 @@ import '../models/settings.dart';
 import '../services/node_service.dart';
 import '../services/note_service.dart';
 import '../services/history_service.dart';
+import '../utils/plan_date.dart';
 
 class AppState extends ChangeNotifier {
   late final NodeService _nodeService;
@@ -41,6 +41,7 @@ class AppState extends ChangeNotifier {
 
     _noteService = NoteService(notesBox);
     _nodeService = NodeService(templatesBox, _noteService);
+    _nodeService.migratePlannedDates(); // #114
 
     _historyBox.watch().listen((_) => notifyListeners());
     _trackedActivitiesBox.watch().listen((_) => notifyListeners());
@@ -121,10 +122,16 @@ class AppState extends ChangeNotifier {
     return day;
   }
 
-  bool planExistsForDate(DateTime date) {
-    final name = DateFormat('dd.MM.yyyy').format(date);
-    return plans.any((n) => n.name == name);
+  /// The visible day plan for [date] (by `plannedDate`, see #114).
+  Node? planForDate(DateTime date) {
+    final key = DateTime(date.year, date.month, date.day);
+    for (final plan in plans) {
+      if (planDateOf(plan) == key) return plan;
+    }
+    return null;
   }
+
+  bool planExistsForDate(DateTime date) => planForDate(date) != null;
   Node? getNodeById(String id) => _nodeService.getById(id);
   dynamic getKeyForNode(Node node) => _nodeService.getKey(node);
 
