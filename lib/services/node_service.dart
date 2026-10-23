@@ -94,7 +94,11 @@ class NodeService {
       if (node == null || node.category != 'planner' || node.plannedDate != null) {
         continue;
       }
-      final date = parseLegacyPlanName(node.name);
+      // Legacy name first; a day renamed before #114 has no date left in its
+      // name, so fall back to the date its History entries were recorded on.
+      final date =
+          parseLegacyPlanName(node.name) ??
+          HistoryService.dominantDateForBook(node.id);
       if (date == null) continue;
       node.plannedDate = _dateOnly(date);
       _box.put(key, node);
