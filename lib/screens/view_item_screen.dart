@@ -150,7 +150,9 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isLeaf = _node.children.isEmpty;
+    final bool hasChildren = _node.children.isNotEmpty;
+    // Own progress is shown for leaves and for parents that keep it (#111).
+    final bool isLeaf = !hasChildren || _node.hasOwnProgress;
     final bool isSingle = _node.stepType == 'single';
     final bool isTrackable = isLeaf && !_node.excludeFromHistory;
 
@@ -180,6 +182,12 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                       'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : 'Пошаговый') : 'Папка'}',
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
+                    if (hasChildren && isLeaf)
+                      Text(
+                        'Подзадач: ${_node.children.length}. Общий прогресс: '
+                        '${_node.completedLeaves}/${_node.totalLeaves}',
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
                     if (_node.excludeFromHistory)
                       const Text(
                         ' (не учитывается в прогрессе)',

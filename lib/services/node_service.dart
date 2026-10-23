@@ -126,10 +126,9 @@ class NodeService {
   Node _copyAndReset(Node node) {
     final copy = node.deepCopy();
     copy.id = const Uuid().v4();
-    if (copy.children.isEmpty) {
-      copy.completed = false;
-      copy.completedSteps = 0;
-    } else {
+    copy.completed = false;
+    copy.completedSteps = 0;
+    if (copy.children.isNotEmpty) {
       copy.children = copy.children.map((c) => _copyAndReset(c)).toList();
     }
     return copy;

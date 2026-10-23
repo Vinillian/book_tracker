@@ -24,9 +24,14 @@ class NodeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isLeaf = node.children.isEmpty && node.stepType != 'folder';
-    final bool isFolder = node.stepType == 'folder' || node.children.isNotEmpty;
+    final bool hasChildren = node.children.isNotEmpty;
+    final bool isLeaf = !hasChildren && node.stepType != 'folder';
+    // Pure container: a folder, or a node with children and no own progress.
+    final bool isFolder =
+        node.stepType == 'folder' || (hasChildren && !node.hasOwnProgress);
     final bool isSingle = node.stepType == 'single';
+    // Checkbox row: a single-type leaf, or a parent that keeps its own checkbox.
+    final bool ownCheckbox = isSingle && (isLeaf || node.hasOwnProgress);
 
     Widget leadingIcon;
     if (isFolder) {
@@ -47,7 +52,7 @@ class NodeTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       child: Padding(
         padding: EdgeInsets.only(left: depth * 16.0),
-        child: isLeaf && isSingle
+        child: ownCheckbox
             ? Row(
           children: [
             Checkbox(
@@ -68,8 +73,11 @@ class NodeTile extends StatelessWidget {
               child: ListTile(
                 title: Text(
                   node.name,
-                  style: const TextStyle(fontWeight: FontWeight.normal),
+                  style: TextStyle(
+                    fontWeight: hasChildren ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
+                trailing: hasChildren ? _buildTrailing() : null,
                 onTap: onTap,
               ),
             ),
@@ -80,12 +88,17 @@ class NodeTile extends StatelessWidget {
           title: Text(
             node.name,
             style: TextStyle(
-              fontWeight: isFolder ? FontWeight.bold : FontWeight.normal,
-              decoration: isLeaf && isSingle && node.completed
+              fontWeight: (isFolder || hasChildren)
+                  ? FontWeight.bold
+                  : FontWeight.normal,
+              decoration: ownCheckbox && node.completed
                   ? TextDecoration.lineThrough
                   : TextDecoration.none,
             ),
           ),
+          subtitle: hasChildren && node.stepType == 'stepByStep'
+              ? Text('Шаги: ${node.completedSteps}/${node.totalSteps}')
+              : null,
           trailing: _buildTrailing(),
           onTap: onTap,
         ),

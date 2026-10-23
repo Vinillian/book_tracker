@@ -24,11 +24,8 @@ class _PickTaskForTrackingScreenState extends State<PickTaskForTrackingScreen> {
     final List<Node> result = [];
     for (var node in nodes) {
       if (node.excludeFromHistory) continue;
-      if (node.children.isEmpty && node.stepType != 'folder') {
-        result.add(node);
-      } else {
-        result.addAll(_collectLeafNodesFromPlans(node.children));
-      }
+      if (node.isTrackableTask) result.add(node);
+      result.addAll(_collectLeafNodesFromPlans(node.children));
     }
     return result;
   }

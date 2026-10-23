@@ -90,10 +90,30 @@ class Node {
     );
   }
 
+  /// Own progress (checkbox or steps) exists for every non-root task except
+  /// pure containers (`folder`). Roots (books, plans, templates) never have it.
+  /// Since #111 a task with subtasks keeps it and it counts together with them.
+  bool get hasOwnProgress => category == null && stepType != 'folder';
+
+  /// A task whose own progress is recorded in History / the heatmap: a leaf,
+  /// or a parent that keeps its own checkbox or steps.
+  bool get isTrackableTask =>
+      children.isEmpty ? stepType != 'folder' : hasOwnProgress;
+
+  int get _ownTotal => stepType == 'single'
+      ? 1
+      : (stepType == 'stepByStep' ? totalSteps : 0);
+
+  int get _ownCompleted => stepType == 'single'
+      ? (completed ? 1 : 0)
+      : (stepType == 'stepByStep' ? completedSteps : 0);
+
   int get totalLeaves {
     if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
-      return children.fold(0, (sum, child) => sum + child.totalLeaves);
+      final fromChildren =
+          children.fold(0, (sum, child) => sum + child.totalLeaves);
+      return hasOwnProgress ? fromChildren + _ownTotal : fromChildren;
     }
     if (stepType == 'single') return 1;
     if (stepType == 'stepByStep') return totalSteps;
@@ -103,7 +123,9 @@ class Node {
   int get completedLeaves {
     if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
-      return children.fold(0, (sum, child) => sum + child.completedLeaves);
+      final fromChildren =
+          children.fold(0, (sum, child) => sum + child.completedLeaves);
+      return hasOwnProgress ? fromChildren + _ownCompleted : fromChildren;
     }
     if (stepType == 'single') return completed ? 1 : 0;
     if (stepType == 'stepByStep') return completedSteps;
@@ -113,13 +135,14 @@ class Node {
   int get nonRoutineLeafCount {
     if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
-      return children.fold(0, (sum, child) => sum + child.nonRoutineLeafCount);
+      final fromChildren =
+          children.fold(0, (sum, child) => sum + child.nonRoutineLeafCount);
+      return hasOwnProgress ? fromChildren + 1 : fromChildren;
     }
     return 1;
   }
 
   void toggle() {
-    if (children.isNotEmpty) return;
     if (stepType == 'single') {
       completed = !completed;
     }
