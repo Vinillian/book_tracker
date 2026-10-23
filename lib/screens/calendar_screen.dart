@@ -20,6 +20,10 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
+  // Marker object meaning "a plan exists on this day" (history entries are
+  // HistoryEntry instances), so the two kinds can be drawn differently.
+  static const Object _planMarker = Object();
+
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   Map<DateTime, List<HistoryEntry>> _events = {};
@@ -40,6 +44,47 @@ class _CalendarScreenState extends State<CalendarScreen> {
   List<HistoryEntry> _getEventsForDay(DateTime day) {
     final normalized = DateTime(day.year, day.month, day.day);
     return _events[normalized] ?? [];
+  }
+
+  DateTime _dayKey(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  Set<DateTime> _planDays(List<Node> plans) {
+    final fmt = DateFormat('dd.MM.yyyy');
+    final days = <DateTime>{};
+    for (final plan in plans) {
+      try {
+        days.add(_dayKey(fmt.parseStrict(plan.name)));
+      } on FormatException {
+        continue; // a plan whose name is not a date
+      }
+    }
+    return days;
+  }
+
+  Widget _markerDot({required bool filled}) => Container(
+    width: 7,
+    height: 7,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: filled ? Colors.blue : null,
+      border: Border.all(color: Colors.blue, width: 1.5),
+    ),
+  );
+
+  Widget _legend(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodySmall;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _markerDot(filled: false),
+        const SizedBox(width: 4),
+        Text('План', style: style),
+        const SizedBox(width: 16),
+        _markerDot(filled: true),
+        const SizedBox(width: 4),
+        Text('Выполнено', style: style),
+      ],
+    );
   }
 
   Node? _existingPlanForDay(DateTime day) {
@@ -130,12 +175,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final planDays = _planDays(context.watch<AppState>().plans);
+    List<Object> markersForDay(DateTime day) => [
+      ..._getEventsForDay(day),
+      if (planDays.contains(_dayKey(day))) _planMarker,
+    ];
+
     return Scaffold(
       appBar: AppBar(title: const Text('Календарь прогресса')),
       endDrawer: const AppDrawerMenu(),
       body: Column(
         children: [
-          TableCalendar(
+          TableCalendar<Object>(
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
@@ -147,14 +198,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
               });
               _openDay(selectedDay);
             },
-            eventLoader: _getEventsForDay,
-            calendarStyle: const CalendarStyle(
-              markerDecoration: BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-              ),
+            eventLoader: markersForDay,
+            calendarBuilders: CalendarBuilders<Object>(
+              markerBuilder: (context, day, events) {
+                final hasPlan = events.contains(_planMarker);
+                final hasHistory = events.any((e) => e is HistoryEntry);
+                return Positioned(
+                  bottom: 4,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasPlan) _markerDot(filled: false),
+                      if (hasPlan && hasHistory) const SizedBox(width: 3),
+                      if (hasHistory) _markerDot(filled: true),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
+          _legend(context),
           const SizedBox(height: 8),
           Expanded(child: _buildEventList()),
         ],
