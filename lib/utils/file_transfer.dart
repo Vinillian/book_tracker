@@ -10,6 +10,7 @@ import '../models/note.dart';
 import '../models/history_entry.dart';
 import '../models/standard_task.dart';
 import '../models/tracked_activity.dart';
+import 'plan_date.dart';
 
 /// Диапазон дат, применяемый при экспорте категории (Plans/History) и
 /// сохраняемый в файле как метаданные `exportedRange`.
@@ -127,16 +128,10 @@ class FileTransfer {
     }
   }
 
-  /// Дата плана (дня) не хранится отдельным полем — она зашита в `Node.name`
-  /// в формате dd.MM.yyyy (см. BookScreen._parsePlanDate). Строгий парсинг,
-  /// несовпадающий формат — null (план не попадёт в date-range фильтр).
-  static DateTime? planDateFromNode(Node node) {
-    try {
-      return DateFormat('dd.MM.yyyy').parseStrict(node.name);
-    } catch (_) {
-      return null;
-    }
-  }
+  /// Дата плана (дня): `Node.plannedDate`, для старых данных — имя в формате
+  /// dd.MM.yyyy (см. planDateOf, #114). Нет даты — null (план не попадёт
+  /// в date-range фильтр).
+  static DateTime? planDateFromNode(Node node) => planDateOf(node);
 
   static Uint8List boxToJsonBytes<T>(List<T> items) {
     final jsonList = items.map((item) => (item as dynamic).toJson()).toList();

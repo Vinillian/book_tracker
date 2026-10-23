@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
 import '../services/history_service.dart';
+import '../utils/plan_date.dart';
 import 'components/progress_card.dart';
 import 'components/day_note_card.dart';
 import 'components/day_done_section.dart';
@@ -34,16 +35,8 @@ class _BookScreenState extends State<BookScreen> {
     super.initState();
     _node = widget.node;
     _nameController = TextEditingController(text: _node.name);
-    _planDate = _parsePlanDate();
-  }
-
-  DateTime? _parsePlanDate() {
-    if (_node.category != 'planner') return null;
-    try {
-      return DateFormat('dd.MM.yyyy').parseStrict(_node.name);
-    } catch (_) {
-      return null; // не удалось распарсить – значит, это не дата
-    }
+    // The date comes from plannedDate, not from the title (#114).
+    _planDate = _node.category == 'planner' ? planDateOf(_node) : null;
   }
 
   void _saveTitle() {
@@ -51,11 +44,28 @@ class _BookScreenState extends State<BookScreen> {
     if (newName.isNotEmpty && newName != _node.name) {
       setState(() => _node.name = newName);
       widget.onNodeUpdated();
-      // Обновляем дату после переименования
-      _planDate = _parsePlanDate();
       context.read<AppState>().notify();
     }
     setState(() => _isEditingTitle = false);
+  }
+
+  Widget _buildTitle() {
+    final date = _planDate;
+    if (date == null) return Text(_node.name);
+    final dateStr = DateFormat('dd.MM.yyyy').format(date);
+    if (dateStr == _node.name) return Text(_node.name);
+    // Renamed day: keep its date visible under the free title.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(_node.name),
+        Text(
+          dateStr,
+          style: const TextStyle(fontSize: 12, color: Colors.white70),
+        ),
+      ],
+    );
   }
 
   @override
@@ -79,7 +89,7 @@ class _BookScreenState extends State<BookScreen> {
               )
             : GestureDetector(
                 onTap: () => setState(() => _isEditingTitle = true),
-                child: Text(_node.name),
+                child: _buildTitle(),
               ),
         actions: _isEditingTitle
             ? [

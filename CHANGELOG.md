@@ -12,6 +12,8 @@
 - "Undo" snackbars close on their own instead of staying on screen (#124)
 - Opening a day without a note no longer throws "setState() or markNeedsBuild() called during build" (#123)
 
+- Day plans are now identified by their `plannedDate` instead of by a `dd.MM.yyyy` title: renaming a day no longer breaks its link to the calendar or lets a duplicate day be created. Old data is migrated lazily on startup and old backups still import (#114)
+
 ### Changed
 - Generated backup files under `backups/` are no longer tracked in git (#118)
 

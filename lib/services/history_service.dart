@@ -108,6 +108,20 @@ class HistoryService {
     }
   }
 
+  /// Most frequent date (without time) among the entries recorded for
+  /// [bookId], or null if there are none. Used to recover the date of a day
+  /// plan that was renamed before plannedDate existed (#114).
+  static DateTime? dominantDateForBook(String bookId) {
+    final counts = <DateTime, int>{};
+    for (final e in _box.values) {
+      if (e.bookId != bookId) continue;
+      final d = DateTime(e.date.year, e.date.month, e.date.day);
+      counts[d] = (counts[d] ?? 0) + 1;
+    }
+    if (counts.isEmpty) return null;
+    return counts.entries.reduce((a, b) => b.value > a.value ? b : a).key;
+  }
+
   static List<HistoryEntry> getEntriesForDay(DateTime day) {
     final start = DateTime(day.year, day.month, day.day);
     final end = start.add(const Duration(days: 1));
