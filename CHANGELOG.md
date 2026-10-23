@@ -1,3 +1,20 @@
+## [1.3.0] - Unreleased
+### Added
+- Calendar: tapping a day opens its plan directly; for a day without a plan a bottom sheet offers "Empty day" or "From template" (#113)
+- Calendar markers now distinguish days that have a plan (ring) from days with completed work in History (filled dot), with a small legend (#113)
+- Day screen: read-only "Done" section listing the day's History entries (#113)
+- Swipe-to-delete with "Undo" for tasks in the editor (#110)
+- Swipe-to-delete with "Undo" for plans and books; notes and History are removed only after the undo window closes, so closing the app in between loses nothing (#110)
+
+### Fixed
+- Editor and item screens no longer return their result via `Navigator.pop` in `dispose()`; the Back button now saves, which fixes lost edits and the "deactivated widget's ancestor" exception (#115)
+- Calendar markers refresh after returning from a day screen, and list items no longer show the task name twice (#113)
+- "Undo" snackbars close on their own instead of staying on screen (#124)
+- Opening a day without a note no longer throws "setState() or markNeedsBuild() called during build" (#123)
+
+### Changed
+- Generated backup files under `backups/` are no longer tracked in git (#118)
+
 ## [1.1.1] - 2026-07-XX
 ### Fixed
 - Activities with the same name now correctly sum on the heatmap instead of overwriting each other (#70)

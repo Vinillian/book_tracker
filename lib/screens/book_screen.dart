@@ -3,8 +3,10 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
+import '../services/history_service.dart';
 import 'components/progress_card.dart';
 import 'components/day_note_card.dart';
+import 'components/day_done_section.dart';
 import 'components/chapter_tree_view.dart';
 
 class BookScreen extends StatefulWidget {
@@ -101,6 +103,8 @@ class _BookScreenState extends State<BookScreen> {
         children: [
           ProgressCard(node: _node),
           DayNoteCard(node: _node),
+          if (_planDate != null)
+            DayDoneSection(entries: HistoryService.getEntriesForDay(_planDate!)),
           ChapterTreeView(
             node: _node,
             bookId: _node.id,
