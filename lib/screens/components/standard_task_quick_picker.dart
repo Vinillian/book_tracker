@@ -10,6 +10,7 @@ Future<void> showStandardTaskQuickPicker(
   BuildContext context, {
   required ValueChanged<StandardTask> onPick,
 }) {
+  final tasks = context.read<AppState>().standardTasks;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -18,30 +19,38 @@ Future<void> showStandardTaskQuickPicker(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
       child: SizedBox(
         height: MediaQuery.sizeOf(ctx).height * 0.6,
-        child: _StandardTaskQuickPicker(onPick: onPick),
+        child: StandardTaskQuickPickerList(tasks: tasks, onPick: onPick),
       ),
     ),
   );
 }
 
-class _StandardTaskQuickPicker extends StatefulWidget {
+/// The search field and the list of the sheet. It gets the tasks from the
+/// caller, so it does not depend on `AppState` (and is easy to test).
+class StandardTaskQuickPickerList extends StatefulWidget {
+  final List<StandardTask> tasks;
   final ValueChanged<StandardTask> onPick;
 
-  const _StandardTaskQuickPicker({required this.onPick});
+  const StandardTaskQuickPickerList({
+    super.key,
+    required this.tasks,
+    required this.onPick,
+  });
 
   @override
-  State<_StandardTaskQuickPicker> createState() =>
-      _StandardTaskQuickPickerState();
+  State<StandardTaskQuickPickerList> createState() =>
+      _StandardTaskQuickPickerListState();
 }
 
-class _StandardTaskQuickPickerState extends State<_StandardTaskQuickPicker> {
+class _StandardTaskQuickPickerListState
+    extends State<StandardTaskQuickPickerList> {
   String _query = '';
   // How many times each task was added while the sheet is open.
   final Map<String, int> _added = {};
 
   @override
   Widget build(BuildContext context) {
-    final all = context.watch<AppState>().standardTasks;
+    final all = widget.tasks;
     final q = _query.trim().toLowerCase();
     final tasks = q.isEmpty
         ? all
