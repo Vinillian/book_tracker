@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/node.dart';
 import '../view_item_screen.dart';
 import '../../utils/day_part.dart';
+import '../../utils/reorder.dart';
 import '../../widgets/node_tile.dart';
 
 class ChapterTreeView extends StatelessWidget {
@@ -15,6 +16,11 @@ class ChapterTreeView extends StatelessWidget {
   /// of the tasks is not changed (#116).
   final bool groupByTime;
 
+  /// Long-press and drag top-level tasks to change their order (#109). With
+  /// time grouping only the "Без времени" (no time) group can be dragged: the
+  /// other groups are sorted by time, so their order is not stored.
+  final bool allowReorder;
+
   const ChapterTreeView({
     super.key,
     required this.node,
@@ -22,38 +28,71 @@ class ChapterTreeView extends StatelessWidget {
     required this.onNodeUpdated,
     this.planDate,
     this.groupByTime = false,
+    this.allowReorder = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: ListView(children: _buildTopLevel(context)),
+      child: CustomScrollView(slivers: _buildSlivers(context)),
     );
   }
 
-  List<Widget> _buildTopLevel(BuildContext context) {
+  List<Widget> _buildSlivers(BuildContext context) {
     final children = node.children;
     if (!groupByTime || !children.any((c) => c.startMinutes != null)) {
-      return _buildChildren(children, 0, context);
+      return [_buildSection(context, children, reorderable: allowReorder)];
     }
     final groups = <DayPart, List<Node>>{};
     for (final c in children) {
       groups.putIfAbsent(dayPartOf(c.startMinutes), () => []).add(c);
     }
-    final widgets = <Widget>[];
+    final slivers = <Widget>[];
     for (final part in DayPart.values) {
       final items = groups[part];
       if (items == null) continue;
-      widgets.add(_buildGroupHeader(context, part, items.length));
-      widgets.addAll(
-        _buildChildren(
-          part == DayPart.none ? items : sortedByStartTime(items),
-          0,
+      slivers.add(
+        SliverToBoxAdapter(child: _buildGroupHeader(context, part, items.length)),
+      );
+      slivers.add(
+        _buildSection(
           context,
+          part == DayPart.none ? items : sortedByStartTime(items),
+          reorderable: allowReorder && part == DayPart.none,
         ),
       );
     }
-    return widgets;
+    return slivers;
+  }
+
+  /// A run of top-level tasks: a plain list, or a list whose items can be
+  /// dragged after a long press (a task is dragged together with its visible
+  /// subtasks). [items] must be in stored order when [reorderable].
+  Widget _buildSection(
+    BuildContext context,
+    List<Node> items, {
+    required bool reorderable,
+  }) {
+    if (!reorderable) {
+      return SliverList(
+        delegate: SliverChildListDelegate(_buildChildren(items, 0, context)),
+      );
+    }
+    return SliverReorderableList(
+      itemCount: items.length,
+      onReorder: (oldIndex, newIndex) {
+        node.children = reorderSubset(node.children, items, oldIndex, newIndex);
+        onNodeUpdated();
+      },
+      itemBuilder: (context, index) {
+        final child = items[index];
+        return ReorderableDelayedDragStartListener(
+          key: ValueKey(child.id),
+          index: index,
+          child: Column(children: _buildChildren([child], 0, context)),
+        );
+      },
+    );
   }
 
   Widget _buildGroupHeader(BuildContext context, DayPart part, int count) {
