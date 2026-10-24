@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
+import '../utils/day_dialogs.dart';
+import '../utils/node_copy.dart';
 import 'template_manager_screen.dart';
 import 'components/books_tab_view.dart';
 import 'components/planner_tab_view.dart';
@@ -112,20 +113,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (selected != null && mounted) {
       final appState = context.read<AppState>();
-      Node copyAndReset(Node node) {
-        final copy = node.deepCopy();
-        copy.id = const Uuid().v4();
-        copy.category = 'book';
-        copy.completed = false;
-        copy.completedSteps = 0;
-        if (copy.children.isNotEmpty) {
-          copy.children = copy.children.map((c) => copyAndReset(c)).toList();
-        }
-        return copy;
-      }
-
-      final newBook = copyAndReset(selected);
-      newBook.name = selected.name;
+      // Only the root becomes a book: nested tasks keep `category == null`
+      // (the old local copy function set 'book' on every nested node too).
+      final newBook = copyAndReset(selected)
+        ..category = 'book'
+        ..name = selected.name;
       appState.addNode(newBook);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Книга "${newBook.name}" создана из шаблона')),
@@ -220,9 +212,20 @@ class _HomeScreenState extends State<HomeScreen> {
     if (selected != null && mounted) {
       final appState = context.read<AppState>();
       final dateStr = DateFormat('dd.MM.yyyy').format(date);
-      if (appState.planExistsForDate(date)) {
+      final existing = appState.planForDate(date);
+      if (existing != null) {
+        // A day for this date already exists: offer to add the tasks to it.
+        final add = await confirmAppendToExistingDay(context, dateStr);
+        if (!add || !mounted) return;
+        final count = appState.appendTasksToDay(existing, selected);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('День "$dateStr" уже существует')),
+          SnackBar(
+            content: Text(
+              count == 0
+                  ? 'В шаблоне "${selected.name}" нет задач'
+                  : 'Добавлено задач: $count из шаблона "${selected.name}" в день "$dateStr"',
+            ),
+          ),
         );
         return;
       }

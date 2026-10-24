@@ -7,11 +7,13 @@
 - "Move to…" in the editor: move one or several tasks (also via multi-select) into another task or folder of the edited tree, with "Undo" (#111, part 2)
 - Optional start time per task (time picker in the task card, clearable): shown in front of the task name; the day screen groups tasks into "Утро" / "День" / "Вечер" (morning / day / evening) and "Без времени" (no time) and sorts them by time once any task has a time. Nothing is stored as folders, existing days and old backups are unchanged (#116)
 - Day screen: quick add at the bottom: type a name and press Enter to add a checkbox task, or open the standard-task list with "+" (search, tap to add, the sheet stays open to add several) without leaving the day screen (#109, part 1)
+- Day screen menu: "Добавить из шаблона…" (add a template's tasks to this day) and "Копировать день…" (copy the day to another date, completion reset; if a day exists there, the tasks are added to it). Creating a day from a template for a date that already has a day now offers to add the tasks instead of refusing (#117)
 - Swipe-to-delete with "Undo" for tasks in the editor (#110)
 - Swipe-to-delete with "Undo" for plans and books; notes and History are removed only after the undo window closes, so closing the app in between loses nothing (#110)
 - Swipe-to-delete and the trash icon for templates now also offer "Undo" (and swiping is off while a template is being picked) (#125)
 
 ### Fixed
+- A book created from a template no longer gets `category == 'book'` on every nested task (only the root); the template copy logic is now shared with days (`copyAndReset`) (#117, #78)
 - Editor and item screens no longer return their result via `Navigator.pop` in `dispose()`; the Back button now saves, which fixes lost edits and the "deactivated widget's ancestor" exception (#115)
 - Calendar markers refresh after returning from a day screen, and list items no longer show the task name twice (#113)
 - "Undo" snackbars close on their own instead of staying on screen (#124)

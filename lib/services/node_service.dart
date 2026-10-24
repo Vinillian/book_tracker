@@ -1,8 +1,8 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:uuid/uuid.dart';
 import '../models/node.dart';
 import 'note_service.dart';
 import 'history_service.dart';
+import '../utils/node_copy.dart';
 import '../utils/plan_date.dart';
 
 class NodeService {
@@ -65,7 +65,7 @@ class NodeService {
 
   Node addDayFromTemplate(Node template, DateTime date) {
     final dateStr = _formatDate(date);
-    final copy = _copyAndReset(template);
+    final copy = copyAndReset(template);
     copy.name = dateStr;
     copy.plannedDate = _dateOnly(date);
     copy.category = 'planner';
@@ -123,14 +123,4 @@ class NodeService {
         '.${date.year}';
   }
 
-  Node _copyAndReset(Node node) {
-    final copy = node.deepCopy();
-    copy.id = const Uuid().v4();
-    copy.completed = false;
-    copy.completedSteps = 0;
-    if (copy.children.isNotEmpty) {
-      copy.children = copy.children.map((c) => _copyAndReset(c)).toList();
-    }
-    return copy;
-  }
 }

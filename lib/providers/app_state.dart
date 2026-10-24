@@ -9,6 +9,7 @@ import '../models/settings.dart';
 import '../services/node_service.dart';
 import '../services/note_service.dart';
 import '../services/history_service.dart';
+import '../utils/node_copy.dart';
 import '../utils/plan_date.dart';
 
 class AppState extends ChangeNotifier {
@@ -120,6 +121,18 @@ class AppState extends ChangeNotifier {
     final day = _nodeService.addDayFromTemplate(template, date);
     notifyListeners();
     return day;
+  }
+
+  /// Adds reset copies of the tasks of [source] (a template or another day) to
+  /// the existing day [target] and saves it (#117). Returns how many tasks
+  /// were added.
+  int appendTasksToDay(Node target, Node source) {
+    final copies = [for (final c in source.children) copyAndReset(c)];
+    if (copies.isEmpty) return 0;
+    target.children.addAll(copies);
+    _nodeService.update(_nodeService.getKey(target), target);
+    notifyListeners();
+    return copies.length;
   }
 
   /// The visible day plan for [date] (by `plannedDate`, see #114).

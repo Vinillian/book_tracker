@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
 import '../services/history_service.dart';
+import '../utils/day_dialogs.dart';
 import '../utils/plan_date.dart';
 import 'components/progress_card.dart';
 import 'components/day_note_card.dart';
 import 'components/day_done_section.dart';
 import 'components/chapter_tree_view.dart';
+import 'template_manager_screen.dart';
 import 'components/quick_add_bar.dart';
 import 'components/standard_task_quick_picker.dart';
 
@@ -62,6 +64,98 @@ class _BookScreenState extends State<BookScreen> {
     return showStandardTaskQuickPicker(
       context,
       onPick: (task) => _addTask(task.toNode()),
+    );
+  }
+
+  /// Adds the tasks of a chosen template to this day (#117).
+  Future<void> _addFromTemplate() async {
+    final appState = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    final template = await Navigator.push<Node>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const TemplateManagerScreen(
+          selectionMode: true,
+          filterCategory: 'planner',
+        ),
+      ),
+    );
+    if (template == null || !mounted) return;
+    final count = appState.appendTasksToDay(_node, template);
+    setState(() {});
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          count == 0
+              ? 'В шаблоне "${template.name}" нет задач'
+              : 'Добавлено задач: $count из шаблона "${template.name}"',
+        ),
+      ),
+    );
+  }
+
+  /// Copies this day to another date (completion is reset). If a day already
+  /// exists there, offers to add the tasks to it (#117).
+  Future<void> _copyDay() async {
+    final appState = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    final current = _planDate ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current.add(const Duration(days: 1)),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      helpText: 'Копировать в день',
+    );
+    if (picked == null || !mounted) return;
+    final date = DateTime(picked.year, picked.month, picked.day);
+    if (date == _planDate) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Выберите другой день')),
+      );
+      return;
+    }
+    final dateStr = DateFormat('dd.MM.yyyy').format(date);
+    final existing = appState.planForDate(date);
+    final Node target;
+    final String message;
+    if (existing == null) {
+      target = appState.addDayFromTemplate(_node, date);
+      message = 'День "$dateStr" создан копированием';
+    } else {
+      final add = await confirmAppendToExistingDay(context, dateStr);
+      if (!add || !mounted) return;
+      final count = appState.appendTasksToDay(existing, _node);
+      target = existing;
+      message = count == 0
+          ? 'В этом дне нет задач для копирования'
+          : 'Добавлено задач: $count в день "$dateStr"';
+    }
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 6),
+        // With an action, SnackBar defaults to persist = true and never closes.
+        persist: false,
+        action: SnackBarAction(
+          label: 'Открыть',
+          onPressed: () => _openDay(appState, target),
+        ),
+      ),
+    );
+  }
+
+  void _openDay(AppState appState, Node day) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BookScreen(
+          node: day,
+          onNodeUpdated: () =>
+              appState.updateNode(appState.getKeyForNode(day), day),
+        ),
+      ),
     );
   }
 
@@ -123,7 +217,26 @@ class _BookScreenState extends State<BookScreen> {
                   },
                 ),
               ]
-            : null,
+            : (_node.category == 'planner'
+                  ? [
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'template') _addFromTemplate();
+                          if (value == 'copy') _copyDay();
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                            value: 'template',
+                            child: Text('Добавить из шаблона…'),
+                          ),
+                          PopupMenuItem(
+                            value: 'copy',
+                            child: Text('Копировать день…'),
+                          ),
+                        ],
+                      ),
+                    ]
+                  : null),
       ),
       body: Column(
         children: [
