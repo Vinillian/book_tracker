@@ -51,6 +51,16 @@ class Node {
   @HiveField(13)
   String? templateTarget;
 
+  /// Optional goal in minutes for a `duration` task; null or 0 means no goal
+  /// (#112).
+  @HiveField(14)
+  int? targetMinutes;
+
+  /// Minutes logged so far for a `duration` task. Several logs a day are summed
+  /// into this value (#112). `defaultValue` makes old records read as 0.
+  @HiveField(15, defaultValue: 0)
+  int loggedMinutes;
+
   Node({
     required this.name,
     required this.children,
@@ -66,6 +76,8 @@ class Node {
     String? trackingId,
     this.startMinutes,
     this.templateTarget,
+    this.targetMinutes,
+    this.loggedMinutes = 0,
   }) : id = id ?? const Uuid().v4(),
         trackingId = trackingId ?? const Uuid().v4();
 
@@ -79,6 +91,8 @@ class Node {
         this.category,
         this.excludeFromHistory = false,
         String? trackingId,
+        this.targetMinutes,
+        this.loggedMinutes = 0,
       }) : children = [],
         isExpanded = false,
         completed = false,
@@ -101,6 +115,8 @@ class Node {
       trackingId: trackingId,
       startMinutes: startMinutes,
       templateTarget: templateTarget,
+      targetMinutes: targetMinutes,
+      loggedMinutes: loggedMinutes,
     );
   }
 
@@ -114,13 +130,29 @@ class Node {
   bool get isTrackableTask =>
       children.isEmpty ? stepType != 'folder' : hasOwnProgress;
 
-  int get _ownTotal => stepType == 'single'
-      ? 1
-      : (stepType == 'stepByStep' ? totalSteps : 0);
+  bool get isDuration => stepType == 'duration';
 
-  int get _ownCompleted => stepType == 'single'
-      ? (completed ? 1 : 0)
-      : (stepType == 'stepByStep' ? completedSteps : 0);
+  /// A `duration` task counts as one unit in the statistics: done once its goal
+  /// is reached, or, when it has no goal, once any time is logged (#112).
+  bool get durationReached {
+    if (!isDuration) return false;
+    final goal = targetMinutes;
+    if (goal != null && goal > 0) return loggedMinutes >= goal;
+    return loggedMinutes > 0;
+  }
+
+  int get _ownTotal {
+    if (stepType == 'single' || isDuration) return 1;
+    if (stepType == 'stepByStep') return totalSteps;
+    return 0;
+  }
+
+  int get _ownCompleted {
+    if (stepType == 'single') return completed ? 1 : 0;
+    if (isDuration) return durationReached ? 1 : 0;
+    if (stepType == 'stepByStep') return completedSteps;
+    return 0;
+  }
 
   int get totalLeaves {
     if (excludeFromHistory) return 0;
@@ -129,9 +161,7 @@ class Node {
           children.fold(0, (sum, child) => sum + child.totalLeaves);
       return hasOwnProgress ? fromChildren + _ownTotal : fromChildren;
     }
-    if (stepType == 'single') return 1;
-    if (stepType == 'stepByStep') return totalSteps;
-    return 0;
+    return _ownTotal;
   }
 
   int get completedLeaves {
@@ -141,9 +171,7 @@ class Node {
           children.fold(0, (sum, child) => sum + child.completedLeaves);
       return hasOwnProgress ? fromChildren + _ownCompleted : fromChildren;
     }
-    if (stepType == 'single') return completed ? 1 : 0;
-    if (stepType == 'stepByStep') return completedSteps;
-    return 0;
+    return _ownCompleted;
   }
 
   int get nonRoutineLeafCount {
@@ -177,6 +205,8 @@ class Node {
       'trackingId': trackingId,
       'startMinutes': startMinutes,
       'templateTarget': templateTarget,
+      'targetMinutes': targetMinutes,
+      'loggedMinutes': loggedMinutes,
     };
   }
 
@@ -199,6 +229,8 @@ class Node {
       trackingId: json['trackingId'] ?? const Uuid().v4(),
       startMinutes: json['startMinutes'] as int?,
       templateTarget: json['templateTarget'] as String?,
+      targetMinutes: json['targetMinutes'] as int?,
+      loggedMinutes: json['loggedMinutes'] as int? ?? 0,
     );
   }
 }
