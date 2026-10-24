@@ -125,6 +125,124 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
+  /// Задачи редактируемого дерева, в которые можно переместить [moving]:
+  /// все узлы, кроме самих перемещаемых и их подэлементов, с глубиной вложения.
+  List<(Node, int)> _moveTargets(List<Node> moving) {
+    final result = <(Node, int)>[];
+    void walk(List<Node> nodes, int depth) {
+      for (final n in nodes) {
+        if (moving.any((m) => identical(m, n))) continue;
+        result.add((n, depth));
+        walk(n.children, depth + 1);
+      }
+    }
+
+    walk(_workingCopy.children, 0);
+    return result;
+  }
+
+  Future<Node?> _pickMoveTarget(List<(Node, int)> targets, int count) {
+    return showDialog<Node>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(count == 1 ? 'Переместить в…' : 'Переместить ($count) в…'),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: targets.length,
+            itemBuilder: (_, i) {
+              final (node, depth) = targets[i];
+              return ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.only(
+                  left: 16.0 + depth * 20,
+                  right: 16,
+                ),
+                leading: Icon(
+                  node.stepType == 'folder'
+                      ? Icons.folder_outlined
+                      : Icons.task_alt_outlined,
+                ),
+                title: Text(node.name.isEmpty ? '[Без названия]' : node.name),
+                onTap: () => Navigator.pop(ctx, node),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Переносит выбранные элементы в подэлементы другой задачи или папки.
+  /// Узлы переносятся как есть (id, trackingId, прогресс, подзадачи не меняются),
+  /// поэтому История и heatmap остаются связаны с ними.
+  Future<void> _moveWithPicker(List<int> indices) async {
+    final sorted = indices.toList()..sort();
+    final removed = [for (final i in sorted) (i, _workingCopy.children[i])];
+    final moving = [for (final e in removed) e.$2];
+    final targets = _moveTargets(moving);
+    final messenger = ScaffoldMessenger.of(context);
+    if (targets.isEmpty) {
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 4),
+          content: Text(
+            'Некуда перемещать: добавьте рядом задачу или папку.',
+          ),
+        ),
+      );
+      return;
+    }
+    final target = await _pickMoveTarget(targets, moving.length);
+    if (target == null || !mounted) return;
+    setState(() {
+      for (final e in removed.reversed) {
+        _workingCopy.children.removeAt(e.$1);
+      }
+      target.children.addAll(moving);
+      target.isExpanded = true;
+      _multiSelect = false;
+      _selectedIndices.clear();
+    });
+    final targetName = target.name.isEmpty ? '[Без названия]' : target.name;
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        // With an action, SnackBar defaults to persist = true and never closes.
+        persist: false,
+        content: Text(
+          moving.length == 1
+              ? 'Перемещено в «$targetName»'
+              : 'Перемещено элементов: ${moving.length} в «$targetName»',
+        ),
+        action: SnackBarAction(
+          label: 'Отменить',
+          onPressed: () {
+            if (!mounted) return;
+            setState(() {
+              target.children
+                  .removeWhere((c) => moving.any((m) => identical(m, c)));
+              for (final e in removed) {
+                final at = e.$1.clamp(0, _workingCopy.children.length);
+                _workingCopy.children.insert(at, e.$2);
+              }
+            });
+          },
+        ),
+      ),
+    );
+  }
+
   void _cancelSelection() {
     setState(() {
       _multiSelect = false;
@@ -384,6 +502,12 @@ class _EditorScreenState extends State<EditorScreen> {
                           onPressed: () => _editChild(index),
                         ),
                         IconButton(
+                          icon: const Icon(Icons.drive_file_move_outlined),
+                          tooltip: 'Переместить в…',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _moveWithPicker([index]),
+                        ),
+                        IconButton(
                           icon: const Icon(Icons.delete),
                           onPressed: () => _deleteWithConfirm([index]),
                         ),
@@ -427,6 +551,13 @@ class _EditorScreenState extends State<EditorScreen> {
                   TextButton(
                     onPressed: _cancelSelection,
                     child: const Text('Отмена'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.drive_file_move_outlined),
+                    tooltip: 'Переместить в…',
+                    onPressed: _selectedIndices.isEmpty
+                        ? null
+                        : () => _moveWithPicker(_selectedIndices.toList()),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
