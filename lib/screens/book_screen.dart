@@ -123,6 +123,7 @@ class _BookScreenState extends State<BookScreen> {
               setState(() {});
             },
             planDate: _planDate,
+            groupByTime: _node.category == 'planner',
           ),
         ],
       ),
