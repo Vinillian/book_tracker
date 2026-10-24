@@ -271,6 +271,7 @@ class _BookScreenState extends State<BookScreen> {
             },
             planDate: _planDate,
             groupByTime: _node.category == 'planner',
+            allowReorder: _node.category == 'planner',
           ),
           if (_node.category == 'planner')
             QuickAddBar(
