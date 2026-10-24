@@ -193,11 +193,8 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
     List<Node> collectLeaves(List<Node> nodes) {
       final leaves = <Node>[];
       for (var node in nodes) {
-        if (node.children.isEmpty && node.stepType != 'folder') {
-          leaves.add(node);
-        } else {
-          leaves.addAll(collectLeaves(node.children));
-        }
+        if (node.isTrackableTask) leaves.add(node);
+        leaves.addAll(collectLeaves(node.children));
       }
       return leaves;
     }

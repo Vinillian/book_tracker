@@ -116,10 +116,9 @@ class _HomeScreenState extends State<HomeScreen> {
         final copy = node.deepCopy();
         copy.id = const Uuid().v4();
         copy.category = 'book';
-        if (copy.children.isEmpty) {
-          copy.completed = false;
-          copy.completedSteps = 0;
-        } else {
+        copy.completed = false;
+        copy.completedSteps = 0;
+        if (copy.children.isNotEmpty) {
           copy.children = copy.children.map((c) => copyAndReset(c)).toList();
         }
         return copy;

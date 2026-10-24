@@ -3,6 +3,7 @@
 - Calendar: tapping a day opens its plan directly; for a day without a plan a bottom sheet offers "Empty day" or "From template" (#113)
 - Calendar markers now distinguish days that have a plan (ring) from days with completed work in History (filled dot), with a small legend (#113)
 - Day screen: read-only "Done" section listing the day's History entries (#113)
+- Any task can now have subtasks while keeping its own checkbox or steps: the task card shows a "Подзадачи" ("Subtasks") button for every task; the task's own progress counts together with its subtasks, a task with its own progress opens its card on tap and expands with the chevron (#111, part 1)
 - Swipe-to-delete with "Undo" for tasks in the editor (#110)
 - Swipe-to-delete with "Undo" for plans and books; notes and History are removed only after the undo window closes, so closing the app in between loses nothing (#110)
 

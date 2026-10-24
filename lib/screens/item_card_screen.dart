@@ -85,6 +85,15 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   }
 
   void _openStructureEditor() async {
+    // Carry unsaved edits from the card into the copy the editor receives;
+    // otherwise they are lost when the editor's result replaces the fields.
+    _workingCopy.name = _nameController.text.trim();
+    _workingCopy.stepType = _stepType;
+    _workingCopy.totalSteps = _totalSteps;
+    _workingCopy.excludeFromHistory = _excludeFromHistory;
+    if (_stepType == 'stepByStep') {
+      _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
+    }
     final updated = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -118,56 +127,22 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
 
   void _onStepTypeChanged(String? newType) {
     if (newType == null || newType == _stepType) return;
-    if (_workingCopy.children.isNotEmpty && newType != 'folder') {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Подтверждение'),
-          content: const Text(
-            'Изменение типа на лист приведёт к удалению всех вложенных элементов. Продолжить?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Отмена'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                setState(() {
-                  _stepType = newType;
-                  _workingCopy.children.clear();
-                  if (newType == 'single') {
-                    _totalSteps = 1;
-                    _completedSteps = 0;
-                  } else if (newType == 'stepByStep') {
-                    _totalSteps = 3;
-                    _completedSteps = 0;
-                  }
-                  _totalStepsController.text = _totalSteps.toString();
-                });
-              },
-              child: const Text('Продолжить'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      setState(() {
-        _stepType = newType;
-        if (newType == 'single') {
-          _totalSteps = 1;
-          _completedSteps = 0;
-        } else if (newType == 'stepByStep') {
-          _totalSteps = 3;
-          _completedSteps = 0;
-        } else if (newType == 'folder') {
-          _totalSteps = 1;
-          _completedSteps = 0;
-        }
-        _totalStepsController.text = _totalSteps.toString();
-      });
-    }
+    // Switching between checkbox and steps keeps subtasks: since #111 a task
+    // keeps its own progress next to them.
+    setState(() {
+      _stepType = newType;
+      if (newType == 'single') {
+        _totalSteps = 1;
+        _completedSteps = 0;
+      } else if (newType == 'stepByStep') {
+        _totalSteps = 3;
+        _completedSteps = 0;
+      } else if (newType == 'folder') {
+        _totalSteps = 1;
+        _completedSteps = 0;
+      }
+      _totalStepsController.text = _totalSteps.toString();
+    });
   }
 
   void _pickFromStandard() async {
@@ -201,11 +176,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     List<Node> collectLeaves(List<Node> nodes) {
       final leaves = <Node>[];
       for (var node in nodes) {
-        if (node.children.isEmpty && node.stepType != 'folder') {
-          leaves.add(node);
-        } else {
-          leaves.addAll(collectLeaves(node.children));
-        }
+        if (node.isTrackableTask) leaves.add(node);
+        leaves.addAll(collectLeaves(node.children));
       }
       return leaves;
     }
@@ -345,6 +317,23 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 ),
               ],
               const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _openStructureEditor,
+                icon: const Icon(Icons.subdirectory_arrow_right),
+                label: Text(
+                  _workingCopy.children.isNotEmpty
+                      ? 'Подзадачи (${_workingCopy.children.length})'
+                      : 'Добавить подзадачи',
+                ),
+              ),
+              if (_workingCopy.children.isNotEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Прогресс задачи и её подзадач считается вместе.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ),
               CheckboxListTile(
                 title: const Text('Не учитывать в прогрессе (рутина)'),
                 value: _excludeFromHistory,

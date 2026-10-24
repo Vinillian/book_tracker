@@ -58,7 +58,9 @@ class ChapterTreeView extends StatelessWidget {
   }
 
   void _openViewScreen(BuildContext context, Node node) async {
-    if (node.children.isNotEmpty) {
+    // A pure container expands on tap; a task with its own progress opens its
+    // card (expand/collapse is the chevron).
+    if (node.children.isNotEmpty && !node.hasOwnProgress) {
       node.isExpanded = !node.isExpanded;
       onNodeUpdated();
       return;

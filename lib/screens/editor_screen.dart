@@ -361,7 +361,12 @@ class _EditorScreenState extends State<EditorScreen> {
                       child.name.isEmpty ? '[Без названия]' : child.name,
                     ),
                     subtitle: child.children.isNotEmpty
-                        ? Text('${child.children.length} подэлементов')
+                        ? Text(
+                            child.hasOwnProgress
+                                ? '${child.children.length} подэлементов · '
+                                    '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : "чекбокс"}'
+                                : '${child.children.length} подэлементов',
+                          )
                         : child.stepType == 'stepByStep'
                         ? Text(
                       '${child.completedSteps}/${child.totalSteps}',
