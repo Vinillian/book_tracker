@@ -46,6 +46,11 @@ class Node {
   @HiveField(12)
   int? startMinutes;
 
+  /// What a template (`category == 'template'`) is for: 'day', 'book' or null
+  /// (any, the value of old templates). Cleared when a template is copied (#117).
+  @HiveField(13)
+  String? templateTarget;
+
   Node({
     required this.name,
     required this.children,
@@ -60,6 +65,7 @@ class Node {
     this.excludeFromHistory = false,
     String? trackingId,
     this.startMinutes,
+    this.templateTarget,
   }) : id = id ?? const Uuid().v4(),
         trackingId = trackingId ?? const Uuid().v4();
 
@@ -94,6 +100,7 @@ class Node {
       excludeFromHistory: excludeFromHistory,
       trackingId: trackingId,
       startMinutes: startMinutes,
+      templateTarget: templateTarget,
     );
   }
 
@@ -169,6 +176,7 @@ class Node {
       'excludeFromHistory': excludeFromHistory,
       'trackingId': trackingId,
       'startMinutes': startMinutes,
+      'templateTarget': templateTarget,
     };
   }
 
@@ -190,6 +198,7 @@ class Node {
       excludeFromHistory: json['excludeFromHistory'] ?? false,
       trackingId: json['trackingId'] ?? const Uuid().v4(),
       startMinutes: json['startMinutes'] as int?,
+      templateTarget: json['templateTarget'] as String?,
     );
   }
 }

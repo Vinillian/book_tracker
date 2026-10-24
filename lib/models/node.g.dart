@@ -30,13 +30,14 @@ class NodeAdapter extends TypeAdapter<Node> {
       excludeFromHistory: fields[10] as bool,
       trackingId: fields[11] as String?,
       startMinutes: fields[12] as int?,
+      templateTarget: fields[13] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Node obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -62,7 +63,9 @@ class NodeAdapter extends TypeAdapter<Node> {
       ..writeByte(11)
       ..write(obj.trackingId)
       ..writeByte(12)
-      ..write(obj.startMinutes);
+      ..write(obj.startMinutes)
+      ..writeByte(13)
+      ..write(obj.templateTarget);
   }
 
   @override
