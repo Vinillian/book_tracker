@@ -31,13 +31,15 @@ class NodeAdapter extends TypeAdapter<Node> {
       trackingId: fields[11] as String?,
       startMinutes: fields[12] as int?,
       templateTarget: fields[13] as String?,
+      targetMinutes: fields[14] as int?,
+      loggedMinutes: fields[15] == null ? 0 : fields[15] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, Node obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -65,7 +67,11 @@ class NodeAdapter extends TypeAdapter<Node> {
       ..writeByte(12)
       ..write(obj.startMinutes)
       ..writeByte(13)
-      ..write(obj.templateTarget);
+      ..write(obj.templateTarget)
+      ..writeByte(14)
+      ..write(obj.targetMinutes)
+      ..writeByte(15)
+      ..write(obj.loggedMinutes);
   }
 
   @override
