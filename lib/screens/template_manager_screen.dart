@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
 import '../utils/delete_with_undo.dart';
+import '../utils/flatten_day_parts.dart';
 import '../utils/template_target.dart';
 import 'editor_screen.dart';
 
@@ -67,6 +68,53 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
     if (target == null || !mounted) return;
     template.templateTarget = target == 'any' ? null : target;
     appState.updateNode(appState.getKeyForNode(template), template);
+  }
+
+  /// Removes the "Утро" / "День" / "Вечер" folders of [template] (#117): their
+  /// tasks move to the top level and get a start time, so the day screen groups
+  /// them by time of day instead. Asks first; "Отменить" restores the template.
+  Future<void> _flattenFolders(AppState appState, Node template) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Убрать папки Утро / День / Вечер?'),
+        content: const Text(
+          'Задачи из этих папок перейдут на верхний уровень шаблона. '
+          'Тем, у кого нет времени начала, будет проставлено время: '
+          'утро 08:00, день 13:00, вечер 19:00. '
+          'Потом это можно отменить.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Убрать папки'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final key = appState.getKeyForNode(template);
+    final before = template.deepCopy();
+    appState.updateNode(key, flattenDayPartFolders(template));
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Папки убраны: ${template.name}'),
+        duration: const Duration(seconds: 6),
+        persist: false,
+        action: SnackBarAction(
+          label: 'Отменить',
+          onPressed: () => appState.updateNode(key, before),
+        ),
+      ),
+    );
   }
 
   @override
@@ -169,6 +217,14 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                         : Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (hasDayPartFolders(template))
+                                IconButton(
+                                  icon: const Icon(Icons.format_list_bulleted),
+                                  tooltip: 'Убрать папки Утро/День/Вечер',
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () =>
+                                      _flattenFolders(appState, template),
+                                ),
                               IconButton(
                                 icon: const Icon(Icons.label_outline),
                                 tooltip: 'Для чего шаблон',
