@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
+import '../utils/delete_with_undo.dart';
 import 'editor_screen.dart';
 
 class TemplateManagerScreen extends StatefulWidget {
@@ -52,7 +53,27 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                 final template = templates[index];
                 final key = appState.getKeyForNode(template);
 
-                return Card(
+                return Dismissible(
+                  key: ValueKey(template.id),
+                  // No swipe-to-delete while a template is being picked.
+                  direction: widget.selectionMode
+                      ? DismissDirection.none
+                      : DismissDirection.endToStart,
+                  background: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    padding: const EdgeInsets.only(right: 20),
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  onDismissed: (_) => deleteNodeWithUndo(context, template),
+                  child: Card(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 4,
@@ -84,7 +105,7 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete),
-                                onPressed: () => appState.deleteNode(key),
+                                onPressed: () => deleteNodeWithUndo(context, template),
                               ),
                             ],
                           ),
@@ -95,6 +116,7 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                         // Редактирование
                       }
                     },
+                  ),
                   ),
                 );
               },
