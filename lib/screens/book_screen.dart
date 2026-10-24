@@ -9,6 +9,8 @@ import 'components/progress_card.dart';
 import 'components/day_note_card.dart';
 import 'components/day_done_section.dart';
 import 'components/chapter_tree_view.dart';
+import 'components/quick_add_bar.dart';
+import 'components/standard_task_quick_picker.dart';
 
 class BookScreen extends StatefulWidget {
   final Node node;
@@ -47,6 +49,20 @@ class _BookScreenState extends State<BookScreen> {
       context.read<AppState>().notify();
     }
     setState(() => _isEditingTitle = false);
+  }
+
+  /// Quick add (#109): works on the live node and saves through
+  /// `onNodeUpdated`, like ticking a task does.
+  void _addTask(Node task) {
+    setState(() => _node.children.add(task));
+    widget.onNodeUpdated();
+  }
+
+  Future<void> _openStandardTaskPicker() {
+    return showStandardTaskQuickPicker(
+      context,
+      onPick: (task) => _addTask(task.toNode()),
+    );
   }
 
   Widget _buildTitle() {
@@ -111,10 +127,28 @@ class _BookScreenState extends State<BookScreen> {
       ),
       body: Column(
         children: [
-          ProgressCard(node: _node),
-          DayNoteCard(node: _node),
-          if (_planDate != null)
-            DayDoneSection(entries: HistoryService.getEntriesForDay(_planDate!)),
+          // With the keyboard open (quick add) the cards above the list may not
+          // fit: cap their height and let them scroll instead of overflowing.
+          // The widget tree is the same either way, so nothing loses its state.
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.viewInsetsOf(context).bottom > 0
+                  ? MediaQuery.sizeOf(context).height * 0.3
+                  : double.infinity,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  ProgressCard(node: _node),
+                  DayNoteCard(node: _node),
+                  if (_planDate != null)
+                    DayDoneSection(
+                      entries: HistoryService.getEntriesForDay(_planDate!),
+                    ),
+                ],
+              ),
+            ),
+          ),
           ChapterTreeView(
             node: _node,
             bookId: _node.id,
@@ -125,6 +159,11 @@ class _BookScreenState extends State<BookScreen> {
             planDate: _planDate,
             groupByTime: _node.category == 'planner',
           ),
+          if (_node.category == 'planner')
+            QuickAddBar(
+              onAdd: (name) => _addTask(Node.leaf(name)),
+              onOpenPicker: _openStandardTaskPicker,
+            ),
         ],
       ),
     );
