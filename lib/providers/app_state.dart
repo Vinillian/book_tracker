@@ -43,6 +43,7 @@ class AppState extends ChangeNotifier {
     _noteService = NoteService(notesBox);
     _nodeService = NodeService(templatesBox, _noteService);
     _nodeService.migratePlannedDates(); // #114
+    _nodeService.migrateNestedBookCategories(); // #139
 
     _historyBox.watch().listen((_) => notifyListeners());
     _trackedActivitiesBox.watch().listen((_) => notifyListeners());

@@ -3,6 +3,7 @@ import '../models/node.dart';
 import 'note_service.dart';
 import 'history_service.dart';
 import '../utils/node_copy.dart';
+import '../utils/nested_category.dart';
 import '../utils/plan_date.dart';
 
 class NodeService {
@@ -105,6 +106,24 @@ class NodeService {
       updated++;
     }
     return updated;
+  }
+
+  /// One-time lazy migration (#139): resets `category == 'book'` on nested
+  /// nodes of books made from templates before the fix in #137. Idempotent, so
+  /// it also repairs books that come back through an old backup. Returns how
+  /// many nodes were changed.
+  int migrateNestedBookCategories() {
+    var fixed = 0;
+    for (final key in _box.keys.toList()) {
+      final node = _box.get(key);
+      if (node == null || node.category != 'book') continue;
+      final changed = clearNestedBookCategory(node);
+      if (changed > 0) {
+        _box.put(key, node);
+        fixed += changed;
+      }
+    }
+    return fixed;
   }
 
   DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
