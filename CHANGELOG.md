@@ -20,6 +20,7 @@
 - Calendar markers refresh after returning from a day screen, and list items no longer show the task name twice (#113)
 - "Undo" snackbars close on their own instead of staying on screen (#124)
 - Opening a day without a note no longer throws "setState() or markNeedsBuild() called during build" (#123)
+- Books made from a template before the fix above are repaired on the next start: nested tasks with `category == 'book'` get their own progress and the start-time button back. The repair is idempotent and also runs for books restored from an old backup (#139)
 
 - Day plans are now identified by their `plannedDate` instead of by a `dd.MM.yyyy` title: renaming a day no longer breaks its link to the calendar or lets a duplicate day be created. Old data is migrated lazily on startup and old backups still import (#114)
 
