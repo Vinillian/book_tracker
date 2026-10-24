@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
 import '../services/history_service.dart';
+import '../utils/day_part.dart';
 
 class NodeTile extends StatelessWidget {
   final Node node;
@@ -71,9 +72,8 @@ class NodeTile extends StatelessWidget {
             ),
             Expanded(
               child: ListTile(
-                title: Text(
-                  node.name,
-                  style: TextStyle(
+                title: _buildTitle(
+                  TextStyle(
                     fontWeight: hasChildren ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
@@ -85,9 +85,8 @@ class NodeTile extends StatelessWidget {
         )
             : ListTile(
           leading: leadingIcon,
-          title: Text(
-            node.name,
-            style: TextStyle(
+          title: _buildTitle(
+            TextStyle(
               fontWeight: (isFolder || hasChildren)
                   ? FontWeight.bold
                   : FontWeight.normal,
@@ -102,6 +101,27 @@ class NodeTile extends StatelessWidget {
           trailing: _buildTrailing(),
           onTap: onTap,
         ),
+      ),
+    );
+  }
+
+  /// Task name, prefixed with its start time (if any) in a muted colour.
+  Widget _buildTitle(TextStyle style) {
+    final minutes = node.startMinutes;
+    if (minutes == null) return Text(node.name, style: style);
+    return Text.rich(
+      TextSpan(
+        style: style,
+        children: [
+          TextSpan(
+            text: '${formatMinutes(minutes)}  ',
+            style: const TextStyle(
+              color: Colors.grey,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+          TextSpan(text: node.name),
+        ],
       ),
     );
   }

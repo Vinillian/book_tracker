@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../models/standard_task.dart';
 import '../providers/app_state.dart';
+import '../utils/day_part.dart';
 import 'editor_screen.dart';
 import 'standard_tasks_picker_screen.dart';
 
@@ -31,6 +32,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   late int _totalSteps;
   late int _completedSteps;
   late bool _excludeFromHistory;
+  int? _startMinutes;
   bool _didSave = false;
 
   @override
@@ -42,6 +44,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _totalSteps = _workingCopy.totalSteps;
     _completedSteps = _workingCopy.completedSteps;
     _excludeFromHistory = _workingCopy.excludeFromHistory;
+    _startMinutes = _workingCopy.startMinutes;
     _totalStepsController = TextEditingController(text: _totalSteps.toString());
   }
 
@@ -62,6 +65,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.stepType = _stepType;
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
+    _workingCopy.startMinutes = _startMinutes;
     if (_stepType == 'single') {
       _workingCopy.completed = _completedSteps > 0;
       _workingCopy.completedSteps = 0;
@@ -91,6 +95,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.stepType = _stepType;
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
+    _workingCopy.startMinutes = _startMinutes;
     if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
     }
@@ -108,9 +113,24 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
         _totalSteps = _workingCopy.totalSteps;
         _completedSteps = _workingCopy.completedSteps;
         _excludeFromHistory = _workingCopy.excludeFromHistory;
+        _startMinutes = _workingCopy.startMinutes;
         _totalStepsController.text = _totalSteps.toString();
       });
     }
+  }
+
+  Future<void> _pickStartTime() async {
+    final initial = _startMinutes ?? 9 * 60;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: initial ~/ 60, minute: initial % 60),
+      builder: (ctx, child) => MediaQuery(
+        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _startMinutes = picked.hour * 60 + picked.minute);
   }
 
   void _updateTotalSteps(String value) {
@@ -244,6 +264,30 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
               },
             ),
             const SizedBox(height: 16),
+            if (_workingCopy.category == null) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _pickStartTime,
+                      icon: const Icon(Icons.schedule),
+                      label: Text(
+                        _startMinutes == null
+                            ? 'Время начала: не задано'
+                            : 'Время начала: ${formatMinutes(_startMinutes!)}',
+                      ),
+                    ),
+                  ),
+                  if (_startMinutes != null)
+                    IconButton(
+                      icon: const Icon(Icons.clear),
+                      tooltip: 'Убрать время',
+                      onPressed: () => setState(() => _startMinutes = null),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
             if (isFolder) ...[
               const Text('Тип: Папка', style: TextStyle(fontSize: 16)),
               const SizedBox(height: 16),

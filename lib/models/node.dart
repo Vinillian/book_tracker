@@ -41,6 +41,11 @@ class Node {
   @HiveField(11)
   String trackingId;
 
+  /// Optional start time as minutes after midnight (0-1439). Used only to
+  /// group and sort tasks on the day screen; null means "no time" (#116).
+  @HiveField(12)
+  int? startMinutes;
+
   Node({
     required this.name,
     required this.children,
@@ -54,6 +59,7 @@ class Node {
     this.category,
     this.excludeFromHistory = false,
     String? trackingId,
+    this.startMinutes,
   }) : id = id ?? const Uuid().v4(),
         trackingId = trackingId ?? const Uuid().v4();
 
@@ -87,6 +93,7 @@ class Node {
       category: category,
       excludeFromHistory: excludeFromHistory,
       trackingId: trackingId,
+      startMinutes: startMinutes,
     );
   }
 
@@ -161,6 +168,7 @@ class Node {
       'category': category,
       'excludeFromHistory': excludeFromHistory,
       'trackingId': trackingId,
+      'startMinutes': startMinutes,
     };
   }
 
@@ -181,6 +189,7 @@ class Node {
       category: json['category'],
       excludeFromHistory: json['excludeFromHistory'] ?? false,
       trackingId: json['trackingId'] ?? const Uuid().v4(),
+      startMinutes: json['startMinutes'] as int?,
     );
   }
 }
