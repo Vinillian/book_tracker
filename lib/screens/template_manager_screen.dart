@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
 import '../utils/delete_with_undo.dart';
+import '../utils/template_target.dart';
 import 'editor_screen.dart';
 
 class TemplateManagerScreen extends StatefulWidget {
@@ -20,10 +21,64 @@ class TemplateManagerScreen extends StatefulWidget {
 }
 
 class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
+  // Filter of the management list: null = all, otherwise a template target.
+  String? _filter;
+
+  /// Asks what a template is for. 'any' means "no target"; null = cancelled.
+  Future<String?> _pickTarget({required bool allowAny}) {
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Для чего шаблон?'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, templateTargetDay),
+            child: const Text('Для дня'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, templateTargetBook),
+            child: const Text('Для книги'),
+          ),
+          if (allowAny)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, 'any'),
+              child: const Text('Любой (и для дня, и для книги)'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createTemplate(AppState appState) async {
+    final target = await _pickTarget(allowAny: false);
+    if (target == null || !mounted) return;
+    appState.addNode(
+      Node(
+        name: 'Новый шаблон',
+        children: [],
+        category: 'template',
+        templateTarget: target,
+      ),
+    );
+  }
+
+  Future<void> _changeTarget(AppState appState, Node template) async {
+    final target = await _pickTarget(allowAny: true);
+    if (target == null || !mounted) return;
+    template.templateTarget = target == 'any' ? null : target;
+    appState.updateNode(appState.getKeyForNode(template), template);
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    final templates = appState.templates;
+    final wanted = widget.selectionMode
+        ? templateTargetForCategory(widget.filterCategory)
+        : _filter;
+    final templates = [
+      for (final t in appState.templates)
+        if (templateMatchesTarget(t, wanted)) t,
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -33,21 +88,47 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
             : [
                 IconButton(
                   icon: const Icon(Icons.add),
-                  onPressed: () {
-                    final newTemplate = Node(
-                      name: 'Новый шаблон',
-                      children: [],
-                      category: 'template',
-                    );
-                    appState.addNode(newTemplate);
-                  },
+                  onPressed: () => _createTemplate(appState),
                   tooltip: 'Новый шаблон',
                 ),
               ],
       ),
-      body: templates.isEmpty
-          ? const Center(child: Text('Нет шаблонов. Нажмите + для создания.'))
-          : ListView.builder(
+      body: Column(
+        children: [
+          if (!widget.selectionMode)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (final f in <String?>[
+                    null,
+                    templateTargetDay,
+                    templateTargetBook,
+                  ])
+                    ChoiceChip(
+                      label: Text(
+                        f == null
+                            ? 'Все'
+                            : (f == templateTargetDay ? 'Дни' : 'Книги'),
+                      ),
+                      selected: _filter == f,
+                      onSelected: (_) => setState(() => _filter = f),
+                    ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: templates.isEmpty
+                ? Center(
+                    child: Text(
+                      widget.selectionMode
+                          ? 'Нет подходящих шаблонов. Создайте их в меню «Шаблоны».'
+                          : 'Нет шаблонов. Нажмите + для создания.',
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : ListView.builder(
               itemCount: templates.length,
               itemBuilder: (context, index) {
                 final template = templates[index];
@@ -80,12 +161,21 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                   ),
                   child: ListTile(
                     title: Text(template.name),
-                    subtitle: Text('Элементов: ${template.totalLeaves}'),
+                    subtitle: Text(
+                      '${templateTargetLabel(template.templateTarget)} · Элементов: ${template.totalLeaves}',
+                    ),
                     trailing: widget.selectionMode
                         ? const Icon(Icons.arrow_forward)
                         : Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              IconButton(
+                                icon: const Icon(Icons.label_outline),
+                                tooltip: 'Для чего шаблон',
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () =>
+                                    _changeTarget(appState, template),
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.edit),
                                 onPressed: () async {
@@ -121,6 +211,9 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                 );
               },
             ),
+          ),
+        ],
+      ),
     );
   }
 }
