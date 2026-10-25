@@ -6,6 +6,7 @@ import '../providers/app_state.dart';
 import '../services/history_service.dart';
 import '../utils/day_dialogs.dart';
 import '../utils/plan_date.dart';
+import '../utils/tracking_id.dart';
 import 'components/progress_card.dart';
 import 'components/day_note_card.dart';
 import 'components/day_done_section.dart';
@@ -61,9 +62,21 @@ class _BookScreenState extends State<BookScreen> {
   }
 
   Future<void> _openStandardTaskPicker() {
+    final appState = context.read<AppState>();
     return showStandardTaskQuickPicker(
       context,
-      onPick: (task) => _addTask(task.toNode()),
+      onPick: (task) {
+        // Join the habit's existing line in History and the heatmap instead
+        // of starting a second one (#149).
+        final node = task.toNode();
+        node.trackingId = resolveTrackingId(
+          task.name,
+          tracked: appState.trackedActivities,
+          roots: [...appState.books, ...appState.plans, ...appState.templates],
+          fallback: task.trackingId,
+        );
+        _addTask(node);
+      },
     );
   }
 
