@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/history_entry.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
+import '../utils/format_minutes.dart';
 import '../utils/plan_date.dart';
 import '../services/history_service.dart';
 import 'book_screen.dart';
@@ -233,14 +234,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   : Icons.radio_button_unchecked,
               color: entry.completed == true ? Colors.green : Colors.grey,
             )
-                : const Icon(Icons.list, color: Colors.blue),
+                : entry.stepType == 'duration'
+                    ? const Icon(Icons.timer, color: Colors.blue)
+                    : const Icon(Icons.list, color: Colors.blue),
             title: Text(entry.nodeName),
             subtitle: entry.stepType == 'single'
                 ? Text(entry.completed == true ? 'Выполнено' : 'Не выполнено')
                 : null,
             trailing: entry.stepType == 'stepByStep'
                 ? Text('Шагов: ${entry.completedSteps}')
-                : null,
+                : entry.stepType == 'duration'
+                    ? Text(formatMinutes(entry.minutes ?? 0))
+                    : null,
           ),
         );
       },

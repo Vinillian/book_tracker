@@ -32,6 +32,11 @@ class HistoryEntry {
   @HiveField(8)
   String trackingId;    // постоянный идентификатор для отслеживания
 
+  /// Minutes logged by a 'duration' task (one entry per log, so a task can
+  /// have several entries on the same day). Null for other task types.
+  @HiveField(9)
+  int? minutes;
+
   HistoryEntry({
     String? id,
     required this.bookId,
@@ -42,6 +47,7 @@ class HistoryEntry {
     this.completed,
     this.completedSteps,
     required this.trackingId,
+    this.minutes,
   }) : id = id ?? const Uuid().v4();
 
   // для single-задачи
@@ -84,6 +90,26 @@ class HistoryEntry {
     );
   }
 
+  // для duration: одна запись на один лог времени
+  factory HistoryEntry.forDuration({
+    required String bookId,
+    required String nodeId,
+    required String nodeName,
+    required int minutes,
+    required String trackingId,
+    DateTime? date,
+  }) {
+    return HistoryEntry(
+      bookId: bookId,
+      nodeId: nodeId,
+      date: date ?? DateTime.now(),
+      nodeName: nodeName,
+      stepType: 'duration',
+      minutes: minutes,
+      trackingId: trackingId,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -95,6 +121,7 @@ class HistoryEntry {
       'completed': completed,
       'completedSteps': completedSteps,
       'trackingId': trackingId,
+      'minutes': minutes,
     };
   }
 
@@ -109,6 +136,7 @@ class HistoryEntry {
       completed: json['completed'],
       completedSteps: json['completedSteps'],
       trackingId: json['trackingId'] ?? '', // для обратной совместимости
+      minutes: json['minutes'] as int?,
     );
   }
 }
