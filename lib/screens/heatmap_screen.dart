@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../services/heatmap_service.dart';
+import '../utils/heat_alpha.dart';
 import 'tracked_activities_screen.dart';
 import 'components/app_drawer_menu.dart';
 
@@ -313,7 +314,10 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                           color: intensity == 0
                                               ? Colors.grey.shade200
                                               : color.withValues(
-                                            alpha: (0.25 + intensity * 0.15).clamp(0.25, 1.0),
+                                            alpha: heatAlpha(
+                                              intensity,
+                                              isDuration: activity.stepType == 'duration',
+                                            ),
                                           ),
                                           borderRadius: BorderRadius.circular(2),
                                           border: isToday
