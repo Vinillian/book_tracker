@@ -4,6 +4,7 @@ import '../models/node.dart';
 import '../models/tracked_activity.dart';
 import '../providers/app_state.dart';
 import '../services/history_service.dart';
+import '../utils/format_minutes.dart';
 
 class ViewItemScreen extends StatefulWidget {
   final String bookId;
@@ -154,6 +155,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     // Own progress is shown for leaves and for parents that keep it (#111).
     final bool isLeaf = !hasChildren || _node.hasOwnProgress;
     final bool isSingle = _node.stepType == 'single';
+    final bool isDuration = _node.isDuration;
     final bool isTrackable = isLeaf && !_node.excludeFromHistory;
 
     final appState = context.watch<AppState>();
@@ -179,7 +181,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : 'Пошаговый') : 'Папка'}',
+                      'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : isDuration ? 'Длительность' : 'Пошаговый') : 'Папка'}',
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     if (hasChildren && isLeaf)
@@ -239,6 +241,28 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                 title: const Text('Выполнено'),
                 value: _node.completed,
                 onChanged: _onToggle,
+              ),
+            ] else if (isLeaf && isDuration) ...[
+              const Text(
+                'Прогресс:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                durationProgressLabel(_node.loggedMinutes, _node.targetMinutes),
+                style: const TextStyle(fontSize: 18),
+              ),
+              if ((_node.targetMinutes ?? 0) > 0) ...[
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (_node.loggedMinutes / _node.targetMinutes!)
+                      .clamp(0.0, 1.0),
+                ),
+              ],
+              const SizedBox(height: 8),
+              const Text(
+                'Добавлять время можно будет в следующем обновлении.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ] else if (isLeaf && !isSingle) ...[
               const Text(
