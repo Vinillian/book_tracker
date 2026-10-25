@@ -1,4 +1,4 @@
-## [1.3.0] - Unreleased
+## [1.3.0] - 2026-10-25
 ### Added
 - Calendar: tapping a day opens its plan directly; for a day without a plan a bottom sheet offers "Empty day" or "From template" (#113)
 - Calendar markers now distinguish days that have a plan (ring) from days with completed work in History (filled dot), with a small legend (#113)
