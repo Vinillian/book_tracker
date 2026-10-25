@@ -26,12 +26,8 @@ class _DayNoteCardState extends State<DayNoteCard> {
   }
 
   void _loadDayNote() {
-    final appState = context.read<AppState>();
-    _dayNote = appState.getNoteForDay(widget.node.id);
-    if (_dayNote == null) {
-      appState.createNoteForDay(widget.node.id);
-      _dayNote = appState.getNoteForDay(widget.node.id);
-    }
+    // No notifyListeners here: this runs in initState, i.e. during build (#123).
+    _dayNote = context.read<AppState>().getOrCreateNoteForDay(widget.node.id);
     _noteController.text = _dayNote?.content ?? '';
   }
 

@@ -9,6 +9,8 @@ import '../models/settings.dart';
 import '../services/node_service.dart';
 import '../services/note_service.dart';
 import '../services/history_service.dart';
+import '../utils/node_copy.dart';
+import '../utils/plan_date.dart';
 
 class AppState extends ChangeNotifier {
   late final NodeService _nodeService;
@@ -40,6 +42,8 @@ class AppState extends ChangeNotifier {
 
     _noteService = NoteService(notesBox);
     _nodeService = NodeService(templatesBox, _noteService);
+    _nodeService.migratePlannedDates(); // #114
+    _nodeService.migrateNestedBookCategories(); // #139
 
     _historyBox.watch().listen((_) => notifyListeners());
     _trackedActivitiesBox.watch().listen((_) => notifyListeners());
@@ -65,14 +69,46 @@ class AppState extends ChangeNotifier {
   Box<StandardTask> get standardTasksBox => _standardTasksBox;
   Box<TrackedActivity> get trackedActivitiesBox => _trackedActivitiesBox;
 
-  List<Node> get books => _nodeService.books;
-  List<Node> get plans => _nodeService.plans;
-  List<Node> get templates => _nodeService.templates;
+  // Узлы, скрытые из списков на время окна «Отменить». Физически они
+  // остаются в Hive до commitNodeDeletion, так что закрытие приложения
+  // в этот момент ничего не теряет.
+  final Set<String> _pendingDeleteIds = {};
+
+  List<Node> _visible(List<Node> nodes) =>
+      nodes.where((n) => !_pendingDeleteIds.contains(n.id)).toList();
+
+  List<Node> get books => _visible(_nodeService.books);
+  List<Node> get plans => _visible(_nodeService.plans);
+  List<Node> get templates => _visible(_nodeService.templates);
 
   void addNode(Node node) { _nodeService.add(node); notifyListeners(); }
   void updateNode(dynamic key, Node node) { _nodeService.update(key, node); notifyListeners(); }
   void deleteNode(dynamic key) {
     _nodeService.delete(key);
+    notifyListeners();
+  }
+
+  /// Шаг 1 удаления с «Отменить»: убрать узел из списков, ничего не стирая.
+  void hideNodeForDeletion(Node node) {
+    _pendingDeleteIds.add(node.id);
+    notifyListeners();
+  }
+
+  /// «Отменить»: вернуть скрытый узел в списки.
+  void restoreNode(Node node) {
+    if (_pendingDeleteIds.remove(node.id)) notifyListeners();
+  }
+
+  /// Окно «Отменить» закрылось: удалить узел, его заметки и History.
+  void commitNodeDeletion(Node node) {
+    if (!_pendingDeleteIds.remove(node.id)) return;
+    dynamic key;
+    try {
+      key = _nodeService.getKey(node);
+    } on StateError {
+      key = null; // уже удалён
+    }
+    if (key != null) _nodeService.delete(key);
     notifyListeners();
   }
 
@@ -88,11 +124,35 @@ class AppState extends ChangeNotifier {
     return day;
   }
 
-  bool planExistsForDate(DateTime date) => _nodeService.planExistsForDate(date);
+  /// Adds reset copies of the tasks of [source] (a template or another day) to
+  /// the existing day [target] and saves it (#117). Returns how many tasks
+  /// were added.
+  int appendTasksToDay(Node target, Node source) {
+    final copies = [for (final c in source.children) copyAndReset(c)];
+    if (copies.isEmpty) return 0;
+    target.children.addAll(copies);
+    _nodeService.update(_nodeService.getKey(target), target);
+    notifyListeners();
+    return copies.length;
+  }
+
+  /// The visible day plan for [date] (by `plannedDate`, see #114).
+  Node? planForDate(DateTime date) {
+    final key = DateTime(date.year, date.month, date.day);
+    for (final plan in plans) {
+      if (planDateOf(plan) == key) return plan;
+    }
+    return null;
+  }
+
+  bool planExistsForDate(DateTime date) => planForDate(date) != null;
   Node? getNodeById(String id) => _nodeService.getById(id);
   dynamic getKeyForNode(Node node) => _nodeService.getKey(node);
 
   Note? getNoteForDay(String linkedNodeId) => _noteService.getNoteForDay(linkedNodeId);
+  /// Silent on purpose (no notifyListeners): called from DayNoteCard.initState.
+  Note getOrCreateNoteForDay(String linkedNodeId) =>
+      _noteService.getOrCreateNoteForDay(linkedNodeId);
   void createNoteForDay(String linkedNodeId) {
     _noteService.createNoteForDay(linkedNodeId);
     notifyListeners();

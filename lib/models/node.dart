@@ -41,6 +41,26 @@ class Node {
   @HiveField(11)
   String trackingId;
 
+  /// Optional start time as minutes after midnight (0-1439). Used only to
+  /// group and sort tasks on the day screen; null means "no time" (#116).
+  @HiveField(12)
+  int? startMinutes;
+
+  /// What a template (`category == 'template'`) is for: 'day', 'book' or null
+  /// (any, the value of old templates). Cleared when a template is copied (#117).
+  @HiveField(13)
+  String? templateTarget;
+
+  /// Optional goal in minutes for a `duration` task; null or 0 means no goal
+  /// (#112).
+  @HiveField(14)
+  int? targetMinutes;
+
+  /// Minutes logged so far for a `duration` task. Several logs a day are summed
+  /// into this value (#112). `defaultValue` makes old records read as 0.
+  @HiveField(15, defaultValue: 0)
+  int loggedMinutes;
+
   Node({
     required this.name,
     required this.children,
@@ -54,6 +74,10 @@ class Node {
     this.category,
     this.excludeFromHistory = false,
     String? trackingId,
+    this.startMinutes,
+    this.templateTarget,
+    this.targetMinutes,
+    this.loggedMinutes = 0,
   }) : id = id ?? const Uuid().v4(),
         trackingId = trackingId ?? const Uuid().v4();
 
@@ -67,6 +91,8 @@ class Node {
         this.category,
         this.excludeFromHistory = false,
         String? trackingId,
+        this.targetMinutes,
+        this.loggedMinutes = 0,
       }) : children = [],
         isExpanded = false,
         completed = false,
@@ -87,39 +113,78 @@ class Node {
       category: category,
       excludeFromHistory: excludeFromHistory,
       trackingId: trackingId,
+      startMinutes: startMinutes,
+      templateTarget: templateTarget,
+      targetMinutes: targetMinutes,
+      loggedMinutes: loggedMinutes,
     );
+  }
+
+  /// Own progress (checkbox or steps) exists for every non-root task except
+  /// pure containers (`folder`). Roots (books, plans, templates) never have it.
+  /// Since #111 a task with subtasks keeps it and it counts together with them.
+  bool get hasOwnProgress => category == null && stepType != 'folder';
+
+  /// A task whose own progress is recorded in History / the heatmap: a leaf,
+  /// or a parent that keeps its own checkbox or steps.
+  bool get isTrackableTask =>
+      children.isEmpty ? stepType != 'folder' : hasOwnProgress;
+
+  bool get isDuration => stepType == 'duration';
+
+  /// A `duration` task counts as one unit in the statistics: done once its goal
+  /// is reached, or, when it has no goal, once any time is logged (#112).
+  bool get durationReached {
+    if (!isDuration) return false;
+    final goal = targetMinutes;
+    if (goal != null && goal > 0) return loggedMinutes >= goal;
+    return loggedMinutes > 0;
+  }
+
+  int get _ownTotal {
+    if (stepType == 'single' || isDuration) return 1;
+    if (stepType == 'stepByStep') return totalSteps;
+    return 0;
+  }
+
+  int get _ownCompleted {
+    if (stepType == 'single') return completed ? 1 : 0;
+    if (isDuration) return durationReached ? 1 : 0;
+    if (stepType == 'stepByStep') return completedSteps;
+    return 0;
   }
 
   int get totalLeaves {
     if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
-      return children.fold(0, (sum, child) => sum + child.totalLeaves);
+      final fromChildren =
+          children.fold(0, (sum, child) => sum + child.totalLeaves);
+      return hasOwnProgress ? fromChildren + _ownTotal : fromChildren;
     }
-    if (stepType == 'single') return 1;
-    if (stepType == 'stepByStep') return totalSteps;
-    return 0;
+    return _ownTotal;
   }
 
   int get completedLeaves {
     if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
-      return children.fold(0, (sum, child) => sum + child.completedLeaves);
+      final fromChildren =
+          children.fold(0, (sum, child) => sum + child.completedLeaves);
+      return hasOwnProgress ? fromChildren + _ownCompleted : fromChildren;
     }
-    if (stepType == 'single') return completed ? 1 : 0;
-    if (stepType == 'stepByStep') return completedSteps;
-    return 0;
+    return _ownCompleted;
   }
 
   int get nonRoutineLeafCount {
     if (excludeFromHistory) return 0;
     if (children.isNotEmpty) {
-      return children.fold(0, (sum, child) => sum + child.nonRoutineLeafCount);
+      final fromChildren =
+          children.fold(0, (sum, child) => sum + child.nonRoutineLeafCount);
+      return hasOwnProgress ? fromChildren + 1 : fromChildren;
     }
     return 1;
   }
 
   void toggle() {
-    if (children.isNotEmpty) return;
     if (stepType == 'single') {
       completed = !completed;
     }
@@ -138,6 +203,10 @@ class Node {
       'category': category,
       'excludeFromHistory': excludeFromHistory,
       'trackingId': trackingId,
+      'startMinutes': startMinutes,
+      'templateTarget': templateTarget,
+      'targetMinutes': targetMinutes,
+      'loggedMinutes': loggedMinutes,
     };
   }
 
@@ -158,6 +227,10 @@ class Node {
       category: json['category'],
       excludeFromHistory: json['excludeFromHistory'] ?? false,
       trackingId: json['trackingId'] ?? const Uuid().v4(),
+      startMinutes: json['startMinutes'] as int?,
+      templateTarget: json['templateTarget'] as String?,
+      targetMinutes: json['targetMinutes'] as int?,
+      loggedMinutes: json['loggedMinutes'] as int? ?? 0,
     );
   }
 }

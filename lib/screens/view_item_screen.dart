@@ -1,9 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../models/history_entry.dart';
 import '../models/node.dart';
 import '../models/tracked_activity.dart';
 import '../providers/app_state.dart';
 import '../services/history_service.dart';
+import '../utils/format_minutes.dart';
 
 class ViewItemScreen extends StatefulWidget {
   final String bookId;
@@ -73,6 +79,65 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     widget.onNodeUpdated();
   }
 
+  /// Logs [minutes] on this duration task: adds them to the task and, unless
+  /// the task is excluded from History, records one History entry (#112).
+  void _addMinutes(int minutes) {
+    if (minutes <= 0) return;
+    setState(() => _node.loggedMinutes += minutes);
+    if (!_node.excludeFromHistory) {
+      HistoryService.recordDurationLog(
+        bookId: widget.bookId,
+        node: _node,
+        minutes: minutes,
+        targetDate: _resolveEventDate(),
+      );
+    }
+    widget.onNodeUpdated();
+  }
+
+  /// Removes one log: its History entry goes and its minutes leave the task.
+  void _removeLog(HistoryEntry entry) {
+    HistoryService.deleteEntryById(entry.id);
+    setState(() {
+      _node.loggedMinutes =
+          math.max(0, _node.loggedMinutes - (entry.minutes ?? 0));
+    });
+    widget.onNodeUpdated();
+  }
+
+  Future<void> _addCustomMinutes() async {
+    // Not disposed on purpose: the dialog is still animating out when the
+    // future completes, and disposing then would throw.
+    final controller = TextEditingController();
+    final minutes = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Сколько минут добавить?'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(hintText: 'От 1 до 1440'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              final v = int.tryParse(controller.text.trim());
+              Navigator.pop(ctx, (v != null && v >= 1 && v <= 1440) ? v : null);
+            },
+            child: const Text('Добавить'),
+          ),
+        ],
+      ),
+    );
+    if (minutes != null && mounted) _addMinutes(minutes);
+  }
+
   void _onSliderChanged(double value) {
     setState(() {
       _tempSteps = value.round();
@@ -97,6 +162,37 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
       }
       widget.onNodeUpdated();
     }
+  }
+
+  /// The task's logged times (History entries), newest first, each removable.
+  List<Widget> _buildLogList() {
+    final logs = HistoryService.getDurationEntriesForNode(_node.id);
+    if (logs.isEmpty) return const [];
+    return [
+      const SizedBox(height: 16),
+      Text(
+        'Записи (${logs.length}):',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      for (final e in logs.take(20))
+        ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.timer, size: 20),
+          title: Text(formatDuration(e.minutes ?? 0)),
+          subtitle: Text(DateFormat('dd.MM HH:mm').format(e.date)),
+          trailing: IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Удалить запись',
+            onPressed: () => _removeLog(e),
+          ),
+        ),
+      if (logs.length > 20)
+        Text(
+          'Показаны последние 20 из ${logs.length}.',
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+    ];
   }
 
   /// Ищет запись TrackedActivity для этого узла по trackingId
@@ -150,8 +246,11 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isLeaf = _node.children.isEmpty;
+    final bool hasChildren = _node.children.isNotEmpty;
+    // Own progress is shown for leaves and for parents that keep it (#111).
+    final bool isLeaf = !hasChildren || _node.hasOwnProgress;
     final bool isSingle = _node.stepType == 'single';
+    final bool isDuration = _node.isDuration;
     final bool isTrackable = isLeaf && !_node.excludeFromHistory;
 
     final appState = context.watch<AppState>();
@@ -162,7 +261,8 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
       appBar: AppBar(title: Text(_node.name)),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Card(
@@ -177,9 +277,15 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : 'Пошаговый') : 'Папка'}',
+                      'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : isDuration ? 'Длительность' : 'Пошаговый') : 'Папка'}',
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
+                    if (hasChildren && isLeaf)
+                      Text(
+                        'Подзадач: ${_node.children.length}. Общий прогресс: '
+                        '${_node.completedLeaves}/${_node.totalLeaves}',
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
                     if (_node.excludeFromHistory)
                       const Text(
                         ' (не учитывается в прогрессе)',
@@ -232,6 +338,40 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                 value: _node.completed,
                 onChanged: _onToggle,
               ),
+            ] else if (isLeaf && isDuration) ...[
+              const Text(
+                'Прогресс:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                durationProgressLabel(_node.loggedMinutes, _node.targetMinutes),
+                style: const TextStyle(fontSize: 18),
+              ),
+              if ((_node.targetMinutes ?? 0) > 0) ...[
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (_node.loggedMinutes / _node.targetMinutes!)
+                      .clamp(0.0, 1.0),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final m in const [5, 15, 30, 60])
+                    ActionChip(
+                      label: Text('+${formatDuration(m)}'),
+                      onPressed: () => _addMinutes(m),
+                    ),
+                  ActionChip(
+                    avatar: const Icon(Icons.edit, size: 16),
+                    label: const Text('Своё…'),
+                    onPressed: _addCustomMinutes,
+                  ),
+                ],
+              ),
+              ..._buildLogList(),
             ] else if (isLeaf && !isSingle) ...[
               const Text(
                 'Прогресс:',
@@ -261,6 +401,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
               ),
             ],
           ],
+        ),
         ),
       ),
     );

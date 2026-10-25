@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
 import '../services/history_service.dart';
+import '../utils/day_part.dart';
+import '../utils/format_minutes.dart';
 
 class NodeTile extends StatelessWidget {
   final Node node;
@@ -24,9 +26,14 @@ class NodeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isLeaf = node.children.isEmpty && node.stepType != 'folder';
-    final bool isFolder = node.stepType == 'folder' || node.children.isNotEmpty;
+    final bool hasChildren = node.children.isNotEmpty;
+    final bool isLeaf = !hasChildren && node.stepType != 'folder';
+    // Pure container: a folder, or a node with children and no own progress.
+    final bool isFolder =
+        node.stepType == 'folder' || (hasChildren && !node.hasOwnProgress);
     final bool isSingle = node.stepType == 'single';
+    // Checkbox row: a single-type leaf, or a parent that keeps its own checkbox.
+    final bool ownCheckbox = isSingle && (isLeaf || node.hasOwnProgress);
 
     Widget leadingIcon;
     if (isFolder) {
@@ -38,6 +45,11 @@ class NodeTile extends StatelessWidget {
         leadingIcon = node.completed
             ? const Icon(Icons.check_circle, color: Colors.green)
             : const Icon(Icons.radio_button_unchecked, color: Colors.grey);
+      } else if (node.isDuration) {
+        leadingIcon = Icon(
+          Icons.timer,
+          color: node.durationReached ? Colors.green : Colors.blue,
+        );
       } else {
         leadingIcon = const Icon(Icons.list, color: Colors.blue);
       }
@@ -47,7 +59,7 @@ class NodeTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       child: Padding(
         padding: EdgeInsets.only(left: depth * 16.0),
-        child: isLeaf && isSingle
+        child: ownCheckbox
             ? Row(
           children: [
             Checkbox(
@@ -66,10 +78,12 @@ class NodeTile extends StatelessWidget {
             ),
             Expanded(
               child: ListTile(
-                title: Text(
-                  node.name,
-                  style: const TextStyle(fontWeight: FontWeight.normal),
+                title: _buildTitle(
+                  TextStyle(
+                    fontWeight: hasChildren ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
+                trailing: hasChildren ? _buildTrailing() : null,
                 onTap: onTap,
               ),
             ),
@@ -77,18 +91,48 @@ class NodeTile extends StatelessWidget {
         )
             : ListTile(
           leading: leadingIcon,
-          title: Text(
-            node.name,
-            style: TextStyle(
-              fontWeight: isFolder ? FontWeight.bold : FontWeight.normal,
-              decoration: isLeaf && isSingle && node.completed
+          title: _buildTitle(
+            TextStyle(
+              fontWeight: (isFolder || hasChildren)
+                  ? FontWeight.bold
+                  : FontWeight.normal,
+              decoration: ownCheckbox && node.completed
                   ? TextDecoration.lineThrough
                   : TextDecoration.none,
             ),
           ),
+          subtitle: hasChildren && node.stepType == 'stepByStep'
+              ? Text('Шаги: ${node.completedSteps}/${node.totalSteps}')
+              : hasChildren && node.isDuration
+                  ? Text(_durationText())
+                  : null,
           trailing: _buildTrailing(),
           onTap: onTap,
         ),
+      ),
+    );
+  }
+
+  String _durationText() =>
+      durationProgressLabel(node.loggedMinutes, node.targetMinutes);
+
+  /// Task name, prefixed with its start time (if any) in a muted colour.
+  Widget _buildTitle(TextStyle style) {
+    final minutes = node.startMinutes;
+    if (minutes == null) return Text(node.name, style: style);
+    return Text.rich(
+      TextSpan(
+        style: style,
+        children: [
+          TextSpan(
+            text: '${formatMinutes(minutes)}  ',
+            style: const TextStyle(
+              color: Colors.grey,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+          TextSpan(text: node.name),
+        ],
       ),
     );
   }
@@ -127,6 +171,17 @@ class NodeTile extends StatelessWidget {
             onPressed: onExpandToggle,
           ),
         ],
+      );
+    } else if (node.isDuration) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: Text(
+          _durationText(),
+          style: TextStyle(
+            fontSize: 12,
+            color: node.durationReached ? Colors.green : Colors.grey,
+          ),
+        ),
       );
     } else if (node.stepType == 'stepByStep') {
       return Padding(

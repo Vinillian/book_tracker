@@ -1,3 +1,38 @@
+## [1.3.0] - 2026-10-25
+### Added
+- Calendar: tapping a day opens its plan directly; for a day without a plan a bottom sheet offers "Empty day" or "From template" (#113)
+- Calendar markers now distinguish days that have a plan (ring) from days with completed work in History (filled dot), with a small legend (#113)
+- Day screen: read-only "Done" section listing the day's History entries (#113)
+- Any task can now have subtasks while keeping its own checkbox or steps: the task card shows a "Подзадачи" ("Subtasks") button for every task; the task's own progress counts together with its subtasks, a task with its own progress opens its card on tap and expands with the chevron (#111, part 1)
+- "Move to…" in the editor: move one or several tasks (also via multi-select) into another task or folder of the edited tree, with "Undo" (#111, part 2)
+- Optional start time per task (time picker in the task card, clearable): shown in front of the task name; the day screen groups tasks into "Утро" / "День" / "Вечер" (morning / day / evening) and "Без времени" (no time) and sorts them by time once any task has a time. Nothing is stored as folders, existing days and old backups are unchanged (#116)
+- Day screen: quick add at the bottom: type a name and press Enter to add a checkbox task, or open the standard-task list with "+" (search, tap to add, the sheet stays open to add several) without leaving the day screen (#109, part 1)
+- Day screen: long-press a task and drag it to change the order (a task moves together with its visible subtasks). With tasks grouped by time only the "Без времени" (no time) group can be dragged, the other groups stay sorted by time (#109, part 2)
+- Templates carry a target, "Для дня" (day) or "Для книги" (book): chosen when a template is created, changeable with the label button, shown in the list; creating a day or a book offers only the matching templates (and old templates without a target, which stay universal). The template manager has a Все / Дни / Книги filter. `Node` gets the optional field `templateTarget` (HiveField 13); old data and backups load unchanged (#117)
+- Template manager: a button on templates that still have "Утро" / "День" / "Вечер" (morning / day / evening) folders moves their tasks to the top level and gives tasks without a time 08:00 / 13:00 / 19:00, so the day screen groups them by time instead; asks first, "Отменить" (Undo) restores the template. New templates are flat already, nothing changes for existing ones unless you press it (#117)
+- Day screen menu: "Добавить из шаблона…" (add a template's tasks to this day) and "Копировать день…" (copy the day to another date, completion reset; if a day exists there, the tasks are added to it). Creating a day from a template for a date that already has a day now offers to add the tasks instead of refusing (#117)
+- Data model for the new "duration" task type: `Node` gets `targetMinutes` (optional goal) and `loggedMinutes` (HiveField 14 and 15); a duration task counts as one unit in the statistics, done when the goal is reached (or when any time is logged if it has no goal). Copies made from templates or days reset the logged time. No UI yet, old data and backups load unchanged (#112, part 1)
+- History for "duration" tasks: `HistoryEntry` gets the optional field `minutes` (HiveField 9) and `HistoryService.recordDurationLog` adds one entry per log without replacing earlier ones, so a task can have several logs per day; a single log can be removed. The heatmap counts the minutes, and the Done section and the calendar show "N мин" ("N min"). No UI to log time yet, old data and backups load unchanged (#112, part 2)
+- "Длительность" (duration) task type can now be created: the task card has a segmented "Чекбокс / Шаги / Длительность" (checkbox / steps / duration) choice instead of radio buttons, with an optional goal in minutes. The day screen, the editor, the task view and the tracking lists show the logged time ("25 мин / 1 ч"); a task with a goal turns green when it is reached. Logging time is not possible yet (#112, part 3a)
+- Logging time on a duration task: the task view has quick buttons (+5 мин, +15 мин, +30 мин, +1 ч) and "Своё…" (custom, 1-1440 minutes); every log is a separate History entry, so a task can get several a day. Logs are listed under the task and each can be deleted, which also takes its minutes off the task. The heatmap colour of a duration task is scaled by minutes (fully saturated at an hour a day). Not included: duration among standard tasks (#112, part 3b)
+- Swipe-to-delete with "Undo" for tasks in the editor (#110)
+- Swipe-to-delete with "Undo" for plans and books; notes and History are removed only after the undo window closes, so closing the app in between loses nothing (#110)
+- Swipe-to-delete and the trash icon for templates now also offer "Undo" (and swiping is off while a template is being picked) (#125)
+
+### Fixed
+- A book created from a template no longer gets `category == 'book'` on every nested task (only the root); the template copy logic is now shared with days (`copyAndReset`) (#117, #78)
+- Editor and item screens no longer return their result via `Navigator.pop` in `dispose()`; the Back button now saves, which fixes lost edits and the "deactivated widget's ancestor" exception (#115)
+- Calendar markers refresh after returning from a day screen, and list items no longer show the task name twice (#113)
+- "Undo" snackbars close on their own instead of staying on screen (#124)
+- Opening a day without a note no longer throws "setState() or markNeedsBuild() called during build" (#123)
+- Books made from a template before the fix above are repaired on the next start: nested tasks with `category == 'book'` get their own progress and the start-time button back. The repair is idempotent and also runs for books restored from an old backup (#139)
+- A standard task added with "+" now joins the existing line of the same habit: its `trackingId` is taken from an already tracked activity (or an existing task) with the same name, so it is tracked right away and no duplicate row appears in the heatmap; the task card uses the same rule. Rows that were already duplicated are not merged (#149)
+
+- Day plans are now identified by their `plannedDate` instead of by a `dd.MM.yyyy` title: renaming a day no longer breaks its link to the calendar or lets a duplicate day be created. Old data is migrated lazily on startup and old backups still import (#114)
+
+### Changed
+- Generated backup files under `backups/` are no longer tracked in git (#118)
+
 ## [1.1.1] - 2026-07-XX
 ### Fixed
 - Activities with the same name now correctly sum on the heatmap instead of overwriting each other (#70)

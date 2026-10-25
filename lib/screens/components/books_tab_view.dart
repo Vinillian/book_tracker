@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/node.dart';
 import '../../providers/app_state.dart';
+import '../../utils/delete_with_undo.dart';
 import '../editor_screen.dart';
 import '../book_screen.dart';
 import '../../widgets/book_card.dart';
@@ -58,7 +59,24 @@ class BooksTabView extends StatelessWidget {
                         final book = filtered[index];
                         final key = appState.getKeyForNode(book);
 
-                        return BookCard(
+                        return Dismissible(
+                          key: ValueKey(book.id),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            padding: const EdgeInsets.only(right: 20),
+                            alignment: Alignment.centerRight,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.delete, color: Colors.white),
+                          ),
+                          onDismissed: (_) => deleteNodeWithUndo(context, book),
+                          child: BookCard(
                           book: book,
                           onTap: () async {
                             await Navigator.push(
@@ -73,7 +91,8 @@ class BooksTabView extends StatelessWidget {
                             );
                           },
                           onEdit: () => _editBook(context, key, book),
-                          onDelete: () => _deleteBook(context, key),
+                          onDelete: () => deleteNodeWithUndo(context, book),
+                          ),
                         );
                       },
                     );
@@ -93,9 +112,5 @@ class BooksTabView extends StatelessWidget {
     if (updated != null && context.mounted) {
       appState.updateNode(key, updated);
     }
-  }
-
-  void _deleteBook(BuildContext context, dynamic key) {
-    context.read<AppState>().deleteNode(key);
   }
 }

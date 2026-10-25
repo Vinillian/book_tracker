@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/node.dart';
 import '../../providers/app_state.dart';
+import '../../utils/delete_with_undo.dart';
+import '../../utils/plan_date.dart';
 import '../editor_screen.dart';
 import '../book_screen.dart';
 
@@ -22,13 +24,12 @@ class PlannerTabView extends StatelessWidget {
 
     final sorted = List<Node>.from(plans)
       ..sort((a, b) {
-        try {
-          final dateA = DateFormat('dd.MM.yyyy').parse(a.name);
-          final dateB = DateFormat('dd.MM.yyyy').parse(b.name);
-          return dateB.compareTo(dateA);
-        } catch (_) {
-          return b.name.compareTo(a.name);
-        }
+        final dateA = planDateOf(a);
+        final dateB = planDateOf(b);
+        if (dateA != null && dateB != null) return dateB.compareTo(dateA);
+        if (dateA != null) return -1;
+        if (dateB != null) return 1;
+        return b.name.compareTo(a.name);
       });
 
     return ListView.builder(
@@ -36,12 +37,31 @@ class PlannerTabView extends StatelessWidget {
       itemBuilder: (context, index) {
         final plan = sorted[index];
         final key = appState.getKeyForNode(plan);
+        final date = planDateOf(plan);
+        final dateStr = date == null ? null : DateFormat('dd.MM.yyyy').format(date);
+        final tasks = 'Задач: ${plan.nonRoutineLeafCount}';
 
-        return Card(
+        return Dismissible(
+          key: ValueKey(plan.id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.only(right: 20),
+            alignment: Alignment.centerRight,
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.delete, color: Colors.white),
+          ),
+          onDismissed: (_) => deleteNodeWithUndo(context, plan),
+          child: Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: ListTile(
             title: Text(plan.name),
-            subtitle: Text('Задач: ${plan.nonRoutineLeafCount}'),
+            subtitle: Text(
+              dateStr != null && dateStr != plan.name ? '$dateStr · $tasks' : tasks,
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -51,7 +71,7 @@ class PlannerTabView extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
-                  onPressed: () => _deletePlan(context, key),
+                  onPressed: () => deleteNodeWithUndo(context, plan),
                 ),
               ],
             ),
@@ -67,6 +87,7 @@ class PlannerTabView extends StatelessWidget {
               );
             },
           ),
+          ),
         );
       },
     );
@@ -81,9 +102,5 @@ class PlannerTabView extends StatelessWidget {
     if (updated != null && context.mounted) {
       appState.updateNode(key, updated);
     }
-  }
-
-  void _deletePlan(BuildContext context, dynamic key) {
-    context.read<AppState>().deleteNode(key);
   }
 }

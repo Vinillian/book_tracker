@@ -1,8 +1,10 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:uuid/uuid.dart';
 import '../models/node.dart';
 import 'note_service.dart';
 import 'history_service.dart';
+import '../utils/node_copy.dart';
+import '../utils/nested_category.dart';
+import '../utils/plan_date.dart';
 
 class NodeService {
   final Box<Node> _box;
@@ -52,6 +54,7 @@ class NodeService {
     final dateStr = _formatDate(date);
     final newDay = Node(
       name: dateStr,
+      plannedDate: _dateOnly(date),
       children: [],
       category: 'planner',
       stepType: 'folder',
@@ -63,18 +66,67 @@ class NodeService {
 
   Node addDayFromTemplate(Node template, DateTime date) {
     final dateStr = _formatDate(date);
-    final copy = _copyAndReset(template);
+    final copy = copyAndReset(template);
     copy.name = dateStr;
+    copy.plannedDate = _dateOnly(date);
     copy.category = 'planner';
     add(copy);
     _noteService.createNoteForDay(copy.id);
     return copy;
   }
 
-  bool planExistsForDate(DateTime date) {
-    final dateStr = _formatDate(date);
-    return plans.any((n) => n.name == dateStr);
+  bool planExistsForDate(DateTime date) => planForDate(date) != null;
+
+  /// The day plan for [date], found by `plannedDate` (legacy name as fallback).
+  Node? planForDate(DateTime date) {
+    final key = _dateOnly(date);
+    for (final plan in plans) {
+      if (planDateOf(plan) == key) return plan;
+    }
+    return null;
   }
+
+  /// One-time lazy migration (#114): fills `plannedDate` for day plans that
+  /// only carry their date in the name. Returns how many plans were updated.
+  int migratePlannedDates() {
+    var updated = 0;
+    for (final key in _box.keys.toList()) {
+      final node = _box.get(key);
+      if (node == null || node.category != 'planner' || node.plannedDate != null) {
+        continue;
+      }
+      // Legacy name first; a day renamed before #114 has no date left in its
+      // name, so fall back to the date its History entries were recorded on.
+      final date =
+          parseLegacyPlanName(node.name) ??
+          HistoryService.dominantDateForBook(node.id);
+      if (date == null) continue;
+      node.plannedDate = _dateOnly(date);
+      _box.put(key, node);
+      updated++;
+    }
+    return updated;
+  }
+
+  /// One-time lazy migration (#139): resets `category == 'book'` on nested
+  /// nodes of books made from templates before the fix in #137. Idempotent, so
+  /// it also repairs books that come back through an old backup. Returns how
+  /// many nodes were changed.
+  int migrateNestedBookCategories() {
+    var fixed = 0;
+    for (final key in _box.keys.toList()) {
+      final node = _box.get(key);
+      if (node == null || node.category != 'book') continue;
+      final changed = clearNestedBookCategory(node);
+      if (changed > 0) {
+        _box.put(key, node);
+        fixed += changed;
+      }
+    }
+    return fixed;
+  }
+
+  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   Node? getPlanByName(String name) {
     try {
@@ -90,15 +142,4 @@ class NodeService {
         '.${date.year}';
   }
 
-  Node _copyAndReset(Node node) {
-    final copy = node.deepCopy();
-    copy.id = const Uuid().v4();
-    if (copy.children.isEmpty) {
-      copy.completed = false;
-      copy.completedSteps = 0;
-    } else {
-      copy.children = copy.children.map((c) => _copyAndReset(c)).toList();
-    }
-    return copy;
-  }
 }

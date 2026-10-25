@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
+import '../utils/format_minutes.dart';
 import 'item_card_screen.dart';
 
 class EditorScreen extends StatefulWidget {
@@ -31,31 +32,216 @@ class _EditorScreenState extends State<EditorScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    // Автосохранение при выходе срабатывает только если пользователь
-    // ещё не сохранил через кнопку check — иначе получим двойной
-    // Navigator.pop на одном и том же переходе.
-    if (!_didSave) {
-      _saveOnDispose();
-    }
     super.dispose();
   }
 
-  void _saveOnDispose() {
+  // Сохранение должно происходить ДО закрытия экрана: в dispose() маршрут
+  // уже снят, и Navigator.pop оттуда ничего не возвращает вызывающему коду.
+  void _saveAndClose() {
+    if (_didSave) return;
     _didSave = true;
     _workingCopy.name = _nameController.text.trim();
     _workingCopy.category = _category;
+    // «Отменить» от удаления не должен пережить экран редактора.
+    ScaffoldMessenger.of(context).clearSnackBars();
     Navigator.pop(context, _workingCopy);
   }
 
-  void _deleteSelected() {
-    final sorted = _selectedIndices.toList()..sort((a, b) => b.compareTo(a));
-    for (final i in sorted) {
-      _workingCopy.children.removeAt(i);
-    }
+  void _deleteSelected() => _deleteWithConfirm(_selectedIndices.toList());
+
+  /// Подтверждение нужно только если среди удаляемых есть задачи с подзадачами.
+  Future<bool> _confirmSubtreeDelete(List<Node> nodes) async {
+    final withChildren = nodes.where((n) => n.children.isNotEmpty).toList();
+    if (withChildren.isEmpty) return true;
+    final text = nodes.length == 1
+        ? '«${withChildren.first.name}» содержит подэлементов: '
+            '${withChildren.first.children.length}. Удалить вместе с ними?'
+        : 'Среди выбранных есть элементы с подэлементами. Удалить их вместе '
+            'с содержимым?';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить?'),
+        content: Text(text),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<void> _deleteWithConfirm(List<int> indices) async {
+    final nodes = [for (final i in indices) _workingCopy.children[i]];
+    if (!await _confirmSubtreeDelete(nodes)) return;
+    if (!mounted) return;
+    _removeWithUndo(indices);
+  }
+
+  /// Удаляет из рабочей копии и показывает snackbar «Отменить».
+  /// История не трогается: правки применяются только при сохранении редактора.
+  void _removeWithUndo(List<int> indices) {
+    final sorted = indices.toList()..sort();
+    final removed = [for (final i in sorted) (i, _workingCopy.children[i])];
     setState(() {
+      for (final e in removed.reversed) {
+        _workingCopy.children.removeAt(e.$1);
+      }
       _multiSelect = false;
       _selectedIndices.clear();
     });
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    final first = removed.first.$2.name;
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        // With an action, SnackBar defaults to persist = true and never closes.
+        persist: false,
+        content: Text(
+          removed.length == 1
+              ? 'Удалено: ${first.isEmpty ? "[Без названия]" : first}'
+              : 'Удалено элементов: ${removed.length}',
+        ),
+        action: SnackBarAction(
+          label: 'Отменить',
+          onPressed: () {
+            if (!mounted) return;
+            setState(() {
+              for (final e in removed) {
+                final at = e.$1.clamp(0, _workingCopy.children.length);
+                _workingCopy.children.insert(at, e.$2);
+              }
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Задачи редактируемого дерева, в которые можно переместить [moving]:
+  /// все узлы, кроме самих перемещаемых и их подэлементов, с глубиной вложения.
+  List<(Node, int)> _moveTargets(List<Node> moving) {
+    final result = <(Node, int)>[];
+    void walk(List<Node> nodes, int depth) {
+      for (final n in nodes) {
+        if (moving.any((m) => identical(m, n))) continue;
+        result.add((n, depth));
+        walk(n.children, depth + 1);
+      }
+    }
+
+    walk(_workingCopy.children, 0);
+    return result;
+  }
+
+  Future<Node?> _pickMoveTarget(List<(Node, int)> targets, int count) {
+    return showDialog<Node>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(count == 1 ? 'Переместить в…' : 'Переместить ($count) в…'),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: targets.length,
+            itemBuilder: (_, i) {
+              final (node, depth) = targets[i];
+              return ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.only(
+                  left: 16.0 + depth * 20,
+                  right: 16,
+                ),
+                leading: Icon(
+                  node.stepType == 'folder'
+                      ? Icons.folder_outlined
+                      : Icons.task_alt_outlined,
+                ),
+                title: Text(node.name.isEmpty ? '[Без названия]' : node.name),
+                onTap: () => Navigator.pop(ctx, node),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Переносит выбранные элементы в подэлементы другой задачи или папки.
+  /// Узлы переносятся как есть (id, trackingId, прогресс, подзадачи не меняются),
+  /// поэтому История и heatmap остаются связаны с ними.
+  Future<void> _moveWithPicker(List<int> indices) async {
+    final sorted = indices.toList()..sort();
+    final removed = [for (final i in sorted) (i, _workingCopy.children[i])];
+    final moving = [for (final e in removed) e.$2];
+    final targets = _moveTargets(moving);
+    final messenger = ScaffoldMessenger.of(context);
+    if (targets.isEmpty) {
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 4),
+          content: Text(
+            'Некуда перемещать: добавьте рядом задачу или папку.',
+          ),
+        ),
+      );
+      return;
+    }
+    final target = await _pickMoveTarget(targets, moving.length);
+    if (target == null || !mounted) return;
+    setState(() {
+      for (final e in removed.reversed) {
+        _workingCopy.children.removeAt(e.$1);
+      }
+      target.children.addAll(moving);
+      target.isExpanded = true;
+      _multiSelect = false;
+      _selectedIndices.clear();
+    });
+    final targetName = target.name.isEmpty ? '[Без названия]' : target.name;
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        // With an action, SnackBar defaults to persist = true and never closes.
+        persist: false,
+        content: Text(
+          moving.length == 1
+              ? 'Перемещено в «$targetName»'
+              : 'Перемещено элементов: ${moving.length} в «$targetName»',
+        ),
+        action: SnackBarAction(
+          label: 'Отменить',
+          onPressed: () {
+            if (!mounted) return;
+            setState(() {
+              target.children
+                  .removeWhere((c) => moving.any((m) => identical(m, c)));
+              for (final e in removed) {
+                final at = e.$1.clamp(0, _workingCopy.children.length);
+                _workingCopy.children.insert(at, e.$2);
+              }
+            });
+          },
+        ),
+      ),
+    );
   }
 
   void _cancelSelection() {
@@ -115,12 +301,6 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
-  void _deleteChild(int index) {
-    setState(() {
-      _workingCopy.children.removeAt(index);
-    });
-  }
-
   void _editChild(int index) async {
     final child = _workingCopy.children[index];
     final result = await Navigator.push(
@@ -139,6 +319,17 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Системная «назад» и стрелка в AppBar тоже сохраняют правки.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _saveAndClose();
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final bool isRoot = widget.node.category != null;
 
     return Scaffold(
@@ -156,7 +347,7 @@ class _EditorScreenState extends State<EditorScreen> {
           if (!_multiSelect)
             IconButton(
               icon: const Icon(Icons.check),
-              onPressed: _saveOnDispose,
+              onPressed: _saveAndClose,
             ),
         ],
       ),
@@ -245,8 +436,24 @@ class _EditorScreenState extends State<EditorScreen> {
               itemBuilder: (context, index) {
                 final child = _workingCopy.children[index];
                 final isSelected = _selectedIndices.contains(index);
-                return Card(
+                return Dismissible(
                   key: ValueKey(child),
+                  direction: _multiSelect
+                      ? DismissDirection.none
+                      : DismissDirection.endToStart,
+                  background: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    padding: const EdgeInsets.only(right: 20),
+                    alignment: Alignment.centerRight,
+                    color: Colors.red,
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  confirmDismiss: (_) => _confirmSubtreeDelete([child]),
+                  onDismissed: (_) => _removeWithUndo([index]),
+                  child: Card(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 4,
@@ -273,10 +480,19 @@ class _EditorScreenState extends State<EditorScreen> {
                       child.name.isEmpty ? '[Без названия]' : child.name,
                     ),
                     subtitle: child.children.isNotEmpty
-                        ? Text('${child.children.length} подэлементов')
+                        ? Text(
+                            child.hasOwnProgress
+                                ? '${child.children.length} подэлементов · '
+                                    '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : child.isDuration ? "время ${durationProgressLabel(child.loggedMinutes, child.targetMinutes)}" : "чекбокс"}'
+                                : '${child.children.length} подэлементов',
+                          )
                         : child.stepType == 'stepByStep'
                         ? Text(
                       '${child.completedSteps}/${child.totalSteps}',
+                    )
+                        : child.isDuration
+                        ? Text(
+                      'Длительность: ${durationProgressLabel(child.loggedMinutes, child.targetMinutes)}',
                     )
                         : child.stepType == 'single'
                         ? const Text('Одиночный чекбокс')
@@ -291,8 +507,14 @@ class _EditorScreenState extends State<EditorScreen> {
                           onPressed: () => _editChild(index),
                         ),
                         IconButton(
+                          icon: const Icon(Icons.drive_file_move_outlined),
+                          tooltip: 'Переместить в…',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _moveWithPicker([index]),
+                        ),
+                        IconButton(
                           icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteChild(index),
+                          onPressed: () => _deleteWithConfirm([index]),
                         ),
                       ],
                     ),
@@ -318,6 +540,7 @@ class _EditorScreenState extends State<EditorScreen> {
                       }
                     },
                   ),
+                  ),
                 );
               },
             ),
@@ -333,6 +556,13 @@ class _EditorScreenState extends State<EditorScreen> {
                   TextButton(
                     onPressed: _cancelSelection,
                     child: const Text('Отмена'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.drive_file_move_outlined),
+                    tooltip: 'Переместить в…',
+                    onPressed: _selectedIndices.isEmpty
+                        ? null
+                        : () => _moveWithPicker(_selectedIndices.toList()),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(

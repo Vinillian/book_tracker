@@ -29,6 +29,16 @@ class NoteService {
     _box.put(note.id, note);
   }
 
+  /// Returns the day's note, creating it if missing. Does not notify anyone,
+  /// so it is safe to call while a widget is being built.
+  Note getOrCreateNoteForDay(String linkedNodeId) {
+    final existing = getNoteForDay(linkedNodeId);
+    if (existing != null) return existing;
+    final note = Note(content: '', linkedNodeId: linkedNodeId);
+    _box.put(note.id, note);
+    return note;
+  }
+
   void save(Note note) {
     note.updatedAt = DateTime.now();
     _box.put(note.id, note);
