@@ -92,7 +92,9 @@ class _PickTaskForTrackingScreenState extends State<PickTaskForTrackingScreen> {
             subtitle: Text(
               node.stepType == 'single'
                   ? 'Одиночный чекбокс'
-                  : 'Пошаговая (${node.totalSteps} шагов)',
+                  : node.isDuration
+                      ? 'Длительность'
+                      : 'Пошаговая (${node.totalSteps} шагов)',
             ),
             onTap: () => Navigator.pop(context, node),
           );

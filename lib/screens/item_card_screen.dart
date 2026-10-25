@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../models/standard_task.dart';
 import '../providers/app_state.dart';
 import '../utils/day_part.dart';
+import '../utils/format_minutes.dart';
 import 'editor_screen.dart';
 import 'standard_tasks_picker_screen.dart';
 
@@ -28,6 +30,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   late Node _workingCopy;
   late TextEditingController _nameController;
   late TextEditingController _totalStepsController;
+  late TextEditingController _targetController;
+  int? _targetMinutes;
   late String _stepType;
   late int _totalSteps;
   late int _completedSteps;
@@ -46,12 +50,16 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _excludeFromHistory = _workingCopy.excludeFromHistory;
     _startMinutes = _workingCopy.startMinutes;
     _totalStepsController = TextEditingController(text: _totalSteps.toString());
+    _targetMinutes = _workingCopy.targetMinutes;
+    _targetController =
+        TextEditingController(text: _targetMinutes?.toString() ?? '');
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _totalStepsController.dispose();
+    _targetController.dispose();
     super.dispose();
   }
 
@@ -71,6 +79,12 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
       _workingCopy.completedSteps = 0;
     } else if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
+      _workingCopy.completed = false;
+    } else if (_stepType == 'duration') {
+      // Logged minutes stay as they are; only the goal is edited here.
+      _workingCopy.targetMinutes = _targetMinutes;
+      _workingCopy.totalSteps = 1;
+      _workingCopy.completedSteps = 0;
       _workingCopy.completed = false;
     }
     Navigator.pop(context, _workingCopy);
@@ -99,6 +113,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
     }
+    if (_stepType == 'duration') {
+      _workingCopy.targetMinutes = _targetMinutes;
+    }
     final updated = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -115,6 +132,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
         _excludeFromHistory = _workingCopy.excludeFromHistory;
         _startMinutes = _workingCopy.startMinutes;
         _totalStepsController.text = _totalSteps.toString();
+        _targetMinutes = _workingCopy.targetMinutes;
+        _targetController.text = _targetMinutes?.toString() ?? '';
       });
     }
   }
@@ -145,6 +164,11 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     }
   }
 
+  void _updateTarget(String value) {
+    final parsed = int.tryParse(value.trim());
+    setState(() => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null);
+  }
+
   void _onStepTypeChanged(String? newType) {
     if (newType == null || newType == _stepType) return;
     // Switching between checkbox and steps keeps subtasks: since #111 a task
@@ -157,7 +181,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
       } else if (newType == 'stepByStep') {
         _totalSteps = 3;
         _completedSteps = 0;
-      } else if (newType == 'folder') {
+      } else if (newType == 'duration' || newType == 'folder') {
         _totalSteps = 1;
         _completedSteps = 0;
       }
@@ -304,23 +328,48 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Radio<String>(
-                    value: 'single',
-                    groupValue: _stepType,
-                    onChanged: _onStepTypeChanged,
-                  ),
-                  const Text('Одиночный чекбокс'),
-                  const SizedBox(width: 24),
-                  Radio<String>(
-                    value: 'stepByStep',
-                    groupValue: _stepType,
-                    onChanged: _onStepTypeChanged,
-                  ),
-                  const Text('Пошаговый'),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'single', label: Text('Чекбокс')),
+                    ButtonSegment(value: 'stepByStep', label: Text('Шаги')),
+                    ButtonSegment(value: 'duration', label: Text('Длительность')),
+                  ],
+                  selected: {_stepType},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (s) => _onStepTypeChanged(s.first),
+                ),
               ),
+              if (_stepType == 'duration') ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Цель, минут (необязательно):',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _targetController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'Без цели',
+                    helperText: 'Выполнена, когда набрано нужное время; '
+                        'без цели - когда записано любое время.',
+                    helperMaxLines: 2,
+                  ),
+                  onChanged: _updateTarget,
+                ),
+                if (_workingCopy.loggedMinutes > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Записано: ${formatDuration(_workingCopy.loggedMinutes)}',
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                  ),
+              ],
               if (_stepType == 'stepByStep') ...[
                 const SizedBox(height: 16),
                 const Text(

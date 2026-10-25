@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/node.dart';
 import '../services/history_service.dart';
 import '../utils/day_part.dart';
+import '../utils/format_minutes.dart';
 
 class NodeTile extends StatelessWidget {
   final Node node;
@@ -44,6 +45,11 @@ class NodeTile extends StatelessWidget {
         leadingIcon = node.completed
             ? const Icon(Icons.check_circle, color: Colors.green)
             : const Icon(Icons.radio_button_unchecked, color: Colors.grey);
+      } else if (node.isDuration) {
+        leadingIcon = Icon(
+          Icons.timer,
+          color: node.durationReached ? Colors.green : Colors.blue,
+        );
       } else {
         leadingIcon = const Icon(Icons.list, color: Colors.blue);
       }
@@ -97,13 +103,18 @@ class NodeTile extends StatelessWidget {
           ),
           subtitle: hasChildren && node.stepType == 'stepByStep'
               ? Text('Шаги: ${node.completedSteps}/${node.totalSteps}')
-              : null,
+              : hasChildren && node.isDuration
+                  ? Text(_durationText())
+                  : null,
           trailing: _buildTrailing(),
           onTap: onTap,
         ),
       ),
     );
   }
+
+  String _durationText() =>
+      durationProgressLabel(node.loggedMinutes, node.targetMinutes);
 
   /// Task name, prefixed with its start time (if any) in a muted colour.
   Widget _buildTitle(TextStyle style) {
@@ -160,6 +171,17 @@ class NodeTile extends StatelessWidget {
             onPressed: onExpandToggle,
           ),
         ],
+      );
+    } else if (node.isDuration) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: Text(
+          _durationText(),
+          style: TextStyle(
+            fontSize: 12,
+            color: node.durationReached ? Colors.green : Colors.grey,
+          ),
+        ),
       );
     } else if (node.stepType == 'stepByStep') {
       return Padding(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
+import '../utils/format_minutes.dart';
 import 'item_card_screen.dart';
 
 class EditorScreen extends StatefulWidget {
@@ -482,12 +483,16 @@ class _EditorScreenState extends State<EditorScreen> {
                         ? Text(
                             child.hasOwnProgress
                                 ? '${child.children.length} подэлементов · '
-                                    '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : "чекбокс"}'
+                                    '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : child.isDuration ? "время ${durationProgressLabel(child.loggedMinutes, child.targetMinutes)}" : "чекбокс"}'
                                 : '${child.children.length} подэлементов',
                           )
                         : child.stepType == 'stepByStep'
                         ? Text(
                       '${child.completedSteps}/${child.totalSteps}',
+                    )
+                        : child.isDuration
+                        ? Text(
+                      'Длительность: ${durationProgressLabel(child.loggedMinutes, child.targetMinutes)}',
                     )
                         : child.stepType == 'single'
                         ? const Text('Одиночный чекбокс')

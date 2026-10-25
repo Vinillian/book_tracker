@@ -150,13 +150,13 @@ void main() {
     });
   });
 
-  group('formatMinutes', () {
+  group('formatDuration', () {
     test('formats minutes and hours', () {
-      expect(formatMinutes(0), '0 мин');
-      expect(formatMinutes(45), '45 мин');
-      expect(formatMinutes(60), '1 ч');
-      expect(formatMinutes(90), '1 ч 30 мин');
-      expect(formatMinutes(135), '2 ч 15 мин');
+      expect(formatDuration(0), '0 мин');
+      expect(formatDuration(45), '45 мин');
+      expect(formatDuration(60), '1 ч');
+      expect(formatDuration(90), '1 ч 30 мин');
+      expect(formatDuration(135), '2 ч 15 мин');
     });
   });
 }

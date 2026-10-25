@@ -39,7 +39,7 @@ class DayDoneSection extends StatelessWidget {
                     trailing: entry.stepType == 'stepByStep'
                         ? Text('Шагов: ${entry.completedSteps}')
                         : entry.stepType == 'duration'
-                            ? Text(formatMinutes(entry.minutes ?? 0))
+                            ? Text(formatDuration(entry.minutes ?? 0))
                             : null,
                   ),
               ],
