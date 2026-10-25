@@ -7,6 +7,7 @@ import '../models/standard_task.dart';
 import '../providers/app_state.dart';
 import '../utils/day_part.dart';
 import '../utils/format_minutes.dart';
+import '../utils/tracking_id.dart';
 import 'editor_screen.dart';
 import 'standard_tasks_picker_screen.dart';
 
@@ -212,27 +213,12 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   /// Поиск существующего trackingId для задачи с таким же именем
   String _findExistingTrackingId(String name) {
     final appState = context.read<AppState>();
-    final allNodes = <Node>[];
-    allNodes.addAll(appState.books);
-    allNodes.addAll(appState.plans);
-    allNodes.addAll(appState.templates);
-
-    List<Node> collectLeaves(List<Node> nodes) {
-      final leaves = <Node>[];
-      for (var node in nodes) {
-        if (node.isTrackableTask) leaves.add(node);
-        leaves.addAll(collectLeaves(node.children));
-      }
-      return leaves;
-    }
-
-    final allLeaves = collectLeaves(allNodes);
-    for (var node in allLeaves) {
-      if (node.name.toLowerCase() == name.toLowerCase() && node.trackingId.isNotEmpty) {
-        return node.trackingId;
-      }
-    }
-    return const Uuid().v4();
+    return resolveTrackingId(
+      name,
+      tracked: appState.trackedActivities,
+      roots: [...appState.books, ...appState.plans, ...appState.templates],
+      fallback: const Uuid().v4(),
+    );
   }
 
   @override
