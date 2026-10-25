@@ -114,6 +114,15 @@ class HistoryService {
     return entry.id;
   }
 
+  /// All 'duration' logs of one node, newest first.
+  static List<HistoryEntry> getDurationEntriesForNode(String nodeId) {
+    final list = _box.values
+        .where((e) => e.nodeId == nodeId && e.stepType == 'duration')
+        .toList();
+    list.sort((a, b) => b.date.compareTo(a.date));
+    return list;
+  }
+
   /// Removes a single History entry by its [HistoryEntry.id]. Returns true
   /// if something was removed.
   static bool deleteEntryById(String id) {

@@ -150,6 +150,43 @@ void main() {
     });
   });
 
+  group('HistoryService.getDurationEntriesForNode', () {
+    late Directory dir;
+    late Box<HistoryEntry> history;
+
+    setUp(() async {
+      dir = await Directory.systemTemp.createTemp('duration_entries_test');
+      Hive.init(dir.path);
+      if (!Hive.isAdapterRegistered(2)) {
+        Hive.registerAdapter(HistoryEntryAdapter());
+      }
+      history = await Hive.openBox<HistoryEntry>('history');
+      HistoryService.init(history);
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      await dir.delete(recursive: true);
+    });
+
+    test('returns only duration logs of that node, newest first', () {
+      final a = durationNode('A');
+      final b = durationNode('B');
+      HistoryService.recordDurationLog(
+          bookId: 'x', node: a, minutes: 10, targetDate: DateTime(2026, 10, 24, 9));
+      HistoryService.recordDurationLog(
+          bookId: 'x', node: a, minutes: 20, targetDate: DateTime(2026, 10, 25, 9));
+      HistoryService.recordDurationLog(
+          bookId: 'x', node: b, minutes: 99, targetDate: DateTime(2026, 10, 25, 9));
+      HistoryService.recordUniqueToggle(
+          bookId: 'x',
+          node: Node(name: 'C', children: [], stepType: 'single'),
+          newValue: true);
+      final logs = HistoryService.getDurationEntriesForNode(a.id);
+      expect(logs.map((e) => e.minutes).toList(), [20, 10]);
+    });
+  });
+
   group('formatDuration', () {
     test('formats minutes and hours', () {
       expect(formatDuration(0), '0 мин');
