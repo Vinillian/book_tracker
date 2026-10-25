@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/history_entry.dart';
+import '../../utils/format_minutes.dart';
 
 /// Read-only list of what was done on a day (History entries for that date).
 class DayDoneSection extends StatelessWidget {
@@ -31,11 +32,15 @@ class DayDoneSection extends StatelessWidget {
                     dense: true,
                     leading: entry.stepType == 'single'
                         ? const Icon(Icons.check_circle, color: Colors.green)
-                        : const Icon(Icons.list, color: Colors.blue),
+                        : entry.stepType == 'duration'
+                            ? const Icon(Icons.timer, color: Colors.blue)
+                            : const Icon(Icons.list, color: Colors.blue),
                     title: Text(entry.nodeName),
                     trailing: entry.stepType == 'stepByStep'
                         ? Text('Шагов: ${entry.completedSteps}')
-                        : null,
+                        : entry.stepType == 'duration'
+                            ? Text(formatMinutes(entry.minutes ?? 0))
+                            : null,
                   ),
               ],
             ),

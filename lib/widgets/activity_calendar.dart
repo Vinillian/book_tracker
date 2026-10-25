@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 import '../models/history_entry.dart';
+import '../utils/format_minutes.dart';
 
 class ActivityCalendar extends StatefulWidget {
   const ActivityCalendar({super.key});
@@ -259,6 +260,9 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
                     if (entry.stepType == 'single') {
                       action = entry.completed == true ? 'Выполнено' : 'Снято';
                       icon = entry.completed == true ? Icons.check_circle : Icons.radio_button_unchecked;
+                    } else if (entry.stepType == 'duration') {
+                      action = formatMinutes(entry.minutes ?? 0);
+                      icon = Icons.timer;
                     } else {
                       action = 'Шагов: ${entry.completedSteps}';
                       icon = Icons.list;

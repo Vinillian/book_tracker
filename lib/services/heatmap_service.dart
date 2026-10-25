@@ -29,6 +29,9 @@ class HeatmapService {
         intensity = 1;
       } else if (entry.stepType == 'stepByStep' && entry.completedSteps != null) {
         intensity = entry.completedSteps!;
+      } else if (entry.stepType == 'duration' && (entry.minutes ?? 0) > 0) {
+        // Intensity of a duration task is the minutes logged that day.
+        intensity = entry.minutes!;
       } else {
         continue;
       }
