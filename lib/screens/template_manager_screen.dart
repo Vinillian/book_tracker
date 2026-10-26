@@ -25,6 +25,21 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
   // Filter of the management list: null = all, otherwise a template target.
   String? _filter;
 
+  static String _filterLabel(String? f) {
+    switch (f) {
+      case null:
+        return 'Все';
+      case templateTargetDay:
+        return 'Дни';
+      case templateTargetWork:
+        return 'Рабочие';
+      case templateTargetOff:
+        return 'Выходные';
+      default:
+        return 'Книги';
+    }
+  }
+
   /// Asks what a template is for. 'any' means "no target"; null = cancelled.
   Future<String?> _pickTarget({required bool allowAny}) {
     return showDialog<String>(
@@ -35,6 +50,14 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, templateTargetDay),
             child: const Text('Для дня'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, templateTargetWork),
+            child: const Text('Для рабочего дня'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, templateTargetOff),
+            child: const Text('Для выходного'),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, templateTargetBook),
@@ -152,14 +175,12 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                   for (final f in <String?>[
                     null,
                     templateTargetDay,
+                    templateTargetWork,
+                    templateTargetOff,
                     templateTargetBook,
                   ])
                     ChoiceChip(
-                      label: Text(
-                        f == null
-                            ? 'Все'
-                            : (f == templateTargetDay ? 'Дни' : 'Книги'),
-                      ),
+                      label: Text(_filterLabel(f)),
                       selected: _filter == f,
                       onSelected: (_) => setState(() => _filter = f),
                     ),
