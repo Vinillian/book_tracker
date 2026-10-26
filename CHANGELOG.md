@@ -1,6 +1,7 @@
 ## [1.4.0] - Unreleased
 ### Added
 - Work schedule: Settings → "График работы" (work schedule) sets a repeating schedule (N work days, M days off, an anchor day and its type; first case 2 / 2 with 23.10.2026 as a day off). The day screen shows a "Рабочий день" / "Выходной" (Work day / Day off) label. The type is computed from the rule, nothing is stored per day; no schedule is set by default. `AppSettings` gets the optional field `workSchedule` (HiveField 1). Per-day override and backup of the schedule follow in the next part (#144, part 1)
+- Templates for work days and days off: besides "Для дня" and "Для книги" a template can be made "Для рабочего дня" or "Для выходного" (Templates → the tag button of a template, or when creating one; the list has filters "Рабочие" and "Выходные"). Where a day template is offered, the work-day and day-off templates are offered too; old templates work as before. The generator of plans for a period follows (#145, part 1)
 
 ### Changed
 - Custom launcher icon (an open book with a mini heatmap and a task list) instead of the default Flutter one, with an adaptive version for Android 8+, and the launcher name is now "Book Planner" (#154)
