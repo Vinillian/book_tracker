@@ -5,6 +5,7 @@
 
 ### Changed
 - Custom launcher icon (an open book with a mini heatmap and a task list) instead of the default Flutter one, with an adaptive version for Android 8+, and the launcher name is now "Book Planner" (#154)
+- Templates screen: the row of filter chips (Все / Дни / Рабочие / Выходные / Книги) is replaced by one drop-down list at the top (#158)
 
 ## [1.3.0] - 2026-10-25
 ### Added
