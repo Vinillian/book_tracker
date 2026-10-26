@@ -3,6 +3,7 @@ import '../models/node.dart';
 import 'note_service.dart';
 import 'history_service.dart';
 import '../utils/node_copy.dart';
+import '../utils/node_ids.dart';
 import '../utils/nested_category.dart';
 import '../utils/plan_date.dart';
 
@@ -10,7 +11,17 @@ class NodeService {
   final Box<Node> _box;
   final NoteService _noteService;
 
-  NodeService(this._box, this._noteService);
+  /// The ids of every root's tasks as of the last save (#84). A task removed
+  /// from a tree is found by comparing with it: the tree itself cannot tell,
+  /// because some screens change the stored node in place before saving.
+  final Map<dynamic, Set<String>> _knownIds = {};
+
+  NodeService(this._box, this._noteService) {
+    for (final key in _box.keys) {
+      final node = _box.get(key);
+      if (node != null) _knownIds[key] = collectNodeIds(node);
+    }
+  }
 
   Box<Node> get box => _box;
 
@@ -30,8 +41,22 @@ class NodeService {
     return _box.keys.firstWhere((k) => _box.get(k) == node);
   }
 
-  void add(Node node) => _box.add(node);
-  void update(dynamic key, Node node) => _box.put(key, node);
+  void add(Node node) {
+    _box.add(node).then((key) => _knownIds[key] = collectNodeIds(node));
+  }
+
+  /// Saves [node] under [key]. History entries of tasks that are no longer in
+  /// the tree are removed with them (#84).
+  void update(dynamic key, Node node) {
+    final now = collectNodeIds(node);
+    final before = _knownIds[key];
+    if (before != null) {
+      final removed = before.difference(now);
+      if (removed.isNotEmpty) HistoryService.deleteEntriesForTasks(removed);
+    }
+    _knownIds[key] = now;
+    _box.put(key, node);
+  }
 
   void delete(dynamic key) {
     final node = _box.get(key);
@@ -46,6 +71,7 @@ class NodeService {
       HistoryService.deleteEntriesForNode(node.id);
 
       // Удаляем сам узел
+      _knownIds.remove(key);
       _box.delete(key);
     }
   }
