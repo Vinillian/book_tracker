@@ -18,15 +18,18 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
     };
     return AppSettings(
       themeMode: fields[0] as String,
+      workSchedule: fields[1] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(1)
+      ..writeByte(2)
       ..writeByte(0)
-      ..write(obj.themeMode);
+      ..write(obj.themeMode)
+      ..writeByte(1)
+      ..write(obj.workSchedule);
   }
 
   @override

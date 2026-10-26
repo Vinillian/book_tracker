@@ -11,6 +11,7 @@ import '../services/note_service.dart';
 import '../services/history_service.dart';
 import '../utils/node_copy.dart';
 import '../utils/plan_date.dart';
+import '../utils/work_schedule.dart';
 
 class AppState extends ChangeNotifier {
   late final NodeService _nodeService;
@@ -33,6 +34,7 @@ class AppState extends ChangeNotifier {
   }) {
     _settingsBox = settingsBox;
     _loadTheme();
+    _loadWorkSchedule();
 
     _historyBox = historyBox;
     _standardTasksBox = standardTasksBox;
@@ -52,6 +54,28 @@ class AppState extends ChangeNotifier {
   void _loadTheme() {
     final settings = _settingsBox.get('appSettings');
     _themeMode = settings?.themeMode ?? 'system';
+  }
+
+  WorkSchedule? _workSchedule;
+
+  /// The work schedule, or null when none is set (#144).
+  WorkSchedule? get workSchedule => _workSchedule;
+
+  /// Work day / day off for [date]; null when no schedule is set.
+  DayType? dayTypeOf(DateTime date) => _workSchedule?.dayTypeOf(date);
+
+  void _loadWorkSchedule() {
+    final settings = _settingsBox.get('appSettings');
+    _workSchedule = WorkSchedule.tryParse(settings?.workSchedule);
+  }
+
+  void setWorkSchedule(WorkSchedule? schedule) {
+    _workSchedule = schedule;
+    final settings =
+        _settingsBox.get('appSettings') ?? AppSettings(themeMode: _themeMode);
+    settings.workSchedule = schedule?.encode();
+    _settingsBox.put('appSettings', settings);
+    notifyListeners();
   }
 
   void setThemeMode(String mode) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../services/history_service.dart';
+import 'work_schedule_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -51,6 +52,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (value) {
                   if (value != null) appState.setThemeMode(value);
                 },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.event_repeat),
+                title: const Text('График работы'),
+                subtitle: Text(
+                  appState.workSchedule == null
+                      ? 'Не задан'
+                      : appState.workSchedule!.summary,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const WorkScheduleScreen(),
+                  ),
+                ),
               ),
               const Divider(),
               const Padding(

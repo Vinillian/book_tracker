@@ -7,6 +7,7 @@ import '../services/history_service.dart';
 import '../utils/day_dialogs.dart';
 import '../utils/plan_date.dart';
 import '../utils/tracking_id.dart';
+import '../utils/work_schedule.dart';
 import 'components/progress_card.dart';
 import 'components/day_note_card.dart';
 import 'components/day_done_section.dart';
@@ -172,6 +173,35 @@ class _BookScreenState extends State<BookScreen> {
     );
   }
 
+  /// "Рабочий день" / "Выходной" label from the work schedule (#144). Shown
+  /// only for a day plan and only while a schedule is set.
+  Widget _dayTypeBanner(BuildContext context) {
+    final date = _planDate;
+    if (_node.category != 'planner' || date == null) {
+      return const SizedBox.shrink();
+    }
+    final type = context.watch<AppState>().dayTypeOf(date);
+    if (type == null) return const SizedBox.shrink();
+    final isWork = type == DayType.work;
+    final color = isWork ? Colors.orange : Colors.green;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Chip(
+          avatar: Icon(
+            isWork ? Icons.work_outline : Icons.weekend_outlined,
+            size: 18,
+            color: color,
+          ),
+          label: Text(dayTypeLabel(type)),
+          backgroundColor: color.withValues(alpha: 0.15),
+          side: BorderSide(color: color),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTitle() {
     final date = _planDate;
     if (date == null) return Text(_node.name);
@@ -265,6 +295,7 @@ class _BookScreenState extends State<BookScreen> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
+                  _dayTypeBanner(context),
                   ProgressCard(node: _node),
                   DayNoteCard(node: _node),
                   if (_planDate != null)
