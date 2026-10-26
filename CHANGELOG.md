@@ -1,3 +1,7 @@
+## [1.4.0] - Unreleased
+### Changed
+- Custom launcher icon (an open book with a mini heatmap and a task list) instead of the default Flutter one, with an adaptive version for Android 8+, and the launcher name is now "Book Planner" (#154)
+
 ## [1.3.0] - 2026-10-25
 ### Added
 - Calendar: tapping a day opens its plan directly; for a day without a plan a bottom sheet offers "Empty day" or "From template" (#113)
