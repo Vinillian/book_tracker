@@ -25,6 +25,9 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
   // Filter of the management list: null = all, otherwise a template target.
   String? _filter;
 
+  // Value of the "Все" entry of the filter menu (the filter itself is null).
+  static const String _filterAll = 'all';
+
   static String _filterLabel(String? f) {
     switch (f) {
       case null:
@@ -169,22 +172,29 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
           if (!widget.selectionMode)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  for (final f in <String?>[
-                    null,
+              child: DropdownMenu<String>(
+                expandedInsets: EdgeInsets.zero,
+                requestFocusOnTap: false,
+                label: const Text('Показывать'),
+                initialSelection: _filter ?? _filterAll,
+                dropdownMenuEntries: [
+                  for (final f in <String>[
+                    _filterAll,
                     templateTargetDay,
                     templateTargetWork,
                     templateTargetOff,
                     templateTargetBook,
                   ])
-                    ChoiceChip(
-                      label: Text(_filterLabel(f)),
-                      selected: _filter == f,
-                      onSelected: (_) => setState(() => _filter = f),
+                    DropdownMenuEntry<String>(
+                      value: f,
+                      label: _filterLabel(f == _filterAll ? null : f),
                     ),
                 ],
+                onSelected: (value) => setState(
+                  () => _filter = (value == null || value == _filterAll)
+                      ? null
+                      : value,
+                ),
               ),
             ),
           Expanded(
