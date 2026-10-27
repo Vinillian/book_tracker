@@ -7,6 +7,9 @@
 - Custom launcher icon (an open book with a mini heatmap and a task list) instead of the default Flutter one, with an adaptive version for Android 8+, and the launcher name is now "Book Planner" (#154)
 - Templates screen: the row of filter chips (Все / Дни / Рабочие / Выходные / Книги) is replaced by one drop-down list at the top (#158)
 
+### Fixed
+- Deleting a task from a book, a day or a template (in the editor, also several at once) now removes its History entries with it, so no completions of deleted tasks stay behind in the calendar and the heatmap. Tracked activities are left as they are on purpose: they are curated by hand (#84)
+
 ## [1.3.0] - 2026-10-25
 ### Added
 - Calendar: tapping a day opens its plan directly; for a day without a plan a bottom sheet offers "Empty day" or "From template" (#113)
