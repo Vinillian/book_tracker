@@ -14,6 +14,7 @@ import '../services/history_service.dart';
 import 'book_screen.dart';
 import 'plan_generator_screen.dart';
 import 'components/app_drawer_menu.dart';
+import 'components/app_menu_button.dart';
 import 'template_manager_screen.dart';
 
 enum _NewDayChoice { empty, template }
@@ -217,13 +218,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             tooltip: 'Планы за период: создать или удалить',
             onPressed: _openPlanBatch,
           ),
-          Builder(
-            builder: (ctx) => IconButton(
-              icon: const Icon(Icons.menu),
-              tooltip: 'Меню',
-              onPressed: () => Scaffold.of(ctx).openEndDrawer(),
-            ),
-          ),
+          const AppMenuButton(),
         ],
       ),
       endDrawer: const AppDrawerMenu(),

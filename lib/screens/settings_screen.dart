@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../services/history_service.dart';
+import 'components/app_drawer_menu.dart';
+import 'components/app_menu_button.dart';
 import 'work_schedule_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,7 +17,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Настройки')),
+      endDrawer: const AppDrawerMenu(),
+      appBar: AppBar(
+        title: const Text('Настройки'),
+        actions: const [AppMenuButton()],
+      ),
       body: Consumer<AppState>(
         builder: (context, appState, _) {
           final currentTheme = appState.themeMode;

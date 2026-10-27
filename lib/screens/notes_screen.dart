@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/note.dart';
 import '../providers/app_state.dart';
 import 'components/app_drawer_menu.dart';
+import 'components/app_menu_button.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -148,6 +149,7 @@ class _NotesScreenState extends State<NotesScreen> {
             onPressed: _addNote,
             tooltip: 'Новая заметка',
           ),
+          const AppMenuButton(),
         ],
       ),
       endDrawer: const AppDrawerMenu(),

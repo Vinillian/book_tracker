@@ -5,6 +5,8 @@ import '../providers/app_state.dart';
 import '../utils/delete_with_undo.dart';
 import '../utils/flatten_day_parts.dart';
 import '../utils/template_target.dart';
+import 'components/app_drawer_menu.dart';
+import 'components/app_menu_button.dart';
 import 'editor_screen.dart';
 
 class TemplateManagerScreen extends StatefulWidget {
@@ -155,6 +157,7 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
     ];
 
     return Scaffold(
+      endDrawer: widget.selectionMode ? null : const AppDrawerMenu(),
       appBar: AppBar(
         title: const Text('Шаблоны'),
         actions: widget.selectionMode
@@ -165,6 +168,7 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                   onPressed: () => _createTemplate(appState),
                   tooltip: 'Новый шаблон',
                 ),
+                const AppMenuButton(),
               ],
       ),
       body: Column(
