@@ -9,6 +9,7 @@ import '../utils/format_minutes.dart';
 import '../utils/plan_date.dart';
 import '../services/history_service.dart';
 import 'book_screen.dart';
+import 'plan_generator_screen.dart';
 import 'components/app_drawer_menu.dart';
 import 'template_manager_screen.dart';
 
@@ -143,6 +144,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  /// Opens the plan generator; offers to undo the whole batch afterwards (#145).
+  Future<void> _generatePlans() async {
+    final created = await Navigator.push<List<Node>>(
+      context,
+      MaterialPageRoute(builder: (_) => const PlanGeneratorScreen()),
+    );
+    if (created == null || created.isEmpty || !mounted) return;
+    final appState = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Создано дней: ${created.length}'),
+        duration: const Duration(seconds: 8),
+        persist: false,
+        action: SnackBarAction(
+          label: 'Отменить',
+          onPressed: () => appState.removeGeneratedDays(created),
+        ),
+      ),
+    );
+  }
+
   Future<void> _showDay(Node plan) async {
     final appState = context.read<AppState>();
     final key = appState.getKeyForNode(plan);
@@ -170,7 +194,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Календарь прогресса')),
+      appBar: AppBar(
+        title: const Text('Календарь прогресса'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome_motion),
+            tooltip: 'Сгенерировать планы',
+            onPressed: _generatePlans,
+          ),
+        ],
+      ),
       endDrawer: const AppDrawerMenu(),
       body: Column(
         children: [

@@ -11,6 +11,7 @@ import '../services/note_service.dart';
 import '../services/history_service.dart';
 import '../utils/node_copy.dart';
 import '../utils/plan_date.dart';
+import '../utils/plan_generator.dart';
 import '../utils/work_schedule.dart';
 
 class AppState extends ChangeNotifier {
@@ -146,6 +147,37 @@ class AppState extends ChangeNotifier {
     final day = _nodeService.addDayFromTemplate(template, date);
     notifyListeners();
     return day;
+  }
+
+  /// Creates the days of [preview] from their templates (#145). A date that
+  /// got a plan in the meantime is skipped, nothing is overwritten. Returns the
+  /// created days so the caller can offer to undo the whole batch.
+  List<Node> generatePlans(PlanGenerationPreview preview) {
+    final taken = <DateTime>{};
+    for (final plan in plans) {
+      final date = planDateOf(plan);
+      if (date != null) taken.add(date);
+    }
+    final created = <Node>[];
+    for (final item in preview.toCreate) {
+      if (taken.contains(item.date)) continue;
+      created.add(_nodeService.addDayFromTemplate(item.template, item.date));
+    }
+    if (created.isNotEmpty) notifyListeners();
+    return created;
+  }
+
+  /// Deletes days made by [generatePlans] (the "Undo" of the whole batch),
+  /// with their notes and History.
+  void removeGeneratedDays(Iterable<Node> days) {
+    for (final day in days) {
+      try {
+        _nodeService.delete(_nodeService.getKey(day));
+      } on StateError {
+        // already gone
+      }
+    }
+    notifyListeners();
   }
 
   /// Adds reset copies of the tasks of [source] (a template or another day) to
