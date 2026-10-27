@@ -43,11 +43,16 @@ class PlanGenerationPreview {
   /// The day types that have no template (for a clear message).
   final Set<DayType> missingTemplates;
 
+  /// The day-off templates in the order they are used one after another
+  /// (by name); with a single one there is no rotation (#146).
+  final List<Node> offRotation;
+
   const PlanGenerationPreview({
     required this.toCreate,
     required this.existing,
     required this.withoutTemplate,
     required this.missingTemplates,
+    this.offRotation = const [],
   });
 
   int get workCount => toCreate.where((d) => d.type == DayType.work).length;
@@ -55,9 +60,13 @@ class PlanGenerationPreview {
 }
 
 /// Works out which of [dates] get a new plan: a day that already has one is
-/// skipped, the type of any other day comes from [schedule], and the plan is
-/// made from the first template for that type ([templateForDayType]). A day
-/// whose type has no template is left out and reported, nothing is guessed.
+/// skipped, the type of any other day comes from [schedule]. A work day is made
+/// from the first work-day template. Days off take the day-off templates one
+/// after another, ordered by name; which one a day gets depends only on the
+/// day's number among the days off counted from the schedule's anchor, so a
+/// skipped day keeps its place and a later period continues the sequence
+/// (#146). A day whose type has no template is left out and reported, nothing
+/// is guessed.
 PlanGenerationPreview previewPlanGeneration({
   required Iterable<DateTime> dates,
   required WorkSchedule schedule,
@@ -65,9 +74,8 @@ PlanGenerationPreview previewPlanGeneration({
   required bool Function(DateTime date) hasPlan,
 }) {
   final list = templates.toList();
-  final templateFor = <DayType, Node?>{
-    for (final type in DayType.values) type: templateForDayType(list, type),
-  };
+  final workTemplate = templateForDayType(list, DayType.work);
+  final offRotation = templatesForDayType(list, DayType.off);
 
   final toCreate = <PlannedDay>[];
   final existing = <DateTime>[];
@@ -80,7 +88,15 @@ PlanGenerationPreview previewPlanGeneration({
       continue;
     }
     final type = schedule.dayTypeOf(date);
-    final template = templateFor[type];
+    final Node? template;
+    if (type == DayType.work) {
+      template = workTemplate;
+    } else if (offRotation.isEmpty) {
+      template = null;
+    } else {
+      final ordinal = schedule.offDayOrdinalOf(date) ?? 0;
+      template = offRotation[ordinal % offRotation.length];
+    }
     if (template == null) {
       withoutTemplate.add(date);
       missing.add(type);
@@ -94,6 +110,7 @@ PlanGenerationPreview previewPlanGeneration({
     existing: existing,
     withoutTemplate: withoutTemplate,
     missingTemplates: missing,
+    offRotation: offRotation,
   );
 }
 

@@ -196,6 +196,14 @@ class _PlanGeneratorScreenState extends State<PlanGeneratorScreen> {
         '(рабочих: ${preview.workCount}, выходных: ${preview.offCount})',
         style: theme.textTheme.titleSmall,
       ),
+      if (preview.offRotation.length > 1) ...[
+        const SizedBox(height: 12),
+        Text(
+          'Выходные чередуют шаблоны по порядку названий '
+          '(${preview.offRotation.length}): '
+          '${preview.offRotation.map((t) => t.name).join(' → ')}',
+        ),
+      ],
       if (preview.existing.isNotEmpty) ...[
         const SizedBox(height: 12),
         Text(

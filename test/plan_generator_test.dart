@@ -251,4 +251,181 @@ void main() {
       expect(r.deletedWithProgress, 0);
     });
   });
+
+  group('offDayOrdinalOf', () {
+    test('counts the days off from the anchor, null for work days', () {
+      final schedule = twoOnTwoOff(); // 23.10 and 24.10 are days off
+      expect(schedule.offDayOrdinalOf(d(23)), 0);
+      expect(schedule.offDayOrdinalOf(d(24)), 1);
+      expect(schedule.offDayOrdinalOf(d(25)), isNull);
+      expect(schedule.offDayOrdinalOf(d(26)), isNull);
+      expect(schedule.offDayOrdinalOf(d(27)), 2);
+      expect(schedule.offDayOrdinalOf(d(28)), 3);
+      expect(schedule.offDayOrdinalOf(d(31)), 4);
+    });
+
+    test('continues backwards before the anchor', () {
+      final schedule = twoOnTwoOff();
+      expect(schedule.offDayOrdinalOf(d(22)), isNull);
+      expect(schedule.offDayOrdinalOf(d(21)), isNull);
+      expect(schedule.offDayOrdinalOf(d(20)), -1);
+      expect(schedule.offDayOrdinalOf(d(19)), -2);
+    });
+
+    test('anchor on a work block: days off start after it', () {
+      final schedule = WorkSchedule(
+        workDays: 2,
+        offDays: 2,
+        anchor: d(23),
+        anchorIsWork: true,
+      );
+      expect(schedule.offDayOrdinalOf(d(23)), isNull);
+      expect(schedule.offDayOrdinalOf(d(24)), isNull);
+      expect(schedule.offDayOrdinalOf(d(25)), 0);
+      expect(schedule.offDayOrdinalOf(d(26)), 1);
+      expect(schedule.offDayOrdinalOf(d(29)), 2);
+      expect(schedule.offDayOrdinalOf(d(30)), 3);
+    });
+
+    test('5 on / 2 off from a Monday: Saturday and Sunday count 0, 1, 2...', () {
+      final schedule = WorkSchedule(
+        workDays: 5,
+        offDays: 2,
+        anchor: DateTime(2026, 10, 26), // a Monday
+        anchorIsWork: true,
+      );
+      expect(schedule.offDayOrdinalOf(DateTime(2026, 10, 31)), 0);
+      expect(schedule.offDayOrdinalOf(DateTime(2026, 11, 1)), 1);
+      expect(schedule.offDayOrdinalOf(DateTime(2026, 11, 7)), 2);
+      expect(schedule.offDayOrdinalOf(DateTime(2026, 11, 2)), isNull);
+    });
+
+    test('is non-null exactly on days off and grows by one each time', () {
+      final schedule = WorkSchedule(
+        workDays: 3,
+        offDays: 2,
+        anchor: d(23),
+        anchorIsWork: true,
+      );
+      int? previous;
+      for (var i = -20; i < 60; i++) {
+        final date = DateTime(2026, 10, 23 + i);
+        final ordinal = schedule.offDayOrdinalOf(date);
+        expect(ordinal != null, schedule.dayTypeOf(date) == DayType.off);
+        if (ordinal != null) {
+          if (previous != null) expect(ordinal, previous + 1);
+          previous = ordinal;
+        }
+      }
+    });
+  });
+
+  group('compareNamesNaturally / templatesForDayType', () {
+    test('numbers sort as numbers, case is ignored', () {
+      final names = ['Выходной 10', 'выходной 2', 'Выходной 1'];
+      names.sort(compareNamesNaturally);
+      expect(names, ['Выходной 1', 'выходной 2', 'Выходной 10']);
+    });
+
+    test('leading zeros and prefixes', () {
+      expect(compareNamesNaturally('Выходной 02', 'Выходной 10'), lessThan(0));
+      expect(compareNamesNaturally('Выходной', 'Выходной 1'), lessThan(0));
+      expect(compareNamesNaturally('Лес', 'лес'), 0);
+    });
+
+    test('only day-off templates, ordered by name, equal names stay in order',
+        () {
+      final o3 = template('Выходной 3', templateTargetOff);
+      final o1 = template('Выходной 1', templateTargetOff);
+      final o10 = template('Выходной 10', templateTargetOff);
+      final o2a = template('Выходной 2', templateTargetOff);
+      final o2b = template('выходной 2', templateTargetOff);
+      final work = template('Work', templateTargetWork);
+      final plain = template('Plain', templateTargetDay);
+      final result = templatesForDayType(
+        [o3, work, o10, o2b, plain, o1, o2a],
+        DayType.off,
+      );
+      expect(result, [o1, o2b, o2a, o3, o10]);
+    });
+
+    test('no day-off templates gives an empty list', () {
+      expect(
+        templatesForDayType([template('W', templateTargetWork)], DayType.off),
+        isEmpty,
+      );
+    });
+  });
+
+  group('rotation of day-off templates', () {
+    final work = template('Work', templateTargetWork);
+    final o1 = template('Выходной 1', templateTargetOff);
+    final o2 = template('Выходной 2', templateTargetOff);
+    final o3 = template('Выходной 3', templateTargetOff);
+    final o4 = template('Выходной 4', templateTargetOff);
+    // Deliberately not in name order.
+    final shuffled = [o3, work, o1, o4, o2];
+
+    PlanGenerationPreview run(
+      DateTime from,
+      DateTime to, {
+      List<Node>? templates,
+      bool Function(DateTime)? hasPlan,
+    }) =>
+        previewPlanGeneration(
+          dates: datesInRange(from, to),
+          schedule: twoOnTwoOff(),
+          templates: templates ?? shuffled,
+          hasPlan: hasPlan ?? ((_) => false),
+        );
+
+    test('days off take the templates in name order, round and round', () {
+      final p = run(d(23), d(31));
+      final names = {
+        for (final day in p.toCreate) day.date.day: day.template.name,
+      };
+      expect(names, {
+        23: 'Выходной 1',
+        24: 'Выходной 2',
+        25: 'Work',
+        26: 'Work',
+        27: 'Выходной 3',
+        28: 'Выходной 4',
+        29: 'Work',
+        30: 'Work',
+        31: 'Выходной 1',
+      });
+      expect(p.offRotation, [o1, o2, o3, o4]);
+    });
+
+    test('a later period continues the sequence', () {
+      final p = run(d(27), d(28));
+      expect(p.toCreate.map((e) => e.template), [o3, o4]);
+    });
+
+    test('a day that already has a plan keeps its place in the cycle', () {
+      final p = run(d(27), d(28), hasPlan: (date) => date == d(27));
+      expect(p.existing, [d(27)]);
+      expect(p.toCreate.map((e) => e.template), [o4]);
+    });
+
+    test('a single day-off template is used everywhere, as before', () {
+      final p = run(d(23), d(31), templates: [work, o2]);
+      expect(
+        p.toCreate.where((e) => e.type == DayType.off).map((e) => e.template),
+        everyElement(same(o2)),
+      );
+      expect(p.offRotation, [o2]);
+    });
+
+    test('ten templates: "Выходной 10" comes last, not second', () {
+      final ten = [
+        for (var i = 10; i >= 1; i--) template('Выходной $i', templateTargetOff),
+      ];
+      final p = run(d(23), d(24), templates: [work, ...ten]);
+      expect(p.offRotation.map((t) => t.name).last, 'Выходной 10');
+      expect(p.toCreate.map((e) => e.template.name),
+          ['Выходной 1', 'Выходной 2']);
+    });
+  });
 }
