@@ -174,8 +174,7 @@ void main() {
       final b = Node.leaf('b');
       final root = plan([a, b]);
       final service = NodeService(nodes, NoteService(notes));
-      service.add(root);
-      await Future<void>.delayed(Duration.zero);
+      await service.add(root);
       done(root, a);
       done(root, b);
       final key = nodes.keys.single;

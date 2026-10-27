@@ -41,8 +41,9 @@ class NodeService {
     return _box.keys.firstWhere((k) => _box.get(k) == node);
   }
 
-  void add(Node node) {
-    _box.add(node).then((key) => _knownIds[key] = collectNodeIds(node));
+  Future<void> add(Node node) async {
+    final key = await _box.add(node);
+    _knownIds[key] = collectNodeIds(node);
   }
 
   /// Saves [node] under [key]. History entries of tasks that are no longer in
