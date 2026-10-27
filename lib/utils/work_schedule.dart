@@ -30,20 +30,42 @@ class WorkSchedule {
 
   String get summary => 'Рабочих дней: $workDays, выходных: $offDays';
 
-  /// Position of [date] inside the cycle, 0 = the anchor day. Calendar days are
-  /// counted in UTC so daylight saving time cannot shift the result.
-  int _positionOf(DateTime date) {
-    final days = DateTime.utc(date.year, date.month, date.day)
-        .difference(DateTime.utc(anchor.year, anchor.month, anchor.day))
-        .inDays;
-    return days % cycleLength; // Dart's % is never negative here
-  }
+  /// Calendar days from the anchor to [date], negative before the anchor.
+  /// Counted in UTC so daylight saving time cannot shift the result.
+  int _daysFromAnchor(DateTime date) =>
+      DateTime.utc(date.year, date.month, date.day)
+          .difference(DateTime.utc(anchor.year, anchor.month, anchor.day))
+          .inDays;
+
+  /// Position of [date] inside the cycle, 0 = the anchor day.
+  int _positionOf(DateTime date) =>
+      _daysFromAnchor(date) % cycleLength; // Dart's % is never negative here
 
   DayType dayTypeOf(DateTime date) {
     final firstBlock = anchorIsWork ? workDays : offDays;
     final firstType = anchorIsWork ? DayType.work : DayType.off;
     final secondType = anchorIsWork ? DayType.off : DayType.work;
     return _positionOf(date) < firstBlock ? firstType : secondType;
+  }
+
+  /// The number of a day off among all days off of the schedule, counted from
+  /// the anchor: the first day off of the anchor's cycle is 0, the next 1, and
+  /// so on (negative before the anchor). Null for a work day. It depends only
+  /// on the date and the schedule, so planning a period later continues the
+  /// same sequence (#146).
+  int? offDayOrdinalOf(DateTime date) {
+    final days = _daysFromAnchor(date);
+    final position = days % cycleLength;
+    final cycle = (days - position) ~/ cycleLength;
+    final int indexInBlock;
+    if (anchorIsWork) {
+      if (position < workDays) return null;
+      indexInBlock = position - workDays;
+    } else {
+      if (position >= offDays) return null;
+      indexInBlock = position;
+    }
+    return cycle * offDays + indexInBlock;
   }
 
   static String _two(int n) => n.toString().padLeft(2, '0');

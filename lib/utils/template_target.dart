@@ -48,6 +48,52 @@ Node? templateForDayType(Iterable<Node> templates, DayType type) {
   return null;
 }
 
+/// Compares names so that numbers sort as numbers and case is ignored:
+/// "Выходной 2" comes before "Выходной 10" (#146).
+int compareNamesNaturally(String a, String b) {
+  final partsA = _nameParts(a);
+  final partsB = _nameParts(b);
+  for (var i = 0; i < partsA.length && i < partsB.length; i++) {
+    final x = partsA[i];
+    final y = partsB[i];
+    final int c;
+    if (_isDigits(x) && _isDigits(y)) {
+      final nx = x.replaceFirst(RegExp(r'^0+(?=.)'), '');
+      final ny = y.replaceFirst(RegExp(r'^0+(?=.)'), '');
+      c = nx.length != ny.length
+          ? nx.length.compareTo(ny.length)
+          : nx.compareTo(ny);
+    } else {
+      c = x.toLowerCase().compareTo(y.toLowerCase());
+    }
+    if (c != 0) return c;
+  }
+  return partsA.length.compareTo(partsB.length);
+}
+
+List<String> _nameParts(String name) =>
+    [for (final m in RegExp(r'\d+|\D+').allMatches(name)) m[0]!];
+
+bool _isDigits(String s) => s.codeUnitAt(0) >= 48 && s.codeUnitAt(0) <= 57;
+
+/// All templates made exactly for a day of [type], ordered by name (numbers
+/// as numbers); equal names keep their order in [templates]. The day-off
+/// templates are used in this order, one after another (#146).
+List<Node> templatesForDayType(Iterable<Node> templates, DayType type) {
+  final wanted = templateTargetForDayType(type);
+  final matching = <(int, Node)>[];
+  var index = 0;
+  for (final t in templates) {
+    if (t.templateTarget == wanted) matching.add((index, t));
+    index++;
+  }
+  matching.sort((a, b) {
+    final c = compareNamesNaturally(a.$2.name, b.$2.name);
+    return c != 0 ? c : a.$1.compareTo(b.$1);
+  });
+  return [for (final (_, t) in matching) t];
+}
+
 String templateTargetLabel(String? target) {
   switch (target) {
     case templateTargetDay:
