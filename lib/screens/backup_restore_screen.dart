@@ -171,6 +171,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     historyBox: _appState.historyBox,
     standardTasksBox: _appState.standardTasksBox,
     trackedActivitiesBox: _appState.trackedActivitiesBox,
+    workSchedule: _appState.workSchedule,
   );
   Future<bool> _importAll() => FileTransfer.importAll(
     templatesBox: _appState.templatesBox,
@@ -178,6 +179,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     historyBox: _appState.historyBox,
     standardTasksBox: _appState.standardTasksBox,
     trackedActivitiesBox: _appState.trackedActivitiesBox,
+    applyWorkSchedule: (schedule) async => _appState.setWorkSchedule(schedule),
   );
 
   // ========== Вспомогательные методы для SnackBar ==========

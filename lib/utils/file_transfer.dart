@@ -11,6 +11,7 @@ import '../models/history_entry.dart';
 import '../models/standard_task.dart';
 import '../models/tracked_activity.dart';
 import 'plan_date.dart';
+import 'work_schedule.dart';
 
 /// Диапазон дат, применяемый при экспорте категории (Plans/History) и
 /// сохраняемый в файле как метаданные `exportedRange`.
@@ -541,21 +542,61 @@ class FileTransfer {
   // ======================= Полный бэкап и восстановление =======================
   // Не затронуто #92 — формат полного бэкапа отдельный от per-category envelope.
 
+  /// The object a full backup is made of. The work schedule (#144) is always
+  /// written: null means "no schedule was set".
+  static Map<String, dynamic> buildFullBackup({
+    required List<dynamic> templates,
+    required List<dynamic> notes,
+    required List<dynamic> history,
+    required List<dynamic> standardTasks,
+    required List<dynamic> trackedActivities,
+    WorkSchedule? workSchedule,
+  }) =>
+      {
+        'templates': templates,
+        'notes': notes,
+        'history': history,
+        'standardTasks': standardTasks,
+        'trackedActivities': trackedActivities,
+        'workSchedule': workSchedule?.toJson(),
+      };
+
+  /// What a full backup says about the work schedule: [apply] is false when the
+  /// file has nothing usable (a backup made before the schedule existed, or a
+  /// damaged entry), so the current schedule must stay as it is. With [apply]
+  /// true, [schedule] is the one to set, or null if no schedule was set when
+  /// the backup was made.
+  static ({bool apply, WorkSchedule? schedule}) workScheduleOfBackup(
+    Map<String, dynamic> data,
+  ) {
+    if (!data.containsKey('workSchedule')) return (apply: false, schedule: null);
+    final raw = data['workSchedule'];
+    if (raw == null) return (apply: true, schedule: null);
+    final schedule = raw is Map ? WorkSchedule.tryParse(jsonEncode(raw)) : null;
+    if (schedule == null) return (apply: false, schedule: null);
+    return (apply: true, schedule: schedule);
+  }
+
   static Future<bool> exportAll({
     required Box templatesBox,
     required Box notesBox,
     required Box historyBox,
     required Box standardTasksBox,
     required Box trackedActivitiesBox,
+    WorkSchedule? workSchedule,
     String? suggestedName,
   }) async {
-    final all = {
-      'templates': templatesBox.values.map((e) => (e as dynamic).toJson()).toList(),
-      'notes': notesBox.values.map((e) => (e as dynamic).toJson()).toList(),
-      'history': historyBox.values.map((e) => (e as dynamic).toJson()).toList(),
-      'standardTasks': standardTasksBox.values.map((e) => (e as dynamic).toJson()).toList(),
-      'trackedActivities': trackedActivitiesBox.values.map((e) => (e as dynamic).toJson()).toList(),
-    };
+    final all = buildFullBackup(
+      templates: templatesBox.values.map((e) => (e as dynamic).toJson()).toList(),
+      notes: notesBox.values.map((e) => (e as dynamic).toJson()).toList(),
+      history: historyBox.values.map((e) => (e as dynamic).toJson()).toList(),
+      standardTasks:
+          standardTasksBox.values.map((e) => (e as dynamic).toJson()).toList(),
+      trackedActivities: trackedActivitiesBox.values
+          .map((e) => (e as dynamic).toJson())
+          .toList(),
+      workSchedule: workSchedule,
+    );
     final jsonString = jsonEncode(all);
     final bytes = Uint8List.fromList(utf8.encode('\uFEFF$jsonString'));
     final name = suggestedName ?? 'full_backup';
@@ -569,6 +610,7 @@ class FileTransfer {
     required Box historyBox,
     required Box standardTasksBox,
     required Box trackedActivitiesBox,
+    Future<void> Function(WorkSchedule? schedule)? applyWorkSchedule,
   }) async {
     final bytes = await _importFile();
     if (bytes == null) return false;
@@ -613,6 +655,8 @@ class FileTransfer {
       return false;
     }
 
+    final scheduleInBackup = workScheduleOfBackup(data);
+
     // Файл валиден целиком — теперь можно безопасно очищать и записывать.
     await templatesBox.clear();
     await notesBox.clear();
@@ -634,6 +678,9 @@ class FileTransfer {
     }
     for (final ta in parsedTrackedActivities) {
       await trackedActivitiesBox.add(ta);
+    }
+    if (scheduleInBackup.apply) {
+      await applyWorkSchedule?.call(scheduleInBackup.schedule);
     }
 
     return true;
