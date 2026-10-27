@@ -5,6 +5,7 @@
 - Plan generator: the calendar has a new button "Сгенерировать планы" (generate plans). Pick a period (up to 366 days); the screen previews how many work days and days off will be created from the work schedule and the "Для рабочего дня" / "Для выходного" templates. Days that already have a plan are skipped and listed, days whose type has no template are skipped with a hint to create one, nothing is overwritten. After creating, "Отменить" (Undo) removes the whole batch. Rotating the day-off templates follows (#146)
 
 ### Changed
+- Calendar: tapping a day now only selects it and shows a short summary under the calendar (the day type, "Выполнено X из Y" (done X of Y), the plan's tasks with start time and progress, and the day's completed entries). The day opens with the "Открыть день" (Open day) button, or "Создать план…" (Create plan…) when the day has no plan (#162)
 - Custom launcher icon (an open book with a mini heatmap and a task list) instead of the default Flutter one, with an adaptive version for Android 8+, and the launcher name is now "Book Planner" (#154)
 - Templates screen: the row of filter chips (Все / Дни / Рабочие / Выходные / Книги) is replaced by one drop-down list at the top (#158)
 
