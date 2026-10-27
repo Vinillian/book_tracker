@@ -8,8 +8,19 @@ import '../utils/plan_generator.dart';
 import '../utils/work_schedule.dart';
 import 'work_schedule_screen.dart';
 
+/// What the plan screen did: days it created, or days the user chose to
+/// delete (the caller deletes them with "Отменить", see `deleteNodesWithUndo`).
+class PlanBatchResult {
+  final List<Node> created;
+  final List<Node> deleted;
+
+  const PlanBatchResult({this.created = const [], this.deleted = const []});
+}
+
+enum _Mode { create, delete }
+
 /// Creates day plans for a period from the work schedule and the work-day /
-/// day-off templates (#145). Pops with the list of created days.
+/// day-off templates (#145), or deletes the plans of a period (#163).
 class PlanGeneratorScreen extends StatefulWidget {
   const PlanGeneratorScreen({super.key});
 
@@ -22,6 +33,8 @@ class _PlanGeneratorScreenState extends State<PlanGeneratorScreen> {
   static final DateFormat _short = DateFormat('dd.MM');
 
   late DateTimeRange _range;
+  _Mode _mode = _Mode.create;
+  bool _keepWithProgress = true;
 
   @override
   void initState() {
@@ -40,7 +53,7 @@ class _PlanGeneratorScreenState extends State<PlanGeneratorScreen> {
       firstDate: DateTime(2020, 1, 1),
       lastDate: DateTime(2030, 12, 31),
       initialDateRange: _range,
-      helpText: 'Период для планов',
+      helpText: 'Период',
     );
     if (picked != null) setState(() => _range = picked);
   }
@@ -63,96 +76,120 @@ class _PlanGeneratorScreenState extends State<PlanGeneratorScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    final schedule = appState.workSchedule;
+    final dates = datesInRange(_range.start, _range.end);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Сгенерировать планы')),
-      body: schedule == null ? _noSchedule() : _content(appState, schedule),
-    );
-  }
-
-  Widget _noSchedule() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      appBar: AppBar(title: const Text('Планы за период')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'График работы не задан: без него неизвестно, какой день рабочий, '
-            'а какой выходной.',
-            textAlign: TextAlign.center,
+          SegmentedButton<_Mode>(
+            segments: const [
+              ButtonSegment(
+                value: _Mode.create,
+                icon: Icon(Icons.add),
+                label: Text('Создать'),
+              ),
+              ButtonSegment(
+                value: _Mode.delete,
+                icon: Icon(Icons.delete_outline),
+                label: Text('Удалить'),
+              ),
+            ],
+            selected: {_mode},
+            onSelectionChanged: (selection) =>
+                setState(() => _mode = selection.first),
           ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const WorkScheduleScreen()),
-            ),
-            child: const Text('Настроить график'),
-          ),
+          const SizedBox(height: 12),
+          ..._mode == _Mode.create
+              ? _createBody(appState, dates)
+              : _deleteBody(appState, dates),
         ],
       ),
     );
   }
 
-  Widget _content(AppState appState, WorkSchedule schedule) {
-    final dates = datesInRange(_range.start, _range.end);
+  Widget _periodCard(int days) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.date_range),
+        title: const Text('Период'),
+        subtitle: Text(
+          '${_full.format(_range.start)} - ${_full.format(_range.end)} '
+          '($days дн.)',
+        ),
+        trailing: const Icon(Icons.edit_calendar),
+        onTap: _pickRange,
+      ),
+    );
+  }
+
+  // ---------- Создать ----------
+
+  List<Widget> _createBody(AppState appState, List<DateTime> dates) {
+    final schedule = appState.workSchedule;
+    if (schedule == null) {
+      return [
+        const SizedBox(height: 24),
+        const Text(
+          'График работы не задан: без него неизвестно, какой день рабочий, '
+          'а какой выходной.',
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const WorkScheduleScreen()),
+          ),
+          child: const Text('Настроить график'),
+        ),
+      ];
+    }
+
+    final theme = Theme.of(context);
     final tooLong = dates.length > maxPlanGenerationDays;
-    final planDates = _planDates(appState.plans);
     final preview = tooLong
         ? null
         : previewPlanGeneration(
             dates: dates,
             schedule: schedule,
             templates: appState.templates,
-            hasPlan: planDates.contains,
+            hasPlan: _planDates(appState.plans).contains,
           );
-    final theme = Theme.of(context);
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(schedule.summary, style: theme.textTheme.bodyMedium),
-        const SizedBox(height: 8),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.date_range),
-            title: const Text('Период'),
-            subtitle: Text(
-              '${_full.format(_range.start)} - ${_full.format(_range.end)} '
-              '(${dates.length} дн.)',
-            ),
-            trailing: const Icon(Icons.edit_calendar),
-            onTap: _pickRange,
-          ),
+    return [
+      Text(schedule.summary, style: theme.textTheme.bodyMedium),
+      const SizedBox(height: 8),
+      _periodCard(dates.length),
+      const SizedBox(height: 8),
+      if (tooLong)
+        Text(
+          'Период слишком длинный: не больше $maxPlanGenerationDays дней.',
+          style: TextStyle(color: theme.colorScheme.error),
+        )
+      else if (preview != null)
+        ..._createPreviewLines(preview, theme),
+      const SizedBox(height: 16),
+      FilledButton.icon(
+        onPressed: preview == null || preview.toCreate.isEmpty
+            ? null
+            : () {
+                final created =
+                    context.read<AppState>().generatePlans(preview);
+                Navigator.pop(context, PlanBatchResult(created: created));
+              },
+        icon: const Icon(Icons.auto_awesome_motion),
+        label: Text(
+          preview == null || preview.toCreate.isEmpty
+              ? 'Создавать нечего'
+              : 'Создать дней: ${preview.toCreate.length}',
         ),
-        const SizedBox(height: 8),
-        if (tooLong)
-          Text(
-            'Период слишком длинный: не больше $maxPlanGenerationDays дней.',
-            style: TextStyle(color: theme.colorScheme.error),
-          )
-        else if (preview != null) ..._previewLines(preview, theme),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: preview == null || preview.toCreate.isEmpty
-              ? null
-              : () {
-                  final created = context.read<AppState>().generatePlans(preview);
-                  Navigator.pop(context, created);
-                },
-          icon: const Icon(Icons.auto_awesome_motion),
-          label: Text(
-            preview == null || preview.toCreate.isEmpty
-                ? 'Создавать нечего'
-                : 'Создать дней: ${preview.toCreate.length}',
-          ),
-        ),
-      ],
-    );
+      ),
+    ];
   }
 
-  List<Widget> _previewLines(PlanGenerationPreview preview, ThemeData theme) {
+  List<Widget> _createPreviewLines(PlanGenerationPreview preview, ThemeData theme) {
     return [
       Text(
         'Будет создано: ${preview.toCreate.length} '
@@ -185,5 +222,90 @@ class _PlanGeneratorScreenState extends State<PlanGeneratorScreen> {
       if (types.contains(DayType.off)) 'выходных',
     ];
     return names.join(' и ');
+  }
+
+  // ---------- Удалить ----------
+
+  List<Widget> _deleteBody(AppState appState, List<DateTime> dates) {
+    final theme = Theme.of(context);
+    final preview = previewPlanDeletion(
+      dates: dates,
+      plans: appState.plans,
+      keepDaysWithProgress: _keepWithProgress,
+    );
+    final keptDates = [
+      for (final plan in preview.keptWithProgress)
+        if (planDateOf(plan) != null) planDateOf(plan)!,
+    ];
+    final count = preview.toDelete.length;
+
+    return [
+      _periodCard(dates.length),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Не удалять дни, где что-то выполнено'),
+        value: _keepWithProgress,
+        onChanged: (value) => setState(() => _keepWithProgress = value),
+      ),
+      const SizedBox(height: 4),
+      Text('Будет удалено: $count', style: theme.textTheme.titleSmall),
+      if (preview.deletedWithProgress > 0) ...[
+        const SizedBox(height: 8),
+        Text(
+          'Из них дней с выполненными задачами: ${preview.deletedWithProgress}.',
+          style: TextStyle(color: theme.colorScheme.error),
+        ),
+      ],
+      if (keptDates.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Text(
+          'Оставлю дни с выполненными задачами (${keptDates.length}): '
+          '${_datesText(keptDates)}',
+        ),
+      ],
+      const SizedBox(height: 8),
+      const Text('Вместе с днём удаляются его заметка и записи в истории.'),
+      const SizedBox(height: 16),
+      FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: theme.colorScheme.error,
+          foregroundColor: theme.colorScheme.onError,
+        ),
+        onPressed: count == 0 ? null : () => _confirmDelete(preview),
+        icon: const Icon(Icons.delete),
+        label: Text(count == 0 ? 'Удалять нечего' : 'Удалить дней: $count'),
+      ),
+    ];
+  }
+
+  Future<void> _confirmDelete(PlanDeletionPreview preview) async {
+    final count = preview.toDelete.length;
+    final withProgress = preview.deletedWithProgress;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить планы?'),
+        content: Text(
+          'Удалить дней: $count '
+          '(${_full.format(_range.start)} - ${_full.format(_range.end)})?'
+          '${withProgress > 0 ? '\nИз них с выполненными задачами: $withProgress.' : ''}'
+          '\nЗаметки и записи в истории этих дней тоже удалятся. '
+          'Сразу после удаления можно нажать «Отменить».',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      Navigator.pop(context, PlanBatchResult(deleted: preview.toDelete));
+    }
   }
 }

@@ -124,4 +124,131 @@ void main() {
       expect(p.withoutTemplate, isEmpty);
     });
   });
+
+  group('dayHasProgress', () {
+    Node day(List<Node> children) =>
+        Node(name: 'D', children: children, category: 'planner');
+
+    test('a clean day has none', () {
+      expect(dayHasProgress(day([Node.leaf('a'), Node.leaf('b')])), isFalse);
+      expect(dayHasProgress(day([])), isFalse);
+    });
+
+    test('a ticked task, finished steps or logged time count', () {
+      expect(dayHasProgress(day([Node.leaf('a')..completed = true])), isTrue);
+      expect(
+          dayHasProgress(day([
+            Node.leaf('s', stepType: 'stepByStep', totalSteps: 3)
+              ..completedSteps = 1,
+          ])),
+          isTrue);
+      expect(
+          dayHasProgress(day([
+            Node.leaf('t', stepType: 'duration')..loggedMinutes = 10,
+          ])),
+          isTrue);
+    });
+
+    test('progress deep in the tree counts', () {
+      final deep = Node(
+        name: 'g',
+        children: [Node.leaf('x')..completed = true],
+        stepType: 'folder',
+      );
+      expect(dayHasProgress(day([deep])), isTrue);
+    });
+  });
+
+  group('previewPlanDeletion', () {
+    Node plan(int dayOfMonth, {bool done = false}) => Node(
+          name: 'p$dayOfMonth',
+          children: [Node.leaf('a')..completed = done],
+          category: 'planner',
+          plannedDate: d(dayOfMonth),
+        );
+
+    final p25 = plan(25);
+    final p26 = plan(26, done: true);
+    final p27 = plan(27);
+    final p30 = plan(30);
+
+    test('only plans inside the period, in date order', () {
+      final r = previewPlanDeletion(
+        dates: datesInRange(d(25), d(28)),
+        plans: [p30, p27, p25],
+        keepDaysWithProgress: true,
+      );
+      expect(r.toDelete, [p25, p27]);
+      expect(r.keptWithProgress, isEmpty);
+    });
+
+    test('days with progress are kept when asked', () {
+      final r = previewPlanDeletion(
+        dates: datesInRange(d(25), d(28)),
+        plans: [p25, p26, p27],
+        keepDaysWithProgress: true,
+      );
+      expect(r.toDelete, [p25, p27]);
+      expect(r.keptWithProgress, [p26]);
+      expect(r.deletedWithProgress, 0);
+    });
+
+    test('with the option off they are deleted and counted', () {
+      final r = previewPlanDeletion(
+        dates: datesInRange(d(25), d(28)),
+        plans: [p25, p26, p27],
+        keepDaysWithProgress: false,
+      );
+      expect(r.toDelete, [p25, p26, p27]);
+      expect(r.keptWithProgress, isEmpty);
+      expect(r.deletedWithProgress, 1);
+    });
+
+    test('both ends of the period are included', () {
+      final r = previewPlanDeletion(
+        dates: datesInRange(d(25), d(27)),
+        plans: [p25, p27],
+        keepDaysWithProgress: true,
+      );
+      expect(r.toDelete, [p25, p27]);
+    });
+
+    test('a plan without a date is never matched', () {
+      final undated = Node(
+        name: 'Free title',
+        children: [Node.leaf('a')],
+        category: 'planner',
+      );
+      final r = previewPlanDeletion(
+        dates: datesInRange(d(1), d(31)),
+        plans: [undated],
+        keepDaysWithProgress: false,
+      );
+      expect(r.toDelete, isEmpty);
+    });
+
+    test('a legacy plan named by its date is matched', () {
+      final legacy = Node(
+        name: '26.10.2026',
+        children: [Node.leaf('a')],
+        category: 'planner',
+      );
+      final r = previewPlanDeletion(
+        dates: datesInRange(d(25), d(28)),
+        plans: [legacy],
+        keepDaysWithProgress: true,
+      );
+      expect(r.toDelete, [legacy]);
+    });
+
+    test('nothing in the period means nothing to delete', () {
+      final r = previewPlanDeletion(
+        dates: datesInRange(d(1), d(5)),
+        plans: [p25, p26],
+        keepDaysWithProgress: false,
+      );
+      expect(r.toDelete, isEmpty);
+      expect(r.deletedWithProgress, 0);
+    });
+  });
 }

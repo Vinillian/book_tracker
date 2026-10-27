@@ -6,6 +6,7 @@ import '../models/history_entry.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
 import '../utils/day_part.dart';
+import '../utils/delete_with_undo.dart';
 import '../utils/format_minutes.dart';
 import '../utils/plan_date.dart';
 import '../utils/work_schedule.dart';
@@ -146,24 +147,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  /// Opens the plan generator; offers to undo the whole batch afterwards (#145).
-  Future<void> _generatePlans() async {
-    final created = await Navigator.push<List<Node>>(
+  /// Opens the screen that creates or deletes plans for a period; offers to
+  /// undo the whole batch afterwards (#145, #163).
+  Future<void> _openPlanBatch() async {
+    final result = await Navigator.push<PlanBatchResult>(
       context,
       MaterialPageRoute(builder: (_) => const PlanGeneratorScreen()),
     );
-    if (created == null || created.isEmpty || !mounted) return;
+    if (result == null || !mounted) return;
+    if (result.deleted.isNotEmpty) {
+      deleteNodesWithUndo(
+        context,
+        result.deleted,
+        message: 'Удалено дней: ${result.deleted.length}',
+      );
+      return;
+    }
+    if (result.created.isEmpty) return;
     final appState = context.read<AppState>();
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars();
     messenger.showSnackBar(
       SnackBar(
-        content: Text('Создано дней: ${created.length}'),
+        content: Text('Создано дней: ${result.created.length}'),
         duration: const Duration(seconds: 8),
         persist: false,
         action: SnackBarAction(
           label: 'Отменить',
-          onPressed: () => appState.removeGeneratedDays(created),
+          onPressed: () => appState.removeGeneratedDays(result.created),
         ),
       ),
     );
@@ -203,8 +214,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.auto_awesome_motion),
-            tooltip: 'Сгенерировать планы',
-            onPressed: _generatePlans,
+            tooltip: 'Планы за период: создать или удалить',
+            onPressed: _openPlanBatch,
           ),
           Builder(
             builder: (ctx) => IconButton(

@@ -137,6 +137,35 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The same three steps as above for several nodes at once, with a single
+  /// notification each (deleting plans for a period, #163).
+  void hideNodesForDeletion(Iterable<Node> nodes) {
+    _pendingDeleteIds.addAll(nodes.map((n) => n.id));
+    notifyListeners();
+  }
+
+  void restoreNodes(Iterable<Node> nodes) {
+    var changed = false;
+    for (final node in nodes) {
+      if (_pendingDeleteIds.remove(node.id)) changed = true;
+    }
+    if (changed) notifyListeners();
+  }
+
+  void commitNodesDeletion(Iterable<Node> nodes) {
+    var changed = false;
+    for (final node in nodes) {
+      if (!_pendingDeleteIds.remove(node.id)) continue;
+      changed = true;
+      try {
+        _nodeService.delete(_nodeService.getKey(node));
+      } on StateError {
+        // already gone
+      }
+    }
+    if (changed) notifyListeners();
+  }
+
   Node addEmptyDay(DateTime date) {
     final day = _nodeService.addEmptyDay(date);
     notifyListeners();

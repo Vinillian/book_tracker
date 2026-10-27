@@ -1,4 +1,5 @@
 import '../models/node.dart';
+import 'plan_date.dart';
 import 'template_target.dart';
 import 'work_schedule.dart';
 
@@ -93,5 +94,69 @@ PlanGenerationPreview previewPlanGeneration({
     existing: existing,
     withoutTemplate: withoutTemplate,
     missingTemplates: missing,
+  );
+}
+
+/// True if anything in [node] was done: a ticked task, finished steps or
+/// logged time, at any depth (#163).
+bool dayHasProgress(Node node) {
+  if (node.completed || node.completedSteps > 0 || node.loggedMinutes > 0) {
+    return true;
+  }
+  return node.children.any(dayHasProgress);
+}
+
+/// What deleting the plans of a period would do, computed without changing
+/// anything (#163).
+class PlanDeletionPreview {
+  /// Days to delete, in date order.
+  final List<Node> toDelete;
+
+  /// Days left alone because something is done in them.
+  final List<Node> keptWithProgress;
+
+  /// How many of [toDelete] still have something done (only when the
+  /// "keep days with progress" option is off).
+  final int deletedWithProgress;
+
+  const PlanDeletionPreview({
+    required this.toDelete,
+    required this.keptWithProgress,
+    required this.deletedWithProgress,
+  });
+}
+
+/// Picks the plans of [plans] whose date is one of [dates]. With
+/// [keepDaysWithProgress] a day where something is done is not deleted.
+/// Plans without a date are never matched.
+PlanDeletionPreview previewPlanDeletion({
+  required Iterable<DateTime> dates,
+  required Iterable<Node> plans,
+  required bool keepDaysWithProgress,
+}) {
+  final wanted = dates.toSet();
+  final inRange = <(DateTime, Node)>[];
+  for (final plan in plans) {
+    final date = planDateOf(plan);
+    if (date != null && wanted.contains(date)) inRange.add((date, plan));
+  }
+  inRange.sort((a, b) => a.$1.compareTo(b.$1));
+
+  final toDelete = <Node>[];
+  final kept = <Node>[];
+  var deletedWithProgress = 0;
+  for (final (_, plan) in inRange) {
+    final done = dayHasProgress(plan);
+    if (done && keepDaysWithProgress) {
+      kept.add(plan);
+    } else {
+      toDelete.add(plan);
+      if (done) deletedWithProgress++;
+    }
+  }
+  return PlanDeletionPreview(
+    toDelete: toDelete,
+    keptWithProgress: kept,
+    deletedWithProgress: deletedWithProgress,
   );
 }
