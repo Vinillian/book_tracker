@@ -19,6 +19,7 @@ class _WorkScheduleScreenState extends State<WorkScheduleScreen> {
   late int _offDays;
   late DateTime _anchor;
   late bool _anchorIsWork;
+  late Map<DateTime, DayType> _overrides;
 
   @override
   void initState() {
@@ -30,6 +31,7 @@ class _WorkScheduleScreenState extends State<WorkScheduleScreen> {
     final now = DateTime.now();
     _anchor = current?.anchor ?? DateTime(now.year, now.month, now.day);
     _anchorIsWork = current?.anchorIsWork ?? false;
+    _overrides = {...?current?.overrides};
   }
 
   WorkSchedule get _schedule => WorkSchedule(
@@ -37,6 +39,7 @@ class _WorkScheduleScreenState extends State<WorkScheduleScreen> {
         offDays: _offDays,
         anchor: _anchor,
         anchorIsWork: _anchorIsWork,
+        overrides: _overrides,
       );
 
   Future<void> _pickAnchor() async {
@@ -107,6 +110,43 @@ class _WorkScheduleScreenState extends State<WorkScheduleScreen> {
     );
   }
 
+  /// Days whose type was set by hand (a holiday, a swapped shift): they can be
+  /// brought back to the rule here. Applied with "Сохранить" like the rest.
+  List<Widget> _overridesSection() {
+    if (_overrides.isEmpty) return const [];
+    final schedule = _schedule;
+    final days = _overrides.keys.toList()..sort();
+    final fmt = DateFormat('dd.MM.yyyy');
+    return [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Text(
+          'Изменено вручную',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      for (final day in days)
+        ListTile(
+          dense: true,
+          title: Text('${fmt.format(day)}: ${dayTypeLabel(_overrides[day]!)}'),
+          subtitle: Text('По графику: ${dayTypeLabel(schedule.baseDayTypeOf(day))}'),
+          trailing: IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: 'Вернуть по графику',
+            onPressed: () =>
+                setState(() => _overrides = {..._overrides}..remove(day)),
+          ),
+        ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          onPressed: () => setState(() => _overrides = {}),
+          child: const Text('Вернуть все по графику'),
+        ),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,6 +202,7 @@ class _WorkScheduleScreenState extends State<WorkScheduleScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _preview(),
             ),
+            ..._overridesSection(),
           ],
           Padding(
             padding: const EdgeInsets.all(16),
