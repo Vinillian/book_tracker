@@ -65,6 +65,18 @@ class AppState extends ChangeNotifier {
   /// Work day / day off for [date]; null when no schedule is set.
   DayType? dayTypeOf(DateTime date) => _workSchedule?.dayTypeOf(date);
 
+  /// True if the type of [date] was set by hand (#144).
+  bool isDayTypeOverridden(DateTime date) =>
+      _workSchedule?.isOverridden(date) ?? false;
+
+  /// Sets the type of [date] by hand (a holiday, a swapped shift); null brings
+  /// the schedule's rule back. Does nothing while no schedule is set.
+  void setDayTypeOverride(DateTime date, DayType? type) {
+    final schedule = _workSchedule;
+    if (schedule == null) return;
+    setWorkSchedule(schedule.withDayType(date, type));
+  }
+
   void _loadWorkSchedule() {
     final settings = _settingsBox.get('appSettings');
     _workSchedule = WorkSchedule.tryParse(settings?.workSchedule);

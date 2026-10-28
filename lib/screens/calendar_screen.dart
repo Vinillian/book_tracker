@@ -9,7 +9,7 @@ import '../utils/day_part.dart';
 import '../utils/delete_with_undo.dart';
 import '../utils/format_minutes.dart';
 import '../utils/plan_date.dart';
-import '../utils/work_schedule.dart';
+import 'components/day_type_chip.dart';
 import '../services/history_service.dart';
 import 'book_screen.dart';
 import 'plan_generator_screen.dart';
@@ -271,7 +271,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (day == null) return const SizedBox.shrink();
     final theme = Theme.of(context);
     final plan = appState.planForDate(day);
-    final type = appState.dayTypeOf(day);
     final events = _getEventsForDay(day);
 
     return ListView(
@@ -289,8 +288,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       DateFormat('dd.MM.yyyy').format(day),
                       style: theme.textTheme.titleMedium,
                     ),
-                    if (type != null)
-                      Text(dayTypeLabel(type), style: theme.textTheme.bodySmall),
+                    DayTypeChip(date: day),
                   ],
                 ),
               ),

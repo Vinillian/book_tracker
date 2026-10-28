@@ -3,11 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
+import 'components/day_type_chip.dart';
 import '../services/history_service.dart';
 import '../utils/day_dialogs.dart';
 import '../utils/plan_date.dart';
 import '../utils/tracking_id.dart';
-import '../utils/work_schedule.dart';
 import 'components/progress_card.dart';
 import 'components/day_note_card.dart';
 import 'components/day_done_section.dart';
@@ -180,24 +180,14 @@ class _BookScreenState extends State<BookScreen> {
     if (_node.category != 'planner' || date == null) {
       return const SizedBox.shrink();
     }
-    final type = context.watch<AppState>().dayTypeOf(date);
-    if (type == null) return const SizedBox.shrink();
-    final isWork = type == DayType.work;
-    final color = isWork ? Colors.orange : Colors.green;
+    if (context.watch<AppState>().dayTypeOf(date) == null) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Chip(
-          avatar: Icon(
-            isWork ? Icons.work_outline : Icons.weekend_outlined,
-            size: 18,
-            color: color,
-          ),
-          label: Text(dayTypeLabel(type)),
-          backgroundColor: color.withValues(alpha: 0.15),
-          side: BorderSide(color: color),
-        ),
+        child: DayTypeChip(date: date),
       ),
     );
   }
