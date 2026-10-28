@@ -91,6 +91,19 @@ class CategoryEnvelope {
   });
 }
 
+/// Разобранный общий файл планов и истории (#168).
+class PlansHistoryFile {
+  final ExportDateRange? exportedRange;
+  final List<Map<String, dynamic>> plans;
+  final List<Map<String, dynamic>> history;
+
+  const PlansHistoryFile({
+    this.exportedRange,
+    required this.plans,
+    required this.history,
+  });
+}
+
 class FileTransfer {
   // ======================= Общие утилиты =======================
 
@@ -404,31 +417,225 @@ class FileTransfer {
     return ImportResult(status: ImportStatus.success, count: imported);
   }
 
-  /// #94 — импорт Планов и Истории одной связанной операцией (не отдельные
-  /// кнопки). Запрашивает два файла подряд (сначала Планы, потом Историю).
+  // ======================= Планы и история одним файлом (#168) =======================
+
+  /// Категория общего файла планов и истории.
+  static const String plansHistoryCategory = 'plansHistory';
+
+  /// Что попадёт в экспорт планов и истории за [range]: планы (category
+  /// 'planner') с датой в диапазоне и записи Истории за дни диапазона.
+  /// Без диапазона (null) — всё.
+  static ({List<Node> plans, List<HistoryEntry> history}) selectPlansHistory({
+    required Iterable<Node> templates,
+    required Iterable<HistoryEntry> history,
+    ExportDateRange? range,
+  }) {
+    final plans = <Node>[];
+    for (final n in templates) {
+      if (n.category != 'planner') continue;
+      if (range != null) {
+        final d = planDateFromNode(n);
+        if (d == null || !range.contains(d)) continue;
+      }
+      plans.add(n);
+    }
+    final entries = <HistoryEntry>[
+      for (final h in history)
+        if (range == null || range.contains(h.date)) h,
+    ];
+    return (plans: plans, history: entries);
+  }
+
+  /// Общий файл: { schemaVersion, category: 'plansHistory', exportedRange?,
+  /// plans, history }.
+  static Uint8List plansHistoryToJsonBytes({
+    required List<Map<String, dynamic>> plans,
+    required List<Map<String, dynamic>> history,
+    ExportDateRange? exportedRange,
+  }) {
+    final envelope = {
+      'schemaVersion': 1,
+      'category': plansHistoryCategory,
+      if (exportedRange != null) 'exportedRange': exportedRange.toJson(),
+      'plans': plans,
+      'history': history,
+    };
+    return Uint8List.fromList(utf8.encode('\uFEFF${jsonEncode(envelope)}'));
+  }
+
+  /// Разбирает общий файл планов и истории. Null, если это не он (старый
+  /// файл планов или истории, мусор) — вызывающий тогда пробует старый формат.
+  static PlansHistoryFile? parsePlansHistoryFile(Uint8List bytes) {
+    final text = _bytesToJsonString(bytes);
+    if (text == null) return null;
+    try {
+      final dynamic decoded = jsonDecode(text);
+      if (decoded is! Map<String, dynamic> ||
+          decoded['category'] != plansHistoryCategory) {
+        return null;
+      }
+      final plans = decoded['plans'];
+      final history = decoded['history'];
+      if (plans is! List || history is! List) return null;
+      return PlansHistoryFile(
+        exportedRange: ExportDateRange.fromJson(
+          decoded['exportedRange'] as Map<String, dynamic>?,
+        ),
+        plans: plans.cast<Map<String, dynamic>>(),
+        history: history.cast<Map<String, dynamic>>(),
+      );
+    } catch (e) {
+      debugPrint('Ошибка парсинга файла планов и истории: $e');
+      return null;
+    }
+  }
+
+  /// Экспорт планов и истории одним файлом за [dateRange] (null = всё).
+  static Future<bool> exportPlansWithHistory({
+    required Box<Node> templatesBox,
+    required Box<HistoryEntry> historyBox,
+    ExportDateRange? dateRange,
+  }) async {
+    final selected = selectPlansHistory(
+      templates: templatesBox.values,
+      history: historyBox.values,
+      range: dateRange,
+    );
+    if (selected.plans.isEmpty && selected.history.isEmpty) {
+      debugPrint('Нет планов и истории для экспорта');
+      return false;
+    }
+    final bytes = plansHistoryToJsonBytes(
+      plans: [for (final p in selected.plans) p.toJson()],
+      history: [for (final h in selected.history) h.toJson()],
+      exportedRange: dateRange,
+    );
+    final fileName = 'plans_history_${DateTime.now().millisecondsSinceEpoch}.json';
+    return _exportFile(bytes, fileName);
+  }
+
+  /// Записывает Планы и Историю в box'ы. Весь разбор уже сделан до вызова.
   ///
-  /// Диапазон замены берётся из `exportedRange` файла Планов:
-  /// - если диапазон есть — заменяются только те существующие Планы, чья
-  ///   дата (см. planDateFromNode) попадает в этот диапазон
-  /// - если диапазона нет (старый bare-array файл или экспорт "без фильтра") —
-  ///   заменяются вообще все Планы, как раньше вело себя replaceWholeList
+  /// Диапазон замены — [range] (из файла): заменяются только Планы, чья дата
+  /// (planDateFromNode) в нём; без диапазона — все Планы. Если в файле нет
+  /// Планов, ничего не удаляется, добавляется только История.
   ///
-  /// История удаляется ТОЧНО по дереву удаляемых Планов, а не по дате:
-  /// собираются id всех узлов (включая вложенные) каждого удаляемого Плана,
-  /// и удаляются только те HistoryEntry, чей nodeId входит в этот набор.
-  /// Так не задеваются записи Истории от других Планов/Книг, у которых
-  /// случайно совпала дата.
+  /// История, связанная с заменяемыми Планами, удаляется ТОЧНО по nodeId
+  /// (включая вложенные узлы), а не по дате — записи других Планов/Книг с
+  /// той же датой не задеваются. Записи Истории, чей id уже есть в box,
+  /// второй раз не добавляются (повторный импорт того же файла безопасен).
   ///
-  /// Оба файла парсятся полностью в память до того, как box'ы будут тронуты —
+  /// Возвращает число записанных Планов + записей Истории.
+  static Future<int> applyPlansWithHistory({
+    required Box<Node> templatesBox,
+    required Box<HistoryEntry> historyBox,
+    required List<Node> plans,
+    required List<HistoryEntry> history,
+    ExportDateRange? range,
+  }) async {
+    // --- Какие существующие Планы попадают под замену ---
+    final existingPlanKeys = <dynamic>[];
+    final plansToRemove = <Node>[];
+    if (plans.isNotEmpty) {
+      for (final key in templatesBox.keys) {
+        final n = templatesBox.get(key);
+        if (n == null || n.category != 'planner') continue;
+        if (range == null) {
+          existingPlanKeys.add(key);
+          plansToRemove.add(n);
+        } else {
+          final d = planDateFromNode(n);
+          if (d != null && range.contains(d)) {
+            existingPlanKeys.add(key);
+            plansToRemove.add(n);
+          }
+        }
+      }
+    }
+
+    // --- id всех узлов (включая дочерние) удаляемых Планов ---
+    final deletedNodeIds = <String>{};
+    void collectIds(Node n) {
+      deletedNodeIds.add(n.id);
+      for (final c in n.children) {
+        collectIds(c);
+      }
+    }
+    for (final p in plansToRemove) {
+      collectIds(p);
+    }
+
+    // --- Удаляем старые Планы и связанную Историю ---
+    await templatesBox.deleteAll(existingPlanKeys);
+    final historyKeysToDelete = <dynamic>[];
+    for (final key in historyBox.keys) {
+      final h = historyBox.get(key);
+      if (h != null && deletedNodeIds.contains(h.nodeId)) {
+        historyKeysToDelete.add(key);
+      }
+    }
+    await historyBox.deleteAll(historyKeysToDelete);
+
+    // --- Записываем новые Планы и Историю ---
+    for (final p in plans) {
+      await templatesBox.add(p);
+    }
+    final knownIds = historyBox.values.map((h) => h.id).toSet();
+    var addedHistory = 0;
+    for (final h in history) {
+      if (!knownIds.add(h.id)) continue;
+      await historyBox.add(h);
+      addedHistory++;
+    }
+    return plans.length + addedHistory;
+  }
+
+  /// Импорт Планов и Истории одной операцией (#94, #168).
+  ///
+  /// Новый формат — один файл с планами и историей (см.
+  /// plansHistoryToJsonBytes). Старый формат тоже понимается: файл Планов, а
+  /// после него второй файл — История (запрашивается следом).
+  ///
+  /// Файлы парсятся полностью в память до того, как box'ы будут тронуты —
   /// если что-то одно повреждено, ничего не меняется.
   static Future<ImportResult> importPlansWithHistory({
     required Box<Node> templatesBox,
     required Box<HistoryEntry> historyBox,
   }) async {
-    // --- Файл Планов ---
-    final plansBytes = await _importFile();
-    if (plansBytes == null) return const ImportResult(status: ImportStatus.empty);
-    final plansEnvelope = parseCategoryEnvelope(plansBytes);
+    final firstBytes = await _importFile();
+    if (firstBytes == null) return const ImportResult(status: ImportStatus.empty);
+
+    // --- Новый формат: всё в одном файле ---
+    final combined = parsePlansHistoryFile(firstBytes);
+    if (combined != null) {
+      final List<Node> plans;
+      final List<HistoryEntry> history;
+      try {
+        plans = combined.plans.map((j) {
+          final n = Node.fromJson(j);
+          n.category = 'planner';
+          return n;
+        }).toList();
+        history = combined.history.map((j) => HistoryEntry.fromJson(j)).toList();
+      } catch (e) {
+        debugPrint('Ошибка парсинга файла планов и истории: $e');
+        return const ImportResult(status: ImportStatus.malformed);
+      }
+      if (plans.isEmpty && history.isEmpty) {
+        return const ImportResult(status: ImportStatus.empty);
+      }
+      final count = await applyPlansWithHistory(
+        templatesBox: templatesBox,
+        historyBox: historyBox,
+        plans: plans,
+        history: history,
+        range: combined.exportedRange,
+      );
+      return ImportResult(status: ImportStatus.success, count: count);
+    }
+
+    // --- Старый формат: файл Планов, потом файл Истории ---
+    final plansEnvelope = parseCategoryEnvelope(firstBytes);
     if (plansEnvelope == null) {
       return const ImportResult(status: ImportStatus.malformed);
     }
@@ -455,7 +662,6 @@ class FileTransfer {
       return const ImportResult(status: ImportStatus.empty);
     }
 
-    // --- Файл Истории ---
     final historyBytes = await _importFile();
     if (historyBytes == null) return const ImportResult(status: ImportStatus.empty);
     final historyEnvelope = parseCategoryEnvelope(historyBytes);
@@ -479,64 +685,14 @@ class FileTransfer {
       return const ImportResult(status: ImportStatus.malformed);
     }
 
-    // Оба файла целиком распарсены — теперь безопасно трогать box'ы.
-
-    // --- Какие существующие Планы попадают под замену ---
-    final range = plansEnvelope.exportedRange;
-    final existingPlanKeys = <dynamic>[];
-    final plansToRemove = <Node>[];
-    for (final key in templatesBox.keys) {
-      final n = templatesBox.get(key);
-      if (n == null || n.category != 'planner') continue;
-      if (range == null) {
-        existingPlanKeys.add(key);
-        plansToRemove.add(n);
-      } else {
-        final d = planDateFromNode(n);
-        if (d != null && range.contains(d)) {
-          existingPlanKeys.add(key);
-          plansToRemove.add(n);
-        }
-      }
-    }
-
-    // --- id всех узлов (включая дочерние) удаляемых Планов ---
-    final deletedNodeIds = <String>{};
-    void collectIds(Node n) {
-      deletedNodeIds.add(n.id);
-      for (final c in n.children) {
-        collectIds(c);
-      }
-    }
-    for (final p in plansToRemove) {
-      collectIds(p);
-    }
-
-    // --- Удаляем старые Планы ---
-    await templatesBox.deleteAll(existingPlanKeys);
-
-    // --- Удаляем связанную Историю — точно по nodeId, не по дате ---
-    final historyKeysToDelete = <dynamic>[];
-    for (final key in historyBox.keys) {
-      final h = historyBox.get(key);
-      if (h != null && deletedNodeIds.contains(h.nodeId)) {
-        historyKeysToDelete.add(key);
-      }
-    }
-    await historyBox.deleteAll(historyKeysToDelete);
-
-    // --- Записываем новые Планы и Историю ---
-    for (final p in parsedPlans) {
-      await templatesBox.add(p);
-    }
-    for (final h in parsedHistory) {
-      await historyBox.add(h);
-    }
-
-    return ImportResult(
-      status: ImportStatus.success,
-      count: parsedPlans.length + parsedHistory.length,
+    final count = await applyPlansWithHistory(
+      templatesBox: templatesBox,
+      historyBox: historyBox,
+      plans: parsedPlans,
+      history: parsedHistory,
+      range: plansEnvelope.exportedRange,
     );
+    return ImportResult(status: ImportStatus.success, count: count);
   }
 
   // ======================= Полный бэкап и восстановление =======================

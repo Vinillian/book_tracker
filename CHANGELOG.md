@@ -12,6 +12,7 @@
 - Calendar: tapping a day now only selects it and shows a short summary under the calendar (the day type, "Выполнено X из Y" (done X of Y), the plan's tasks with start time and progress, and the day's completed entries). The day opens with the "Открыть день" (Open day) button, or "Создать план…" (Create plan…) when the day has no plan (#162)
 - Custom launcher icon (an open book with a mini heatmap and a task list) instead of the default Flutter one, with an adaptive version for Android 8+, and the launcher name is now "Book Planner" (#154)
 - Templates screen: the row of filter chips (Все / Дни / Рабочие / Выходные / Книги) is replaced by one drop-down list at the top (#158)
+- Import / Export, "Планы и история": one export button saves the plans and the history of the chosen period into one file, and one import step reads it. Files made before (a plans file, then a history file) still work: the import then asks for the second file. History entries that already exist are not added twice, so importing the same file again does not duplicate them (#168)
 
 ### Fixed
 - Deleting a task from a book, a day or a template (in the editor, also several at once) now removes its History entries with it, so no completions of deleted tasks stay behind in the calendar and the heatmap. Tracked activities are left as they are on purpose: they are curated by hand (#84)
