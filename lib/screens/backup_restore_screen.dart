@@ -8,6 +8,8 @@ import '../models/standard_task.dart';
 import '../models/tracked_activity.dart';
 import '../providers/app_state.dart';
 import '../utils/file_transfer.dart';
+import 'components/app_drawer_menu.dart';
+import 'components/app_menu_button.dart';
 
 /// Категории данных, между которыми переключается выпадающий список
 /// на экране Backup/Restore. Plans и History объединены в одну категорию:
@@ -546,7 +548,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Импорт и экспорт')),
+      endDrawer: const AppDrawerMenu(),
+      appBar: AppBar(
+        title: const Text('Импорт и экспорт'),
+        actions: const [AppMenuButton()],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -4,6 +4,8 @@ import 'package:uuid/uuid.dart';
 import '../models/standard_task.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
+import 'components/app_drawer_menu.dart';
+import 'components/app_menu_button.dart';
 
 class StandardTasksScreen extends StatefulWidget {
   const StandardTasksScreen({super.key});
@@ -77,6 +79,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
         .toList();
 
     return Scaffold(
+      endDrawer: const AppDrawerMenu(),
       appBar: AppBar(
         title: const Text('Стандартные задачи'),
         actions: [
@@ -85,6 +88,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
             onPressed: _addTask,
             tooltip: 'Добавить задачу',
           ),
+          const AppMenuButton(),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
