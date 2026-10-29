@@ -10,6 +10,7 @@ import '../utils/delete_with_undo.dart';
 import '../utils/format_minutes.dart';
 import '../utils/plan_date.dart';
 import 'components/day_type_chip.dart';
+import 'components/schedule_day_cell.dart';
 import '../services/history_service.dart';
 import 'book_screen.dart';
 import 'plan_generator_screen.dart';
@@ -200,6 +201,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final planDays = _planDays(appState.plans);
+    final schedule = appState.workSchedule;
+    final today = DateTime.now();
     // Re-read History on every build: it changes elsewhere (deleting a plan,
     // ticking tasks), and AppState notifications rebuild this screen.
     _events = HistoryService.getAllEntriesGroupedByDate();
@@ -239,6 +242,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
             },
             eventLoader: markersForDay,
             calendarBuilders: CalendarBuilders<Object>(
+              // With a work schedule every date is tinted by its day type
+              // (#171); the markers below are still drawn over the cell.
+              prioritizedBuilder: schedule == null
+                  ? null
+                  : (context, day, focusedDay) => ScheduleDayCell(
+                        dayNumber: day.day,
+                        type: schedule.dayTypeOf(day),
+                        overridden: schedule.isOverridden(day),
+                        selected: isSameDay(_selectedDay, day),
+                        today: isSameDay(today, day),
+                        outside: day.month != focusedDay.month,
+                      ),
               markerBuilder: (context, day, events) {
                 final hasPlan = events.contains(_planMarker);
                 final hasHistory = events.any((e) => e is HistoryEntry);
@@ -257,6 +272,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           _legend(context),
+          if (schedule != null) ...[
+            const SizedBox(height: 4),
+            const ScheduleLegend(),
+          ],
           const SizedBox(height: 8),
           Expanded(child: _buildDaySummary(appState)),
         ],
