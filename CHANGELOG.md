@@ -18,6 +18,7 @@
 
 ### Fixed
 - Deleting a task from a book, a day or a template (in the editor, also several at once) now removes its History entries with it, so no completions of deleted tasks stay behind in the calendar and the heatmap. Tracked activities are left as they are on purpose: they are curated by hand (#84)
+- Editing a standard task (for example a checkbox becomes 2 steps) now reaches the task picker of the heatmap: the list shows the standard tasks with their current type and steps, and a tracked task follows the name and type of its standard task. Tasks already placed in plans and templates keep what they were made with (#173)
 
 ## [1.3.0] - 2026-10-25
 ### Added

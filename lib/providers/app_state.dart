@@ -12,6 +12,7 @@ import '../services/history_service.dart';
 import '../utils/node_copy.dart';
 import '../utils/plan_date.dart';
 import '../utils/plan_generator.dart';
+import '../utils/tracking_choices.dart';
 import '../utils/work_schedule.dart';
 
 class AppState extends ChangeNotifier {
@@ -273,16 +274,35 @@ class AppState extends ChangeNotifier {
 
   void updateStandardTask(String id, StandardTask task) {
     dynamic keyToUpdate;
+    String? previousTrackingId;
     for (var key in _standardTasksBox.keys) {
       final existing = _standardTasksBox.get(key);
       if (existing != null && existing.id == id) {
         keyToUpdate = key;
+        previousTrackingId = existing.trackingId;
         break;
       }
     }
     if (keyToUpdate != null) {
       _standardTasksBox.put(keyToUpdate, task);
+      _syncTrackedActivities(task, previousTrackingId ?? task.trackingId);
       notifyListeners();
+    }
+  }
+
+  /// A tracked activity follows its standard task: the name and the type of an
+  /// edited task reach it (#173). Plan and template tasks are copies and keep
+  /// what they were made with.
+  void _syncTrackedActivities(StandardTask task, String previousTrackingId) {
+    for (final key in _trackedActivitiesBox.keys.toList()) {
+      final activity = _trackedActivitiesBox.get(key);
+      if (activity == null) continue;
+      final updated = trackedActivityFollowing(
+        activity,
+        task,
+        previousTrackingId: previousTrackingId,
+      );
+      if (updated != null) _trackedActivitiesBox.put(key, updated);
     }
   }
 
