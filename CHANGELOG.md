@@ -17,6 +17,7 @@
 - Import / Export, "Планы и история": one export button saves the plans and the history of the chosen period into one file, and one import step reads it. Files made before (a plans file, then a history file) still work: the import then asks for the second file. History entries that already exist are not added twice, so importing the same file again does not duplicate them (#168)
 
 ### Fixed
+- Standard tasks: the tracking id (what keeps a habit on one line of History and the heatmap) is now chosen by one rule everywhere: a tracked habit or a task with the same name, otherwise the standard task's own id. Renaming a standard task no longer gives it a new id, so it stays on its line, and the heatmap picker does not offer it again as a new one (#176)
 - Deleting a task from a book, a day or a template (in the editor, also several at once) now removes its History entries with it, so no completions of deleted tasks stay behind in the calendar and the heatmap. Tracked activities are left as they are on purpose: they are curated by hand (#84)
 - Editing a standard task (for example a checkbox becomes 2 steps) now reaches the task picker of the heatmap: the list shows the standard tasks with their current type and steps, and a tracked task follows the name and type of its standard task. Tasks already placed in plans and templates keep what they were made with (#173)
 

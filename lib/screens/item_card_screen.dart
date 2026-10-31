@@ -197,7 +197,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     );
     if (selected != null) {
       final name = selected.name;
-      final existingId = _findExistingTrackingId(name);
+      // The standard task's own id is the fallback, as in the quick picker.
+      final existingId =
+          _findExistingTrackingId(name, fallback: selected.trackingId);
       setState(() {
         _nameController.text = name;
         _stepType = selected.stepType;
@@ -211,13 +213,13 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   }
 
   /// Поиск существующего trackingId для задачи с таким же именем
-  String _findExistingTrackingId(String name) {
+  String _findExistingTrackingId(String name, {String? fallback}) {
     final appState = context.read<AppState>();
     return resolveTrackingId(
       name,
       tracked: appState.trackedActivities,
       roots: [...appState.books, ...appState.plans, ...appState.templates],
-      fallback: const Uuid().v4(),
+      fallback: fallback ?? const Uuid().v4(),
     );
   }
 
