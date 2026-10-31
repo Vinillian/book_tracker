@@ -1,4 +1,4 @@
-## [1.4.0] - Unreleased
+## [1.4.0] - 2026-10-31
 ### Added
 - Work schedule: Settings → "График работы" (work schedule) sets a repeating schedule (N work days, M days off, an anchor day and its type; first case 2 / 2 with 23.10.2026 as a day off). The day screen shows a "Рабочий день" / "Выходной" (Work day / Day off) label. The type is computed from the rule, nothing is stored per day; no schedule is set by default. `AppSettings` gets the optional field `workSchedule` (HiveField 1). The day type can be set by hand and the schedule is saved in the full backup, see below (#144)
 - The work schedule is saved in the full backup and comes back with "Восстановление из бэкапа" (restore from backup). A backup made before 1.4.0 has no schedule in it and leaves the current one as it is (#144)
