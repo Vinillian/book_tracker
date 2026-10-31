@@ -25,3 +25,23 @@ void _reset(Node node) {
     _reset(child);
   }
 }
+
+/// A new template made from the template [source] (#174): the same tasks with
+/// new ids and no progress. [name] and [target] (null = for any day or book)
+/// are the new template's own.
+Node templateCopy(Node source, {required String name, String? target}) {
+  final copy = copyAndReset(source);
+  copy.name = name;
+  copy.category = 'template';
+  copy.templateTarget = target;
+  return copy;
+}
+
+/// Adds reset copies of the tasks of [source] at the end of the tasks of
+/// [target] (loading a base template into another one, #174). Returns how many
+/// tasks were added; [source] is not changed.
+int appendCopiesOfTasks(Node target, Node source) {
+  final copies = [for (final c in source.children) copyAndReset(c)];
+  target.children.addAll(copies);
+  return copies.length;
+}

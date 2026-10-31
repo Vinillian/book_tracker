@@ -4,6 +4,7 @@ import '../models/node.dart';
 import '../providers/app_state.dart';
 import '../utils/delete_with_undo.dart';
 import '../utils/flatten_day_parts.dart';
+import '../utils/node_copy.dart';
 import '../utils/template_target.dart';
 import 'components/app_drawer_menu.dart';
 import 'components/app_menu_button.dart';
@@ -89,6 +90,84 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
         templateTarget: target,
       ),
     );
+  }
+
+  /// Asks the name and the purpose of a copy of [template]; null = cancelled.
+  /// The purpose starts as the source's, so a base "Утро" can become
+  /// "Выходной 1", "Выходной 2" ... one dialog each (#174).
+  Future<({String name, String? target})?> _askCopyDetails(Node template) {
+    final controller = TextEditingController(text: '${template.name} (копия)');
+    var target = template.templateTarget ?? 'any';
+    const options = <(String, String)>[
+      (templateTargetDay, 'Для дня'),
+      (templateTargetWork, 'Для рабочего дня'),
+      (templateTargetOff, 'Для выходного'),
+      (templateTargetBook, 'Для книги'),
+      ('any', 'Любой (и для дня, и для книги)'),
+    ];
+    return showDialog<({String name, String? target})>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Создать копию'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Название'),
+              ),
+              const SizedBox(height: 16),
+              const Text('Для чего шаблон'),
+              DropdownButton<String>(
+                isExpanded: true,
+                value: target,
+                items: [
+                  for (final (value, label) in options)
+                    DropdownMenuItem(value: value, child: Text(label)),
+                ],
+                onChanged: (value) =>
+                    setLocal(() => target = value ?? target),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () {
+                final name = controller.text.trim();
+                if (name.isEmpty) return;
+                Navigator.pop(
+                  ctx,
+                  (name: name, target: target == 'any' ? null : target),
+                );
+              },
+              child: const Text('Создать'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Makes a new template from [template]: the same tasks, ready to be changed
+  /// (#174). The base stays as it is.
+  Future<void> _duplicateTemplate(AppState appState, Node template) async {
+    final details = await _askCopyDetails(template);
+    if (details == null || !mounted) return;
+    appState.addNode(
+      templateCopy(template, name: details.name, target: details.target),
+    );
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(content: Text('Создан шаблон «${details.name}»')),
+      );
   }
 
   Future<void> _changeTarget(AppState appState, Node template) async {
@@ -252,21 +331,6 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                         : Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (hasDayPartFolders(template))
-                                IconButton(
-                                  icon: const Icon(Icons.format_list_bulleted),
-                                  tooltip: 'Убрать папки Утро/День/Вечер',
-                                  visualDensity: VisualDensity.compact,
-                                  onPressed: () =>
-                                      _flattenFolders(appState, template),
-                                ),
-                              IconButton(
-                                icon: const Icon(Icons.label_outline),
-                                tooltip: 'Для чего шаблон',
-                                visualDensity: VisualDensity.compact,
-                                onPressed: () =>
-                                    _changeTarget(appState, template),
-                              ),
                               IconButton(
                                 icon: const Icon(Icons.edit),
                                 onPressed: () async {
@@ -287,6 +351,34 @@ class _TemplateManagerScreenState extends State<TemplateManagerScreen> {
                               IconButton(
                                 icon: const Icon(Icons.delete),
                                 onPressed: () => deleteNodeWithUndo(context, template),
+                              ),
+                              PopupMenuButton<String>(
+                                tooltip: 'Ещё',
+                                onSelected: (value) {
+                                  switch (value) {
+                                    case 'copy':
+                                      _duplicateTemplate(appState, template);
+                                    case 'target':
+                                      _changeTarget(appState, template);
+                                    case 'flatten':
+                                      _flattenFolders(appState, template);
+                                  }
+                                },
+                                itemBuilder: (_) => [
+                                  const PopupMenuItem(
+                                    value: 'copy',
+                                    child: Text('Создать копию…'),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'target',
+                                    child: Text('Для чего шаблон…'),
+                                  ),
+                                  if (hasDayPartFolders(template))
+                                    const PopupMenuItem(
+                                      value: 'flatten',
+                                      child: Text('Убрать папки Утро/День/Вечер'),
+                                    ),
+                                ],
                               ),
                             ],
                           ),
