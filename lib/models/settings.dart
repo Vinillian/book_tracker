@@ -7,5 +7,9 @@ class AppSettings {
   @HiveField(0)
   String themeMode;
 
-  AppSettings({required this.themeMode});
+  /// The work schedule as JSON (see `WorkSchedule`), null = no schedule (#144).
+  @HiveField(1)
+  String? workSchedule;
+
+  AppSettings({required this.themeMode, this.workSchedule});
 }

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
+import 'components/day_type_chip.dart';
 import '../services/history_service.dart';
 import '../utils/day_dialogs.dart';
 import '../utils/plan_date.dart';
@@ -172,6 +173,25 @@ class _BookScreenState extends State<BookScreen> {
     );
   }
 
+  /// "Рабочий день" / "Выходной" label from the work schedule (#144). Shown
+  /// only for a day plan and only while a schedule is set.
+  Widget _dayTypeBanner(BuildContext context) {
+    final date = _planDate;
+    if (_node.category != 'planner' || date == null) {
+      return const SizedBox.shrink();
+    }
+    if (context.watch<AppState>().dayTypeOf(date) == null) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: DayTypeChip(date: date),
+      ),
+    );
+  }
+
   Widget _buildTitle() {
     final date = _planDate;
     if (date == null) return Text(_node.name);
@@ -265,6 +285,7 @@ class _BookScreenState extends State<BookScreen> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
+                  _dayTypeBanner(context),
                   ProgressCard(node: _node),
                   DayNoteCard(node: _node),
                   if (_planDate != null)

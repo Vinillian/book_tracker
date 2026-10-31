@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../services/history_service.dart';
+import 'components/app_drawer_menu.dart';
+import 'components/app_menu_button.dart';
+import 'work_schedule_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,7 +17,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Настройки')),
+      endDrawer: const AppDrawerMenu(),
+      appBar: AppBar(
+        title: const Text('Настройки'),
+        actions: const [AppMenuButton()],
+      ),
       body: Consumer<AppState>(
         builder: (context, appState, _) {
           final currentTheme = appState.themeMode;
@@ -51,6 +58,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (value) {
                   if (value != null) appState.setThemeMode(value);
                 },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.event_repeat),
+                title: const Text('График работы'),
+                subtitle: Text(
+                  appState.workSchedule == null
+                      ? 'Не задан'
+                      : appState.workSchedule!.summary,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const WorkScheduleScreen(),
+                  ),
+                ),
               ),
               const Divider(),
               const Padding(

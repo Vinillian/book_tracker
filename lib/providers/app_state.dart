@@ -11,6 +11,9 @@ import '../services/note_service.dart';
 import '../services/history_service.dart';
 import '../utils/node_copy.dart';
 import '../utils/plan_date.dart';
+import '../utils/plan_generator.dart';
+import '../utils/tracking_choices.dart';
+import '../utils/work_schedule.dart';
 
 class AppState extends ChangeNotifier {
   late final NodeService _nodeService;
@@ -33,6 +36,7 @@ class AppState extends ChangeNotifier {
   }) {
     _settingsBox = settingsBox;
     _loadTheme();
+    _loadWorkSchedule();
 
     _historyBox = historyBox;
     _standardTasksBox = standardTasksBox;
@@ -52,6 +56,40 @@ class AppState extends ChangeNotifier {
   void _loadTheme() {
     final settings = _settingsBox.get('appSettings');
     _themeMode = settings?.themeMode ?? 'system';
+  }
+
+  WorkSchedule? _workSchedule;
+
+  /// The work schedule, or null when none is set (#144).
+  WorkSchedule? get workSchedule => _workSchedule;
+
+  /// Work day / day off for [date]; null when no schedule is set.
+  DayType? dayTypeOf(DateTime date) => _workSchedule?.dayTypeOf(date);
+
+  /// True if the type of [date] was set by hand (#144).
+  bool isDayTypeOverridden(DateTime date) =>
+      _workSchedule?.isOverridden(date) ?? false;
+
+  /// Sets the type of [date] by hand (a holiday, a swapped shift); null brings
+  /// the schedule's rule back. Does nothing while no schedule is set.
+  void setDayTypeOverride(DateTime date, DayType? type) {
+    final schedule = _workSchedule;
+    if (schedule == null) return;
+    setWorkSchedule(schedule.withDayType(date, type));
+  }
+
+  void _loadWorkSchedule() {
+    final settings = _settingsBox.get('appSettings');
+    _workSchedule = WorkSchedule.tryParse(settings?.workSchedule);
+  }
+
+  void setWorkSchedule(WorkSchedule? schedule) {
+    _workSchedule = schedule;
+    final settings =
+        _settingsBox.get('appSettings') ?? AppSettings(themeMode: _themeMode);
+    settings.workSchedule = schedule?.encode();
+    _settingsBox.put('appSettings', settings);
+    notifyListeners();
   }
 
   void setThemeMode(String mode) {
@@ -112,6 +150,35 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The same three steps as above for several nodes at once, with a single
+  /// notification each (deleting plans for a period, #163).
+  void hideNodesForDeletion(Iterable<Node> nodes) {
+    _pendingDeleteIds.addAll(nodes.map((n) => n.id));
+    notifyListeners();
+  }
+
+  void restoreNodes(Iterable<Node> nodes) {
+    var changed = false;
+    for (final node in nodes) {
+      if (_pendingDeleteIds.remove(node.id)) changed = true;
+    }
+    if (changed) notifyListeners();
+  }
+
+  void commitNodesDeletion(Iterable<Node> nodes) {
+    var changed = false;
+    for (final node in nodes) {
+      if (!_pendingDeleteIds.remove(node.id)) continue;
+      changed = true;
+      try {
+        _nodeService.delete(_nodeService.getKey(node));
+      } on StateError {
+        // already gone
+      }
+    }
+    if (changed) notifyListeners();
+  }
+
   Node addEmptyDay(DateTime date) {
     final day = _nodeService.addEmptyDay(date);
     notifyListeners();
@@ -122,6 +189,37 @@ class AppState extends ChangeNotifier {
     final day = _nodeService.addDayFromTemplate(template, date);
     notifyListeners();
     return day;
+  }
+
+  /// Creates the days of [preview] from their templates (#145). A date that
+  /// got a plan in the meantime is skipped, nothing is overwritten. Returns the
+  /// created days so the caller can offer to undo the whole batch.
+  List<Node> generatePlans(PlanGenerationPreview preview) {
+    final taken = <DateTime>{};
+    for (final plan in plans) {
+      final date = planDateOf(plan);
+      if (date != null) taken.add(date);
+    }
+    final created = <Node>[];
+    for (final item in preview.toCreate) {
+      if (taken.contains(item.date)) continue;
+      created.add(_nodeService.addDayFromTemplate(item.template, item.date));
+    }
+    if (created.isNotEmpty) notifyListeners();
+    return created;
+  }
+
+  /// Deletes days made by [generatePlans] (the "Undo" of the whole batch),
+  /// with their notes and History.
+  void removeGeneratedDays(Iterable<Node> days) {
+    for (final day in days) {
+      try {
+        _nodeService.delete(_nodeService.getKey(day));
+      } on StateError {
+        // already gone
+      }
+    }
+    notifyListeners();
   }
 
   /// Adds reset copies of the tasks of [source] (a template or another day) to
@@ -176,16 +274,35 @@ class AppState extends ChangeNotifier {
 
   void updateStandardTask(String id, StandardTask task) {
     dynamic keyToUpdate;
+    String? previousTrackingId;
     for (var key in _standardTasksBox.keys) {
       final existing = _standardTasksBox.get(key);
       if (existing != null && existing.id == id) {
         keyToUpdate = key;
+        previousTrackingId = existing.trackingId;
         break;
       }
     }
     if (keyToUpdate != null) {
       _standardTasksBox.put(keyToUpdate, task);
+      _syncTrackedActivities(task, previousTrackingId ?? task.trackingId);
       notifyListeners();
+    }
+  }
+
+  /// A tracked activity follows its standard task: the name and the type of an
+  /// edited task reach it (#173). Plan and template tasks are copies and keep
+  /// what they were made with.
+  void _syncTrackedActivities(StandardTask task, String previousTrackingId) {
+    for (final key in _trackedActivitiesBox.keys.toList()) {
+      final activity = _trackedActivitiesBox.get(key);
+      if (activity == null) continue;
+      final updated = trackedActivityFollowing(
+        activity,
+        task,
+        previousTrackingId: previousTrackingId,
+      );
+      if (updated != null) _trackedActivitiesBox.put(key, updated);
     }
   }
 

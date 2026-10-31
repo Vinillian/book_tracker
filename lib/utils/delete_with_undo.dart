@@ -41,3 +41,40 @@ void deleteNodeWithUndo(BuildContext context, Node node) {
         if (!undone) appState.commitNodeDeletion(node);
       });
 }
+
+/// То же для нескольких узлов сразу (удаление планов за период, #163): один
+/// snackbar с «Отменить» возвращает все. Заметки и History стираются, когда
+/// snackbar закрылся без нажатия «Отменить».
+void deleteNodesWithUndo(
+  BuildContext context,
+  List<Node> nodes, {
+  required String message,
+}) {
+  if (nodes.isEmpty) return;
+  final appState = context.read<AppState>();
+  final messenger = ScaffoldMessenger.of(context);
+
+  messenger.clearSnackBars();
+  appState.hideNodesForDeletion(nodes);
+
+  var undone = false;
+  messenger
+      .showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 8),
+          persist: false,
+          action: SnackBarAction(
+            label: 'Отменить',
+            onPressed: () {
+              undone = true;
+              appState.restoreNodes(nodes);
+            },
+          ),
+        ),
+      )
+      .closed
+      .then((_) {
+        if (!undone) appState.commitNodesDeletion(nodes);
+      });
+}

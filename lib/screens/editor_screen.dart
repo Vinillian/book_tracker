@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
 import '../utils/format_minutes.dart';
+import '../utils/node_copy.dart';
 import 'item_card_screen.dart';
+import 'template_manager_screen.dart';
 
 class EditorScreen extends StatefulWidget {
   final Node node;
@@ -294,6 +296,41 @@ class _EditorScreenState extends State<EditorScreen> {
     }
   }
 
+  /// Loads the tasks of another template (a base such as "Утро") into this one:
+  /// they are added as copies at the end, so only what differs is left to add
+  /// (#174). Later changes of the base do not reach this template.
+  Future<void> _loadFromTemplate() async {
+    final source = await Navigator.push<Node>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const TemplateManagerScreen(
+          selectionMode: true,
+          filterCategory: 'planner',
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    if (source.id == _workingCopy.id) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Нельзя загрузить шаблон сам в себя')),
+      );
+      return;
+    }
+    final count = appendCopiesOfTasks(_workingCopy, source);
+    setState(() {});
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          count == 0
+              ? 'В шаблоне «${source.name}» нет задач'
+              : 'Добавлено задач из «${source.name}»: $count',
+        ),
+      ),
+    );
+  }
+
   void _addFolder() {
     final newNode = Node(name: '', children: [], stepType: 'folder');
     setState(() {
@@ -400,16 +437,22 @@ class _EditorScreenState extends State<EditorScreen> {
                     onSelected: (value) {
                       if (value == 'leaf') _addLeaf();
                       if (value == 'folder') _addFolder();
+                      if (value == 'template') _loadFromTemplate();
                     },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
                         value: 'leaf',
                         child: Text('Добавить лист'),
                       ),
-                      PopupMenuItem(
+                      const PopupMenuItem(
                         value: 'folder',
                         child: Text('Добавить папку'),
                       ),
+                      if (_category == 'template')
+                        const PopupMenuItem(
+                          value: 'template',
+                          child: Text('Загрузить из шаблона…'),
+                        ),
                     ],
                     icon: const Icon(Icons.add),
                   ),
