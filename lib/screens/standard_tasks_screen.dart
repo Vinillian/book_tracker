@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 import '../models/standard_task.dart';
-import '../models/node.dart';
 import '../providers/app_state.dart';
+import '../utils/tracking_id.dart';
+import 'components/app_drawer_menu.dart';
+import 'components/app_menu_button.dart';
 
 class StandardTasksScreen extends StatefulWidget {
   const StandardTasksScreen({super.key});
@@ -77,6 +78,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
         .toList();
 
     return Scaffold(
+      endDrawer: const AppDrawerMenu(),
       appBar: AppBar(
         title: const Text('Стандартные задачи'),
         actions: [
@@ -85,6 +87,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
             onPressed: _addTask,
             tooltip: 'Добавить задачу',
           ),
+          const AppMenuButton(),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
@@ -184,30 +187,6 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
     super.dispose();
   }
 
-  String _findExistingTrackingId(String name, AppState appState) {
-    final allNodes = <Node>[];
-    allNodes.addAll(appState.books);
-    allNodes.addAll(appState.plans);
-    allNodes.addAll(appState.templates);
-
-    List<Node> collectLeaves(List<Node> nodes) {
-      final leaves = <Node>[];
-      for (var node in nodes) {
-        if (node.isTrackableTask) leaves.add(node);
-        leaves.addAll(collectLeaves(node.children));
-      }
-      return leaves;
-    }
-
-    final allLeaves = collectLeaves(allNodes);
-    for (var node in allLeaves) {
-      if (node.name.toLowerCase() == name.toLowerCase() && node.trackingId.isNotEmpty) {
-        return node.trackingId;
-      }
-    }
-    return const Uuid().v4();
-  }
-
   void _save() {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
@@ -233,7 +212,14 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       return;
     }
 
-    final trackingId = _findExistingTrackingId(name, appState);
+    // One rule for the tracking id everywhere (#176): a tracked habit or a task
+    // with this name, otherwise the task's own id, so a rename keeps its line.
+    final trackingId = resolveTrackingId(
+      name,
+      tracked: appState.trackedActivities,
+      roots: [...appState.books, ...appState.plans, ...appState.templates],
+      fallback: widget.task.trackingId,
+    );
 
     final updatedTask = StandardTask(
       id: widget.task.id,

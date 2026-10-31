@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
+import '../utils/tracking_choices.dart';
 
 class PickTaskForTrackingScreen extends StatefulWidget {
   const PickTaskForTrackingScreen({super.key});
@@ -33,24 +34,20 @@ class _PickTaskForTrackingScreenState extends State<PickTaskForTrackingScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
-    final plans = appState.plans;
-    final allLeafNodes = _collectLeafNodesFromPlans(plans);
+    final allLeafNodes = _collectLeafNodesFromPlans(appState.plans);
 
-    // Группируем по trackingId
-    final uniqueMap = <String, Node>{};
-    for (var node in allLeafNodes) {
-      if (!uniqueMap.containsKey(node.trackingId)) {
-        uniqueMap[node.trackingId] = node;
-      }
-    }
-    final allUniqueNodes = uniqueMap.values.toList();
-    allUniqueNodes.sort((a, b) => a.name.compareTo(b.name));
+    // Стандартные задачи с их актуальным описанием (тип, число шагов), затем
+    // задачи из планов, которых нет среди стандартных (по trackingId) (#173).
+    final choices = trackingChoices(
+      standardTasks: appState.standardTasks,
+      planLeaves: allLeafNodes,
+    );
 
     // Фильтрация по поисковому запросу
     final filteredNodes = _searchQuery.isEmpty
-        ? allUniqueNodes
-        : allUniqueNodes.where((node) =>
-        node.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+        ? choices
+        : choices.where((c) =>
+        c.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -81,22 +78,16 @@ class _PickTaskForTrackingScreenState extends State<PickTaskForTrackingScreen> {
       ),
       body: filteredNodes.isEmpty
           ? const Center(
-        child: Text('Нет доступных задач.\nСоздайте не-рутинные задачи в планах.'),
+        child: Text('Нет доступных задач.\nСоздайте стандартную задачу или не-рутинную задачу в плане.'),
       )
           : ListView.builder(
         itemCount: filteredNodes.length,
         itemBuilder: (ctx, index) {
-          final node = filteredNodes[index];
+          final choice = filteredNodes[index];
           return ListTile(
-            title: Text(node.name),
-            subtitle: Text(
-              node.stepType == 'single'
-                  ? 'Одиночный чекбокс'
-                  : node.isDuration
-                      ? 'Длительность'
-                      : 'Пошаговая (${node.totalSteps} шагов)',
-            ),
-            onTap: () => Navigator.pop(context, node),
+            title: Text(choice.name),
+            subtitle: Text(choice.description),
+            onTap: () => Navigator.pop(context, choice.toNode()),
           );
         },
       ),

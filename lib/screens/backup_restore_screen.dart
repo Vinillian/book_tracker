@@ -8,6 +8,8 @@ import '../models/standard_task.dart';
 import '../models/tracked_activity.dart';
 import '../providers/app_state.dart';
 import '../utils/file_transfer.dart';
+import 'components/app_drawer_menu.dart';
+import 'components/app_menu_button.dart';
 
 /// Категории данных, между которыми переключается выпадающий список
 /// на экране Backup/Restore. Plans и History объединены в одну категорию:
@@ -83,17 +85,14 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     setCategory: 'book',
   );
 
-  Future<bool> _exportPlans() => FileTransfer.exportCategory(
-    box: _appState.templatesBox,
-    category: 'planner',
-    categoryFilter: 'planner',
+  // #168: Планы и История экспортируются одним файлом и импортируются одной
+  // операцией. Старые файлы (отдельно Планы, затем История) импорт тоже
+  // понимает — тогда он запросит второй файл.
+  Future<bool> _exportPlansHistory() => FileTransfer.exportPlansWithHistory(
+    templatesBox: _appState.templatesBox,
+    historyBox: _appState.historyBox,
     dateRange: _plansHistoryRange,
-    dateExtractor: FileTransfer.planDateFromNode,
-    suggestedName: 'plans',
   );
-  // #94: импорт Планов теперь всегда тянет за собой связанную Историю
-  // одной операцией (запросит два файла подряд: Планы, затем Историю).
-  // Отдельной кнопки "Импорт истории" в UI больше нет.
   Future<ImportResult> _importPlansWithHistory() =>
       FileTransfer.importPlansWithHistory(
         templatesBox: _appState.templatesBox,
@@ -128,17 +127,6 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     filterJson: (json) => json['linkedNodeId'] == null,
   );
 
-  Future<bool> _exportHistory() => FileTransfer.exportCategory(
-    box: _appState.historyBox,
-    category: 'history',
-    dateRange: _plansHistoryRange,
-    dateExtractor: (h) => h.date,
-    suggestedName: 'history',
-  );
-  // Импорт Истории отдельной кнопкой больше не существует — см. #94,
-  // _importPlansWithHistory выше. Экспорт остаётся отдельным (та же кнопка,
-  // тот же диапазон _plansHistoryRange, что и у Plans).
-
   // Стандартные задачи
   Future<bool> _exportStandardTasks() => FileTransfer.exportCategory(
     box: _appState.standardTasksBox,
@@ -171,6 +159,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     historyBox: _appState.historyBox,
     standardTasksBox: _appState.standardTasksBox,
     trackedActivitiesBox: _appState.trackedActivitiesBox,
+    workSchedule: _appState.workSchedule,
   );
   Future<bool> _importAll() => FileTransfer.importAll(
     templatesBox: _appState.templatesBox,
@@ -178,6 +167,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     historyBox: _appState.historyBox,
     standardTasksBox: _appState.standardTasksBox,
     trackedActivitiesBox: _appState.trackedActivitiesBox,
+    applyWorkSchedule: (schedule) async => _appState.setWorkSchedule(schedule),
   );
 
   // ========== Вспомогательные методы для SnackBar ==========
@@ -397,29 +387,21 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           const Padding(
             padding: EdgeInsets.only(bottom: 8),
             child: Text(
-              'Один диапазон дат применяется и к Планам, и к Истории — '
-                  'они экспортируются и импортируются вместе.',
+              'Планы и История сохраняются в один файл за выбранный '
+                  'диапазон дат и импортируются вместе.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
           _buildTile(
-            'Экспорт планов',
+            'Экспорт планов и истории',
                 () => _runExport(
-              _exportPlans,
-              'Планы экспортированы',
-              'Нет планов для экспорта в выбранном диапазоне или отменено',
+              _exportPlansHistory,
+              'Планы и история экспортированы',
+              'Нет планов и истории в выбранном диапазоне или отменено',
             ),
           ),
           _buildTile(
-            'Экспорт истории',
-                () => _runExport(
-              _exportHistory,
-              'История экспортирована',
-              'Нет истории для экспорта в выбранном диапазоне или отменено',
-            ),
-          ),
-          _buildTile(
-            'Импорт планов (+ история)',
+            'Импорт планов и истории',
                 () => _runImport(
               _importPlansWithHistory,
               'Импортировано (планы + история)',
@@ -429,9 +411,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           const Padding(
             padding: EdgeInsets.only(bottom: 8, top: 4),
             child: Text(
-              'Импорт запросит два файла подряд: сначала Планы, потом '
-                  'Историю. Заменяются только те Планы (и связанная с ними '
-                  'История), что попадают в диапазон импортируемого файла.',
+              'Заменяются только те Планы (и связанная с ними История), что '
+                  'попадают в диапазон импортируемого файла. Записи Истории, '
+                  'которые уже есть, не дублируются. Старые файлы (отдельно '
+                  'Планы, потом История) тоже подходят: импорт запросит '
+                  'второй файл.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
@@ -544,7 +528,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Импорт и экспорт')),
+      endDrawer: const AppDrawerMenu(),
+      appBar: AppBar(
+        title: const Text('Импорт и экспорт'),
+        actions: const [AppMenuButton()],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

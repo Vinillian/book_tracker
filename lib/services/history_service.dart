@@ -25,6 +25,23 @@ class HistoryService {
     }
   }
 
+  /// Removes the History entries of tasks that were deleted from a tree
+  /// (#84). Returns how many entries were removed.
+  static int deleteEntriesForTasks(Set<String> nodeIds) {
+    if (nodeIds.isEmpty) return 0;
+    final keysToDelete = <dynamic>[];
+    for (var key in _box.keys) {
+      final entry = _box.get(key);
+      if (entry != null && nodeIds.contains(entry.nodeId)) {
+        keysToDelete.add(key);
+      }
+    }
+    for (var key in keysToDelete) {
+      _box.delete(key);
+    }
+    return keysToDelete.length;
+  }
+
   static Future<void> deleteHistoryForDate(DateTime date) async {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
