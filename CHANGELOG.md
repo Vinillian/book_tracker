@@ -1,3 +1,12 @@
+## [Unreleased]
+### Changed
+- Plans tab: the folder button (templates screen) is removed from the app bar; the templates screen is in the menu only, and "+" creates a day from a template (#179)
+- The deprecated `Radio` (`groupValue` / `onChanged`) and `MaterialStateProperty` APIs are replaced by `RadioGroup` and `WidgetStateProperty`, an unused import is gone: `flutter analyze` has no issues left (#89)
+
+### Fixed
+- Statistics: "Лидеры прогресса" (progress leaders) no longer gets an unpredictable order, or a broken bar, for an empty book or plan (division by zero); equal progress keeps the original order (#74)
+- Settings: deleting the History of a day or all of it no longer uses a screen context after the screen may have been closed (#88)
+
 ## [1.4.0] - 2026-10-31
 ### Added
 - Work schedule: Settings → "График работы" (work schedule) sets a repeating schedule (N work days, M days off, an anchor day and its type; first case 2 / 2 with 23.10.2026 as a day off). The day screen shows a "Рабочий день" / "Выходной" (Work day / Day off) label. The type is computed from the rule, nothing is stored per day; no schedule is set by default. `AppSettings` gets the optional field `workSchedule` (HiveField 1). The day type can be set by hand and the schedule is saved in the full backup, see below (#144)

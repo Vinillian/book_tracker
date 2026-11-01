@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
+import '../utils/progress.dart';
 import '../widgets/activity_calendar.dart';
 import 'components/app_drawer_menu.dart';
 
@@ -55,12 +56,12 @@ class StatisticsScreen extends StatelessWidget {
               ? completedLeaves / totalLeaves
               : 0.0;
 
-          allItems.sort(
-                (a, b) => (b['completed'] / b['total']).compareTo(
-              a['completed'] / a['total'],
-            ),
-          );
-          final topItems = allItems.take(5).toList();
+          // An empty book or plan has progress 0, not NaN (#74).
+          final topItems = sortedByProgress(
+            allItems,
+            completed: (item) => item['completed'] as int,
+            total: (item) => item['total'] as int,
+          ).take(5).toList();
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -112,7 +113,10 @@ class StatisticsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 ...topItems.map((item) {
-                  final progress = item['completed'] / item['total'];
+                  final progress = progressRatio(
+                    item['completed'] as int,
+                    item['total'] as int,
+                  );
                   final category = item['category'] == 'book'
                       ? 'Книга'
                       : 'План';
