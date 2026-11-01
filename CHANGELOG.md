@@ -2,10 +2,12 @@
 ### Changed
 - Plans tab: the folder button (templates screen) is removed from the app bar; the templates screen is in the menu only, and "+" creates a day from a template (#179)
 - The deprecated `Radio` (`groupValue` / `onChanged`) and `MaterialStateProperty` APIs are replaced by `RadioGroup` and `WidgetStateProperty`, an unused import is gone: `flutter analyze` has no issues left (#89)
+- Finding the key of a record by its id (standard tasks, tracked activities, notes, nodes) goes through one helper, `findKeyById`, instead of five hand-written loops. Tests now cover hiding, undoing and committing the deletion of nodes, notes and History, and the standard task / tracked activity updates (#77, #126)
 
 ### Fixed
 - Statistics: "Лидеры прогресса" (progress leaders) no longer gets an unpredictable order, or a broken bar, for an empty book or plan (division by zero); equal progress keeps the original order (#74)
 - Settings: deleting the History of a day or all of it no longer uses a screen context after the screen may have been closed (#88)
+- Saving or deleting a book, plan or template no longer depends on the object being the very same instance as the stored one: the stored record is found by its id, so an edited copy (and a copy handed to the undo window) reaches the right record instead of silently doing nothing (#73)
 
 ## [1.4.0] - 2026-10-31
 ### Added
