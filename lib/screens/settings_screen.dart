@@ -14,6 +14,82 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  static String _dateLabel(DateTime d) => '${d.day}.${d.month}.${d.year}';
+
+  /// Asks for a day and a confirmation, then deletes that day's History.
+  /// Everything after an `await` goes through the State's own `context` behind
+  /// `mounted`, so leaving the screen meanwhile cannot touch a dead context
+  /// (#88).
+  Future<void> _deleteHistoryForDay(AppState appState) async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (selectedDate == null || !mounted) return;
+
+    final label = _dateLabel(selectedDate);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Подтверждение'),
+        content: Text(
+          'Все записи истории за $label будут безвозвратно удалены. Продолжить?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    await HistoryService.deleteHistoryForDate(selectedDate);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('История за $label удалена')),
+    );
+    appState.notify();
+  }
+
+  /// Asks for a confirmation, then clears the whole History (#88).
+  Future<void> _clearAllHistory(AppState appState) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Подтверждение'),
+        content: const Text(
+          'Вся история будет безвозвратно удалена. Продолжить?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    await HistoryService.clear();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Вся история удалена')),
+    );
+    appState.notify();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,29 +111,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              RadioListTile<String>(
-                title: const Text('Системная'),
-                value: 'system',
+              // The group value and the callback live in a RadioGroup (the
+              // per-tile ones are deprecated, #89).
+              RadioGroup<String>(
                 groupValue: currentTheme,
                 onChanged: (value) {
                   if (value != null) appState.setThemeMode(value);
                 },
-              ),
-              RadioListTile<String>(
-                title: const Text('Светлая'),
-                value: 'light',
-                groupValue: currentTheme,
-                onChanged: (value) {
-                  if (value != null) appState.setThemeMode(value);
-                },
-              ),
-              RadioListTile<String>(
-                title: const Text('Тёмная'),
-                value: 'dark',
-                groupValue: currentTheme,
-                onChanged: (value) {
-                  if (value != null) appState.setThemeMode(value);
-                },
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RadioListTile<String>(
+                      title: Text('Системная'),
+                      value: 'system',
+                    ),
+                    RadioListTile<String>(
+                      title: Text('Светлая'),
+                      value: 'light',
+                    ),
+                    RadioListTile<String>(
+                      title: Text('Тёмная'),
+                      value: 'dark',
+                    ),
+                  ],
+                ),
               ),
               const Divider(),
               ListTile(
@@ -87,82 +164,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 title: const Text('Удалить историю за выбранный день'),
                 leading: const Icon(Icons.delete_sweep, color: Colors.red),
-                onTap: () async {
-                  final selectedDate = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2030),
-                  );
-                  if (selectedDate == null) return;
-
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Подтверждение'),
-                      content: Text(
-                        'Все записи истории за ${selectedDate.day}.${selectedDate.month}.${selectedDate.year} будут безвозвратно удалены. Продолжить?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Отмена'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Удалить', style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirm == true && mounted) {
-                    await HistoryService.deleteHistoryForDate(selectedDate);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'История за ${selectedDate.day}.${selectedDate.month}.${selectedDate.year} удалена',
-                          ),
-                        ),
-                      );
-                      appState.notify();
-                    }
-                  }
-                },
+                onTap: () => _deleteHistoryForDay(appState),
               ),
               ListTile(
                 title: const Text('Очистить всю историю'),
                 leading: const Icon(Icons.delete_forever, color: Colors.red),
-                onTap: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Подтверждение'),
-                      content: const Text(
-                        'Вся история будет безвозвратно удалена. Продолжить?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Отмена'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Удалить', style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirm == true && mounted) {
-                    await HistoryService.clear();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Вся история удалена')),
-                      );
-                      appState.notify();
-                    }
-                  }
-                },
+                onTap: () => _clearAllHistory(appState),
               ),
             ],
           );

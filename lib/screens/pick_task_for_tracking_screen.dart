@@ -65,8 +65,8 @@ class _PickTaskForTrackingScreenState extends State<PickTaskForTrackingScreen> {
                   _searchQuery = value;
                 });
               },
-              elevation: MaterialStateProperty.all(0),
-              shape: MaterialStateProperty.all(
+              elevation: WidgetStateProperty.all(0),
+              shape: WidgetStateProperty.all(
                 RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(color: Colors.grey.shade300),

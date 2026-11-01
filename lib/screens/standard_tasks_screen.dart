@@ -102,8 +102,8 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
                   _searchQuery = value;
                 });
               },
-              elevation: MaterialStateProperty.all(0),
-              shape: MaterialStateProperty.all(
+              elevation: WidgetStateProperty.all(0),
+              shape: WidgetStateProperty.all(
                 RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(color: Colors.grey.shade300),
@@ -263,17 +263,24 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
               'Тип прогресса:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            RadioListTile<String>(
-              title: const Text('Одиночный чекбокс'),
-              value: 'single',
+            RadioGroup<String>(
               groupValue: _stepType,
-              onChanged: (value) => setState(() => _stepType = value!),
-            ),
-            RadioListTile<String>(
-              title: const Text('Пошаговый'),
-              value: 'stepByStep',
-              groupValue: _stepType,
-              onChanged: (value) => setState(() => _stepType = value!),
+              onChanged: (value) {
+                if (value != null) setState(() => _stepType = value);
+              },
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<String>(
+                    title: Text('Одиночный чекбокс'),
+                    value: 'single',
+                  ),
+                  RadioListTile<String>(
+                    title: Text('Пошаговый'),
+                    value: 'stepByStep',
+                  ),
+                ],
+              ),
             ),
             if (_stepType == 'stepByStep') ...[
               const SizedBox(height: 16),

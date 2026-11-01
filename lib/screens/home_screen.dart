@@ -275,19 +275,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       return [
         IconButton(
-          icon: const Icon(Icons.folder),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                const TemplateManagerScreen(selectionMode: false),
-              ),
-            );
-          },
-          tooltip: 'Управление шаблонами',
-        ),
-        IconButton(
           icon: const Icon(Icons.add),
           onPressed: _showNewDayDialog,
           tooltip: 'Новый день',
