@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/note.dart';
+import '../utils/box_keys.dart';
 
 class NoteService {
   final Box<Note> _box;
@@ -51,14 +52,7 @@ class NoteService {
       return;
     }
     // Если не нашли, ищем заметку, у которой поле id равно переданному id
-    dynamic keyToDelete;
-    for (var key in _box.keys) {
-      final note = _box.get(key);
-      if (note != null && note.id == id) {
-        keyToDelete = key;
-        break;
-      }
-    }
+    final keyToDelete = findKeyById<Note>(_box, (n) => n.id, id);
     if (keyToDelete != null) {
       _box.delete(keyToDelete);
     } else {
