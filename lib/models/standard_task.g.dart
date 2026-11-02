@@ -24,13 +24,14 @@ class StandardTaskAdapter extends TypeAdapter<StandardTask> {
       excludeFromHistory: fields[4] as bool,
       colorValue: fields[5] as int?,
       trackingId: fields[6] as String?,
+      targetMinutes: fields[7] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, StandardTask obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class StandardTaskAdapter extends TypeAdapter<StandardTask> {
       ..writeByte(5)
       ..write(obj.colorValue)
       ..writeByte(6)
-      ..write(obj.trackingId);
+      ..write(obj.trackingId)
+      ..writeByte(7)
+      ..write(obj.targetMinutes);
   }
 
   @override
