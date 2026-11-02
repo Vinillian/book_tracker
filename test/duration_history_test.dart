@@ -131,6 +131,9 @@ void main() {
       final day60 = DateTime(2026, 10, 22);
       final day5 = DateTime(2026, 10, 23);
       final dayTwoSessions = DateTime(2026, 10, 24);
+      final day10 = DateTime(2026, 10, 25);
+      final day15 = DateTime(2026, 10, 26);
+      final day45 = DateTime(2026, 10, 27);
 
       HistoryService.recordDurationLog(
           bookId: 'b', node: n, minutes: 20, targetDate: day20);
@@ -148,6 +151,12 @@ void main() {
 
       HistoryService.recordDurationLog(
           bookId: 'b', node: n, minutes: 5, targetDate: day5);
+      HistoryService.recordDurationLog(
+          bookId: 'b', node: n, minutes: 10, targetDate: day10);
+      HistoryService.recordDurationLog(
+          bookId: 'b', node: n, minutes: 15, targetDate: day15);
+      HistoryService.recordDurationLog(
+          bookId: 'b', node: n, minutes: 45, targetDate: day45);
 
       HistoryService.recordDurationLog(
           bookId: 'b', node: n, minutes: 15, targetDate: dayTwoSessions);
@@ -166,7 +175,10 @@ void main() {
       expect(data[day40]![n.trackingId], 2.0);
       expect(data[day60]![n.trackingId], 3.0);
       expect(data[day5]![n.trackingId], 0.25);
+      expect(data[day10]![n.trackingId], 0.5);
+      expect(data[day15]![n.trackingId], 0.75);
       expect(data[dayTwoSessions]![n.trackingId], 1.5);
+      expect(data[day45]![n.trackingId], 2.25);
 
       // The point conversion is presentation-only; raw history minutes remain.
       final durationEntries =
@@ -175,7 +187,7 @@ void main() {
         0,
         (total, entry) => total + (entry.minutes ?? 0),
       );
-      expect(storedMinutes, 155);
+      expect(storedMinutes, 225);
     });
 
     test('heatmap keeps single and step task intensity semantics unchanged',
