@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:book_tracker/models/node.dart';
 import 'package:book_tracker/models/standard_task.dart';
 import 'package:book_tracker/models/tracked_activity.dart';
 import 'package:book_tracker/providers/app_state.dart';
+import 'package:book_tracker/screens/item_card_screen.dart';
 import 'package:book_tracker/screens/standard_tasks_screen.dart';
 import 'package:book_tracker/services/hive_startup.dart';
 
@@ -95,6 +97,64 @@ void main() {
     expect(appState.standardTasks.single.name, 'Чтение');
     expect(appState.standardTasks.single.stepType, 'duration');
     expect(appState.standardTasks.single.targetMinutes, 45);
+  });
+
+
+  testWidgets('item-card picker copies duration goal and tracking identity',
+      (tester) async {
+    appState.addStandardTask(
+      StandardTask(
+        name: 'Бег',
+        stepType: 'duration',
+        targetMinutes: 45,
+        trackingId: 'running-standard-task',
+      ),
+    );
+
+    Node? createdNode;
+    await tester.pumpWidget(
+      ChangeNotifierProvider<AppState>.value(
+        value: appState,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () async {
+                  createdNode = await Navigator.of(context).push<Node>(
+                    MaterialPageRoute(
+                      builder: (_) => ItemCardScreen(
+                        node: Node.leaf(''),
+                        isNew: true,
+                        quickAdd: true,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Добавить задачу'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Добавить задачу'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Выбрать из стандартных'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Бег'));
+    await tester.pumpAndSettle();
+
+    final targetField = find.byType(TextField).at(1);
+    expect(tester.widget<TextField>(targetField).controller!.text, '45');
+
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    expect(createdNode, isNotNull);
+    expect(createdNode!.stepType, 'duration');
+    expect(createdNode!.targetMinutes, 45);
+    expect(createdNode!.trackingId, 'running-standard-task');
   });
 
   testWidgets('editing duration task preserves tracking id and updates tracked activity',
