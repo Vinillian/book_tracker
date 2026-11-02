@@ -300,7 +300,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                         date.month,
                                         date.day,
                                       );
-                                      final intensity = data[normalizedDate]?[activity.nodeId] ?? 0;
+                                      final intensity = data[normalizedDate]?[activity.nodeId] ?? 0.0;
                                       final color = Color(activity.colorValue);
                                       final isToday = normalizedDate.year == today.year &&
                                           normalizedDate.month == today.month &&
@@ -327,18 +327,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                           )
                                               : null,
                                         ),
-                                        child: intensity > 0
-                                            ? Center(
-                                          child: Text(
-                                            intensity.toString(),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 7,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        )
-                                            : null,
                                       );
                                     },
                                   ).toList(),
