@@ -80,11 +80,13 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField).first, 'Чтение');
+    await tester.ensureVisible(find.text('Длительность'));
     await tester.tap(find.text('Длительность'));
     await tester.pumpAndSettle();
 
     expect(find.text('Цель, минут (необязательно):'), findsOneWidget);
     final targetField = find.byType(TextField).at(1);
+    await tester.ensureVisible(targetField);
     await tester.enterText(targetField, '45');
     await tester.tap(find.byIcon(Icons.check));
     await tester.pumpAndSettle();
@@ -115,9 +117,12 @@ void main() {
 
     await _openEditor(tester, appState, task, isNew: false);
     await tester.enterText(find.byType(TextField).first, 'Чтение книг');
+    await tester.ensureVisible(find.text('Длительность'));
     await tester.tap(find.text('Длительность'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).at(1), '60');
+    final targetField = find.byType(TextField).at(1);
+    await tester.ensureVisible(targetField);
+    await tester.enterText(targetField, '60');
     await tester.tap(find.byIcon(Icons.check));
     await tester.pumpAndSettle();
 
