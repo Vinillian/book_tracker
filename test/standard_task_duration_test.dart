@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:book_tracker/models/standard_task.dart';
-import 'package:book_tracker/models/node.dart';
 
 class _LegacyStandardTaskAdapter extends TypeAdapter<StandardTask> {
   @override
