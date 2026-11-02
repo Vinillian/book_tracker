@@ -123,22 +123,98 @@ void main() {
       expect(history.values.single.minutes, 45);
     });
 
-    test('heatmap sums the minutes of a tracked duration task per day',
+    test('heatmap converts summed duration minutes to fractional 20-minute points',
         () async {
       final n = durationNode('Работа');
-      final day = DateTime(2026, 10, 25, 14, 30);
+      final day20 = DateTime(2026, 10, 20);
+      final day40 = DateTime(2026, 10, 21);
+      final day60 = DateTime(2026, 10, 22);
+      final day5 = DateTime(2026, 10, 23);
+      final dayTwoSessions = DateTime(2026, 10, 24);
+
       HistoryService.recordDurationLog(
-          bookId: 'b', node: n, minutes: 25, targetDate: day);
+          bookId: 'b', node: n, minutes: 20, targetDate: day20);
+
+      // Separate sessions are summed before converting minutes to points.
       HistoryService.recordDurationLog(
-          bookId: 'b', node: n, minutes: 35, targetDate: day);
+          bookId: 'b', node: n, minutes: 20, targetDate: day40);
+      HistoryService.recordDurationLog(
+          bookId: 'b', node: n, minutes: 20, targetDate: day40);
+
+      HistoryService.recordDurationLog(
+          bookId: 'b', node: n, minutes: 25, targetDate: day60);
+      HistoryService.recordDurationLog(
+          bookId: 'b', node: n, minutes: 35, targetDate: day60);
+
+      HistoryService.recordDurationLog(
+          bookId: 'b', node: n, minutes: 5, targetDate: day5);
+
+      HistoryService.recordDurationLog(
+          bookId: 'b', node: n, minutes: 15, targetDate: dayTwoSessions);
+      HistoryService.recordDurationLog(
+          bookId: 'b', node: n, minutes: 15, targetDate: dayTwoSessions);
+
       await tracked.add(TrackedActivity(
         nodeId: n.trackingId,
         name: n.name,
         colorValue: 0xFF2196F3,
         stepType: 'duration',
       ));
+
       final data = HeatmapService(history, tracked).getIntensityData();
-      expect(data[DateTime(2026, 10, 25)]![n.trackingId], 60);
+      expect(data[day20]![n.trackingId], 1.0);
+      expect(data[day40]![n.trackingId], 2.0);
+      expect(data[day60]![n.trackingId], 3.0);
+      expect(data[day5]![n.trackingId], 0.25);
+      expect(data[dayTwoSessions]![n.trackingId], 1.5);
+
+      // The point conversion is presentation-only; raw history minutes remain.
+      final durationEntries =
+          history.values.where((entry) => entry.stepType == 'duration');
+      final storedMinutes = durationEntries.fold<int>(
+        0,
+        (total, entry) => total + (entry.minutes ?? 0),
+      );
+      expect(storedMinutes, 155);
+    });
+
+    test('heatmap keeps single and step task intensity semantics unchanged',
+        () async {
+      final day = DateTime(2026, 10, 25);
+
+      await history.add(HistoryEntry.forSingle(
+        bookId: 'b',
+        nodeId: 'single-node',
+        nodeName: 'Одна отметка',
+        completed: true,
+        trackingId: 'single-tracking',
+        date: day,
+      ));
+      await history.add(HistoryEntry.forStep(
+        bookId: 'b',
+        nodeId: 'steps-node',
+        nodeName: 'Шаги',
+        completedSteps: 4,
+        trackingId: 'steps-tracking',
+        date: day,
+      ));
+
+      await tracked.add(TrackedActivity(
+        nodeId: 'single-tracking',
+        name: 'Одна отметка',
+        colorValue: 0xFF2196F3,
+        stepType: 'single',
+      ));
+      await tracked.add(TrackedActivity(
+        nodeId: 'steps-tracking',
+        name: 'Шаги',
+        colorValue: 0xFF4CAF50,
+        stepType: 'stepByStep',
+      ));
+
+      final data = HeatmapService(history, tracked).getIntensityData();
+      expect(data[day]!['single-tracking'], 1.0);
+      expect(data[day]!['steps-tracking'], 4.0);
     });
 
     test('heatmap ignores untracked tasks', () {
