@@ -86,11 +86,7 @@ class _StandardTaskQuickPickerListState
                     final count = _added[task.id] ?? 0;
                     return ListTile(
                       title: Text(task.name),
-                      subtitle: Text(
-                        task.stepType == 'single'
-                            ? 'Одиночный чекбокс'
-                            : 'Пошаговый (${task.totalSteps} шагов)',
-                      ),
+                      subtitle: Text(task.progressDescription),
                       trailing: count == 0
                           ? const Icon(Icons.add)
                           : Text(
