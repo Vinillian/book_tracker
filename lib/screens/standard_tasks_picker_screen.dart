@@ -74,11 +74,7 @@ class _StandardTasksPickerScreenState
           final task = filteredTasks[index];
           return ListTile(
             title: Text(task.name),
-            subtitle: Text(
-              task.stepType == 'single'
-                  ? 'Одиночный чекбокс'
-                  : 'Пошаговый (${task.totalSteps} шагов)',
-            ),
+            subtitle: Text(task.progressDescription),
             onTap: () => Navigator.pop(context, task),
           );
         },
