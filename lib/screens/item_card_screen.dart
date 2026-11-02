@@ -67,7 +67,10 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   void _applyAndPop() {
     final name = _nameController.text.trim();
     if (widget.isNew && name.isNotEmpty) {
-      final existingId = _findExistingTrackingId(name);
+      final existingId = _findExistingTrackingId(
+        name,
+        fallback: _workingCopy.trackingId,
+      );
       _workingCopy.trackingId = existingId;
     }
     _workingCopy.name = name;
