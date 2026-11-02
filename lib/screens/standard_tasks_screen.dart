@@ -152,7 +152,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
   }
 }
 
-// Оставляем StandardTaskEditorScreen без изменений (он уже был)
+// Editor for reusable single, step-by-step, and duration task definitions.
 class StandardTaskEditorScreen extends StatefulWidget {
   final StandardTask task;
   final bool isNew;
@@ -258,7 +258,8 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           children: [
             TextField(
               controller: _nameController,
@@ -346,6 +347,7 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
               onChanged: (value) => setState(() => _excludeFromHistory = value ?? false),
             ),
           ],
+          ),
         ),
       ),
     );
