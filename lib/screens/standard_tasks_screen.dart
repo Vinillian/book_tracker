@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/standard_task.dart';
 import '../providers/app_state.dart';
@@ -129,11 +130,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: ListTile(
               title: Text(task.name),
-              subtitle: Text(
-                task.stepType == 'single'
-                    ? 'Одиночный чекбокс'
-                    : 'Пошаговый (${task.totalSteps} шагов)',
-              ),
+              subtitle: Text(task.progressDescription),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -168,14 +165,20 @@ class StandardTaskEditorScreen extends StatefulWidget {
 
 class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
   late TextEditingController _nameController;
+  late TextEditingController _targetController;
   late String _stepType;
   late int _totalSteps;
+  int? _targetMinutes;
   late bool _excludeFromHistory;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.task.name);
+    _targetMinutes = widget.task.targetMinutes;
+    _targetController = TextEditingController(
+      text: _targetMinutes?.toString() ?? '',
+    );
     _stepType = widget.task.stepType;
     _totalSteps = widget.task.totalSteps;
     _excludeFromHistory = widget.task.excludeFromHistory;
@@ -184,7 +187,13 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _targetController.dispose();
     super.dispose();
+  }
+
+  void _updateTarget(String value) {
+    final parsed = int.tryParse(value.trim());
+    setState(() => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null);
   }
 
   void _save() {
@@ -228,6 +237,7 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       totalSteps: _stepType == 'stepByStep' ? _totalSteps : 1,
       excludeFromHistory: _excludeFromHistory,
       trackingId: trackingId,
+      targetMinutes: _stepType == 'duration' ? _targetMinutes : null,
     );
     if (widget.isNew) {
       appState.addStandardTask(updatedTask);
@@ -279,9 +289,37 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
                     title: Text('Пошаговый'),
                     value: 'stepByStep',
                   ),
+                  RadioListTile<String>(
+                    title: Text('Длительность'),
+                    value: 'duration',
+                  ),
                 ],
               ),
             ),
+            if (_stepType == 'duration') ...[
+              const SizedBox(height: 16),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Цель, минут (необязательно):',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _targetController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Без цели',
+                  helperText: 'Без цели задача считается выполненной после '
+                      'первой записи времени.',
+                  helperMaxLines: 2,
+                ),
+                onChanged: _updateTarget,
+              ),
+            ],
             if (_stepType == 'stepByStep') ...[
               const SizedBox(height: 16),
               const Text(
