@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'models/node.dart';
@@ -15,72 +13,67 @@ import 'providers/app_state.dart';
 import 'services/node_service.dart';
 import 'services/note_service.dart';
 
-// Имена боксов, которые не удалось открыть штатно и пришлось пересоздать
-// из-за повреждения файла. Заполняется в _openBox, читается в main() для
-// передачи в MyApp, который покажет пользователю уведомление.
-final List<String> _corruptedBoxNames = [];
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
 
-  Hive.registerAdapter(NodeAdapter());
-  Hive.registerAdapter(AppSettingsAdapter());
-  Hive.registerAdapter(HistoryEntryAdapter());
-  Hive.registerAdapter(NoteAdapter());
-  Hive.registerAdapter(StandardTaskAdapter());
-  Hive.registerAdapter(TrackedActivityAdapter());
+  // Close only the boxes opened during this startup attempt if a later step
+  // fails. Hive.close() is global and would invalidate every earlier box.
+  final openedBoxClosers = <Future<void> Function()>[];
 
-  Box<Node> templatesBox = await _openBox<Node>('templates');
-  Box<AppSettings> settingsBox = await _openBox<AppSettings>('settings');
-  Box<HistoryEntry> historyBox = await _openBox<HistoryEntry>('history');
-  Box<Note> notesBox = await _openBox<Note>('notes');
-  Box<StandardTask> standardTasksBox = await _openBox<StandardTask>('standard_tasks');
-  Box<TrackedActivity> trackedActivitiesBox = await _openBox<TrackedActivity>('tracked_activities');
+  Future<Box<T>> openBox<T>(String name) async {
+    final box = await Hive.openBox<T>(name);
+    openedBoxClosers.add(() => box.close());
+    return box;
+  }
 
-  _migrateExistingPlans(templatesBox, notesBox);
-
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(
-        templatesBox: templatesBox,
-        notesBox: notesBox,
-        historyBox: historyBox,
-        standardTasksBox: standardTasksBox,
-        trackedActivitiesBox: trackedActivitiesBox,
-        settingsBox: settingsBox,
-      ),
-      child: MyApp(corruptedBoxNames: List.unmodifiable(_corruptedBoxNames)),
-    ),
-  );
-}
-
-Future<Box<T>> _openBox<T>(String name) async {
   try {
-    return await Hive.openBox<T>(name);
-  } catch (e) {
-    debugPrint('Ошибка открытия $name: $e');
-    await Hive.close();
-    final appDir = await getApplicationDocumentsDirectory();
-    final hiveDir = Directory('${appDir.path}/app_flutter');
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    // Переименовываем повреждённые файлы вместо удаления — оригинал
-    // остаётся на устройстве на случай, если данные понадобится
-    // восстанавливать вручную.
-    final filesToPreserve = [
-      '${hiveDir.path}/$name.hive',
-      '${hiveDir.path}/$name.lock',
-    ];
-    for (final filePath in filesToPreserve) {
+    await Hive.initFlutter();
+
+    Hive.registerAdapter(NodeAdapter());
+    Hive.registerAdapter(AppSettingsAdapter());
+    Hive.registerAdapter(HistoryEntryAdapter());
+    Hive.registerAdapter(NoteAdapter());
+    Hive.registerAdapter(StandardTaskAdapter());
+    Hive.registerAdapter(TrackedActivityAdapter());
+
+    final templatesBox = await openBox<Node>('templates');
+    final settingsBox = await openBox<AppSettings>('settings');
+    final historyBox = await openBox<HistoryEntry>('history');
+    final notesBox = await openBox<Note>('notes');
+    final standardTasksBox = await openBox<StandardTask>('standard_tasks');
+    final trackedActivitiesBox =
+        await openBox<TrackedActivity>('tracked_activities');
+
+    _migrateExistingPlans(templatesBox, notesBox);
+
+    runApp(
+      ChangeNotifierProvider(
+        create: (_) => AppState(
+          templatesBox: templatesBox,
+          notesBox: notesBox,
+          historyBox: historyBox,
+          standardTasksBox: standardTasksBox,
+          trackedActivitiesBox: trackedActivitiesBox,
+          settingsBox: settingsBox,
+        ),
+        child: const MyApp(),
+      ),
+    );
+  } catch (error, stackTrace) {
+    debugPrint('Ошибка инициализации локального хранилища: $error');
+    debugPrintStack(stackTrace: stackTrace);
+
+    // Preserve every original Hive file. A failed open is not sufficient
+    // evidence that the box is corrupt, so recovery must not rename files.
+    for (final closeBox in openedBoxClosers.reversed) {
       try {
-        final file = File(filePath);
-        if (await file.exists()) {
-          await file.rename('$filePath.corrupted-$timestamp');
-        }
-      } catch (_) {}
+        await closeBox();
+      } catch (closeError) {
+        debugPrint('Не удалось закрыть бокс после ошибки запуска: $closeError');
+      }
     }
-    _corruptedBoxNames.add(name);
-    return await Hive.openBox<T>(name);
+
+    runApp(StartupErrorApp(error: error));
   }
 }
 
@@ -103,56 +96,17 @@ void _migrateExistingPlans(Box<Node> templatesBox, Box<Note> notesBox) {
   }
 }
 
-class MyApp extends StatefulWidget {
-  final List<String> corruptedBoxNames;
-
-  const MyApp({super.key, this.corruptedBoxNames = const []});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.corruptedBoxNames.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showCorruptionNotice());
-    }
-  }
-
-  void _showCorruptionNotice() {
-    final context = _navigatorKey.currentContext;
-    if (context == null) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Обнаружено повреждение данных'),
-        content: Text(
-          'Не удалось открыть часть локальных данных '
-              '(${widget.corruptedBoxNames.join(", ")}) — файл, похоже, был '
-              'повреждён. Для этого раздела создано новое пустое хранилище, '
-              'чтобы приложение могло продолжить работу. Повреждённая копия '
-              'сохранена рядом на устройстве на случай, если данные нужно '
-              'будет восстановить вручную.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Понятно'),
-          ),
-        ],
-      ),
-    );
-  }
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   ThemeMode _getThemeMode(String mode) {
     switch (mode) {
-      case 'light': return ThemeMode.light;
-      case 'dark': return ThemeMode.dark;
-      default: return ThemeMode.system;
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
     }
   }
 
@@ -162,7 +116,6 @@ class _MyAppState extends State<MyApp> {
       builder: (context, appState, _) {
         final themeMode = _getThemeMode(appState.themeMode);
         return MaterialApp(
-          navigatorKey: _navigatorKey,
           title: 'Book Planner',
           theme: ThemeData(
             primarySwatch: Colors.blue,
@@ -179,6 +132,60 @@ class _MyAppState extends State<MyApp> {
           debugShowCheckedModeBanner: false,
         );
       },
+    );
+  }
+}
+
+/// Shown when startup cannot safely open all local boxes. No Hive data is
+/// modified or moved, so the user can close the app and seek help recovering
+/// the original files instead of unknowingly continuing with empty storage.
+class StartupErrorApp extends StatelessWidget {
+  final Object error;
+
+  const StartupErrorApp({super.key, required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Book Planner',
+      home: Scaffold(
+        appBar: AppBar(title: const Text('Book Planner')),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(
+                  Icons.storage_rounded,
+                  size: 48,
+                  color: Colors.orange,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Не удалось открыть локальные данные',
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Приложение не запущено, чтобы не повредить ваши данные. '
+                  'Файлы хранилища не удалялись и не перемещались. '
+                  'Закройте приложение и обратитесь за помощью с диагностикой '
+                  'ошибки перед попыткой восстановления.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                SelectableText(
+                  error.toString(),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
