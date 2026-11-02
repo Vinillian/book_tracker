@@ -47,7 +47,7 @@ class HeatmapService {
 
       final dayData = result.putIfAbsent(date, () => <String, double>{});
       dayData[entry.trackingId] =
-          (dayData[entry.trackingId] ?? 0) + intensity;
+          (dayData[entry.trackingId] ?? 0.0) + intensity;
     }
 
     // 20 minutes = 1 point. Keep partial points instead of rounding.
@@ -57,7 +57,7 @@ class HeatmapService {
       for (final activityEntry in dayEntry.value.entries) {
         final points = activityEntry.value / 20;
         dayData[activityEntry.key] =
-            (dayData[activityEntry.key] ?? 0) + points;
+            (dayData[activityEntry.key] ?? 0.0) + points;
       }
     }
 
