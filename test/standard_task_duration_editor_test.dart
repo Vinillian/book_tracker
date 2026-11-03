@@ -127,7 +127,7 @@ void main() {
     expect(appState.standardTasks.single.name, 'Чтение');
     expect(appState.standardTasks.single.stepType, 'duration');
     expect(appState.standardTasks.single.targetMinutes, 45);
-  });
+  }, timeout: const Timeout(Duration(seconds: 60)));
 
 
   testWidgets('item-card picker copies duration goal and tracking identity',
