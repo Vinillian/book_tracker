@@ -18,6 +18,7 @@ Future<void> _openEditor(
   StandardTask task, {
   required bool isNew,
 }) async {
+  print('[duration-editor] openEditor: before pumpWidget');
   await tester.pumpWidget(
     ChangeNotifierProvider<AppState>.value(
       value: appState,
@@ -41,8 +42,11 @@ Future<void> _openEditor(
     ),
   );
 
+  print('[duration-editor] openEditor: after pumpWidget');
   await tester.tap(find.text('Открыть редактор'));
+  print('[duration-editor] openEditor: after tap');
   await _pumpRouteTransition(tester);
+  print('[duration-editor] openEditor: after route pump');
 }
 
 Future<void> _pumpRouteTransition(WidgetTester tester) async {
@@ -57,12 +61,15 @@ void main() {
   late AppState appState;
 
   setUp(() async {
+    print('[duration-editor] setUp: start');
     directory = await Directory.systemTemp.createTemp('standard_task_editor');
     Hive.init(directory.path);
     registerAppHiveAdapters();
+    print('[duration-editor] setUp: adapters registered');
     final boxes = await HiveStartup(
       openBox: <T>(String name) => Hive.openBox<T>(name),
     ).open();
+    print('[duration-editor] setUp: boxes opened');
     appState = AppState(
       templatesBox: boxes.templatesBox,
       notesBox: boxes.notesBox,
@@ -71,16 +78,22 @@ void main() {
       trackedActivitiesBox: boxes.trackedActivitiesBox,
       settingsBox: boxes.settingsBox,
     );
+    print('[duration-editor] setUp: complete');
   });
 
   tearDown(() async {
+    print('[duration-editor] tearDown: start');
     appState.dispose();
+    print('[duration-editor] tearDown: appState disposed');
     await Hive.close();
+    print('[duration-editor] tearDown: Hive closed');
     await directory.delete(recursive: true);
+    print('[duration-editor] tearDown: complete');
   });
 
   testWidgets('creates a duration standard task with an optional goal',
       (tester) async {
+    print('[duration-editor] test: before openEditor');
     await _openEditor(
       tester,
       appState,
@@ -88,17 +101,27 @@ void main() {
       isNew: true,
     );
 
+    print('[duration-editor] test: editor opened');
     await tester.enterText(find.byType(TextField).first, 'Чтение');
+    print('[duration-editor] test: name entered');
     await tester.ensureVisible(find.text('Длительность'));
+    print('[duration-editor] test: duration visible');
     await tester.tap(find.text('Длительность'));
+    print('[duration-editor] test: duration tapped');
     await tester.pump();
+    print('[duration-editor] test: duration pumped');
 
     expect(find.text('Цель, минут (необязательно):'), findsOneWidget);
+    print('[duration-editor] test: goal label found');
     final targetField = find.byType(TextField).at(1);
     await tester.ensureVisible(targetField);
+    print('[duration-editor] test: goal field visible');
     await tester.enterText(targetField, '45');
+    print('[duration-editor] test: goal entered');
     await tester.tap(find.byIcon(Icons.check));
+    print('[duration-editor] test: save tapped');
     await _pumpRouteTransition(tester);
+    print('[duration-editor] test: route popped');
 
     expect(appState.standardTasks, hasLength(1));
     expect(appState.standardTasks.single.name, 'Чтение');
