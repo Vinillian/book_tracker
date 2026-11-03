@@ -60,11 +60,22 @@ class AppState extends ChangeNotifier {
         _trackedActivitiesBox.watch().listen((_) => notifyListeners());
   }
 
+  Future<void>? _watchSubscriptionsCancellation;
+
+  /// Cancels Hive listeners and completes when both stream cancellations finish.
+  /// Tests and explicit storage shutdown can await this before closing Hive.
+  Future<void> cancelWatchSubscriptions() {
+    return _watchSubscriptionsCancellation ??= Future.wait<void>([
+      _historySubscription.cancel(),
+      _trackedActivitiesSubscription.cancel(),
+    ]);
+  }
+
   @override
   void dispose() {
-    // Stop listening before the owning Hive boxes are closed.
-    unawaited(_historySubscription.cancel());
-    unawaited(_trackedActivitiesSubscription.cancel());
+    // Provider disposal is synchronous; explicit shutdown can await the same
+    // cancellation future through cancelWatchSubscriptions().
+    unawaited(cancelWatchSubscriptions());
     super.dispose();
   }
 
