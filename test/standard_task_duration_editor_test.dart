@@ -42,7 +42,14 @@ Future<void> _openEditor(
   );
 
   await tester.tap(find.text('Открыть редактор'));
-  await tester.pumpAndSettle();
+  await _pumpRouteTransition(tester);
+}
+
+Future<void> _pumpRouteTransition(WidgetTester tester) async {
+  // Avoid waiting for the blinking cursor of an autofocus TextField.
+  // Material route transitions finish within 500 ms.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 500));
 }
 
 void main() {
@@ -84,14 +91,14 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Чтение');
     await tester.ensureVisible(find.text('Длительность'));
     await tester.tap(find.text('Длительность'));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.text('Цель, минут (необязательно):'), findsOneWidget);
     final targetField = find.byType(TextField).at(1);
     await tester.ensureVisible(targetField);
     await tester.enterText(targetField, '45');
     await tester.tap(find.byIcon(Icons.check));
-    await tester.pumpAndSettle();
+    await _pumpRouteTransition(tester);
 
     expect(appState.standardTasks, hasLength(1));
     expect(appState.standardTasks.single.name, 'Чтение');
@@ -139,17 +146,17 @@ void main() {
     );
 
     await tester.tap(find.text('Добавить задачу'));
-    await tester.pumpAndSettle();
+    await _pumpRouteTransition(tester);
     await tester.tap(find.byTooltip('Выбрать из стандартных'));
-    await tester.pumpAndSettle();
+    await _pumpRouteTransition(tester);
     await tester.tap(find.text('Бег'));
-    await tester.pumpAndSettle();
+    await _pumpRouteTransition(tester);
 
     final targetField = find.byType(TextField).at(1);
     expect(tester.widget<TextField>(targetField).controller!.text, '45');
 
     await tester.tap(find.byIcon(Icons.check));
-    await tester.pumpAndSettle();
+    await _pumpRouteTransition(tester);
 
     expect(createdNode, isNotNull);
     expect(createdNode!.stepType, 'duration');
@@ -179,12 +186,12 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Чтение книг');
     await tester.ensureVisible(find.text('Длительность'));
     await tester.tap(find.text('Длительность'));
-    await tester.pumpAndSettle();
+    await tester.pump();
     final targetField = find.byType(TextField).at(1);
     await tester.ensureVisible(targetField);
     await tester.enterText(targetField, '60');
     await tester.tap(find.byIcon(Icons.check));
-    await tester.pumpAndSettle();
+    await _pumpRouteTransition(tester);
 
     final updatedTask = appState.standardTasks.single;
     final tracked = appState.trackedActivities.single;
