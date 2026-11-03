@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:book_tracker/models/node.dart';
@@ -20,7 +19,6 @@ Future<void> _openEditor(
   StandardTask task, {
   required bool isNew,
 }) async {
-  print('[duration-editor] openEditor: before pumpWidget');
   await tester.pumpWidget(
     ChangeNotifierProvider<AppState>.value(
       value: appState,
@@ -44,20 +42,15 @@ Future<void> _openEditor(
     ),
   );
 
-  print('[duration-editor] openEditor: after pumpWidget');
   await tester.tap(find.text('Открыть редактор'));
-  print('[duration-editor] openEditor: after tap');
   await _pumpRouteTransition(tester);
-  print('[duration-editor] openEditor: after route pump');
 }
 
 Future<void> _closeBoxForTest<T>(Box<T> box, String name) async {
-  print('[duration-editor] close $name: start');
   await box.close().timeout(
     const Duration(seconds: 10),
     onTimeout: () => throw TimeoutException('Timed out closing $name'),
   );
-  print('[duration-editor] close $name: complete');
 }
 
 /// Windows may briefly lock a freshly closed Hive directory (for example,
@@ -67,7 +60,6 @@ Future<void> _deleteTempDirectoryWithRetry(Directory directory) async {
   for (var attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await directory.delete(recursive: true);
-      print('[duration-editor] temp directory deleted');
       return;
     } on FileSystemException catch (error) {
       final isWindowsSharingViolation = error.osError?.errorCode == 32;
@@ -91,15 +83,13 @@ void main() {
   WidgetTester? activeTester;
 
   setUp(() async {
-    print('[duration-editor] setUp: start');
     directory = await Directory.systemTemp.createTemp('standard_task_editor');
     Hive.init(directory.path);
     registerAppHiveAdapters();
-    print('[duration-editor] setUp: adapters registered');
-    final boxes = await HiveStartup(
+    openedBoxes = await HiveStartup(
       openBox: <T>(String name) => Hive.openBox<T>(name),
     ).open();
-    print('[duration-editor] setUp: boxes opened');
+    final boxes = openedBoxes!;
     appState = AppState(
       templatesBox: boxes.templatesBox,
       notesBox: boxes.notesBox,
@@ -108,15 +98,11 @@ void main() {
       trackedActivitiesBox: boxes.trackedActivitiesBox,
       settingsBox: boxes.settingsBox,
     );
-    print('[duration-editor] setUp: complete');
   });
 
   tearDown(() async {
-    print('[duration-editor] tearDown: start');
     await appState.cancelWatchSubscriptions();
-    print('[duration-editor] tearDown: watch subscriptions cancelled');
     appState.dispose();
-    print('[duration-editor] tearDown: appState disposed');
 
     // Close boxes separately to identify which Hive box blocks shutdown.
     final boxes = openedBoxes;
@@ -129,7 +115,6 @@ void main() {
       await _closeBoxForTest(boxes.templatesBox, 'templates');
     }
 
-    print('[duration-editor] tearDown: all boxes closed');
     final tester = activeTester;
     if (tester != null) {
       // Use real async time for Windows sharing-violation retries; widget tests
@@ -139,13 +124,11 @@ void main() {
       await directory.delete(recursive: true);
     }
     activeTester = null;
-    print('[duration-editor] tearDown: complete');
   });
 
   testWidgets('creates a duration standard task with an optional goal',
       (tester) async {
     activeTester = tester;
-    print('[duration-editor] test: before openEditor');
     await _openEditor(
       tester,
       appState,
@@ -153,27 +136,17 @@ void main() {
       isNew: true,
     );
 
-    print('[duration-editor] test: editor opened');
     await tester.enterText(find.byType(TextField).first, 'Чтение');
-    print('[duration-editor] test: name entered');
     await tester.ensureVisible(find.text('Длительность'));
-    print('[duration-editor] test: duration visible');
     await tester.tap(find.text('Длительность'));
-    print('[duration-editor] test: duration tapped');
     await tester.pump();
-    print('[duration-editor] test: duration pumped');
 
     expect(find.text('Цель, минут (необязательно):'), findsOneWidget);
-    print('[duration-editor] test: goal label found');
     final targetField = find.byType(TextField).at(1);
     await tester.ensureVisible(targetField);
-    print('[duration-editor] test: goal field visible');
     await tester.enterText(targetField, '45');
-    print('[duration-editor] test: goal entered');
     await tester.tap(find.byIcon(Icons.check));
-    print('[duration-editor] test: save tapped');
     await _pumpRouteTransition(tester);
-    print('[duration-editor] test: route popped');
 
     expect(appState.standardTasks, hasLength(1));
     expect(appState.standardTasks.single.name, 'Чтение');
