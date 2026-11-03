@@ -60,6 +60,23 @@ Future<void> _closeBoxForTest<T>(Box<T> box, String name) async {
   print('[duration-editor] close $name: complete');
 }
 
+/// Windows may briefly lock a freshly closed Hive directory (for example,
+/// while another process scans its files). Retry sharing violations only.
+Future<void> _deleteTempDirectoryWithRetry(Directory directory) async {
+  const maxAttempts = 50;
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await directory.delete(recursive: true);
+      print('[duration-editor] temp directory deleted');
+      return;
+    } on FileSystemException catch (error) {
+      final isWindowsSharingViolation = error.osError?.errorCode == 32;
+      if (!isWindowsSharingViolation || attempt == maxAttempts) rethrow;
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+  }
+}
+
 Future<void> _pumpRouteTransition(WidgetTester tester) async {
   // Avoid waiting for the blinking cursor of an autofocus TextField.
   // Material route transitions finish within 500 ms.
@@ -71,6 +88,7 @@ void main() {
   late Directory directory;
   late AppState appState;
   OpenedHiveBoxes? openedBoxes;
+  WidgetTester? activeTester;
 
   setUp(() async {
     print('[duration-editor] setUp: start');
@@ -112,12 +130,21 @@ void main() {
     }
 
     print('[duration-editor] tearDown: all boxes closed');
-    await directory.delete(recursive: true);
+    final tester = activeTester;
+    if (tester != null) {
+      // Use real async time for Windows sharing-violation retries; widget tests
+      // otherwise run inside a fake-async zone.
+      await tester.runAsync(() => _deleteTempDirectoryWithRetry(directory));
+    } else {
+      await directory.delete(recursive: true);
+    }
+    activeTester = null;
     print('[duration-editor] tearDown: complete');
   });
 
   testWidgets('creates a duration standard task with an optional goal',
       (tester) async {
+    activeTester = tester;
     print('[duration-editor] test: before openEditor');
     await _openEditor(
       tester,
@@ -157,6 +184,7 @@ void main() {
 
   testWidgets('item-card picker copies duration goal and tracking identity',
       (tester) async {
+    activeTester = tester;
     appState.addStandardTask(
       StandardTask(
         name: 'Бег',
@@ -214,6 +242,7 @@ void main() {
 
   testWidgets('editing duration task preserves tracking id and updates tracked activity',
       (tester) async {
+    activeTester = tester;
     final task = StandardTask(
       name: 'Чтение',
       stepType: 'single',
