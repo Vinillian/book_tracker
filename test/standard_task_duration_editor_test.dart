@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:book_tracker/models/node.dart';
@@ -49,6 +50,15 @@ Future<void> _openEditor(
   print('[duration-editor] openEditor: after route pump');
 }
 
+Future<void> _closeBoxForTest<T>(Box<T> box, String name) async {
+  print('[duration-editor] close $name: start');
+  await box.close().timeout(
+    const Duration(seconds: 10),
+    onTimeout: () => throw TimeoutException('Timed out closing $name'),
+  );
+  print('[duration-editor] close $name: complete');
+}
+
 Future<void> _pumpRouteTransition(WidgetTester tester) async {
   // Avoid waiting for the blinking cursor of an autofocus TextField.
   // Material route transitions finish within 500 ms.
@@ -59,6 +69,7 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 void main() {
   late Directory directory;
   late AppState appState;
+  late OpenedHiveBoxes openedBoxes;
 
   setUp(() async {
     print('[duration-editor] setUp: start');
@@ -87,8 +98,16 @@ void main() {
     print('[duration-editor] tearDown: watch subscriptions cancelled');
     appState.dispose();
     print('[duration-editor] tearDown: appState disposed');
-    await Hive.close();
-    print('[duration-editor] tearDown: Hive closed');
+
+    // Close boxes separately to identify which Hive box blocks shutdown.
+    await _closeBoxForTest(openedBoxes.trackedActivitiesBox, 'trackedActivities');
+    await _closeBoxForTest(openedBoxes.standardTasksBox, 'standardTasks');
+    await _closeBoxForTest(openedBoxes.notesBox, 'notes');
+    await _closeBoxForTest(openedBoxes.historyBox, 'history');
+    await _closeBoxForTest(openedBoxes.settingsBox, 'settings');
+    await _closeBoxForTest(openedBoxes.templatesBox, 'templates');
+
+    print('[duration-editor] tearDown: all boxes closed');
     await directory.delete(recursive: true);
     print('[duration-editor] tearDown: complete');
   });
