@@ -83,6 +83,8 @@ void main() {
 
   tearDown(() async {
     print('[duration-editor] tearDown: start');
+    await appState.cancelWatchSubscriptions();
+    print('[duration-editor] tearDown: watch subscriptions cancelled');
     appState.dispose();
     print('[duration-editor] tearDown: appState disposed');
     await Hive.close();
