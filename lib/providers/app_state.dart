@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/node.dart';
@@ -23,6 +25,8 @@ class AppState extends ChangeNotifier {
   late final Box<StandardTask> _standardTasksBox;
   late final Box<TrackedActivity> _trackedActivitiesBox;
   late final Box<AppSettings> _settingsBox;
+  late final StreamSubscription<BoxEvent> _historySubscription;
+  late final StreamSubscription<BoxEvent> _trackedActivitiesSubscription;
 
   String _themeMode = 'system';
   String get themeMode => _themeMode;
@@ -50,8 +54,18 @@ class AppState extends ChangeNotifier {
     _nodeService.migratePlannedDates(); // #114
     _nodeService.migrateNestedBookCategories(); // #139
 
-    _historyBox.watch().listen((_) => notifyListeners());
-    _trackedActivitiesBox.watch().listen((_) => notifyListeners());
+    _historySubscription =
+        _historyBox.watch().listen((_) => notifyListeners());
+    _trackedActivitiesSubscription =
+        _trackedActivitiesBox.watch().listen((_) => notifyListeners());
+  }
+
+  @override
+  void dispose() {
+    // Stop listening before the owning Hive boxes are closed.
+    unawaited(_historySubscription.cancel());
+    unawaited(_trackedActivitiesSubscription.cancel());
+    super.dispose();
   }
 
   void _loadTheme() {
