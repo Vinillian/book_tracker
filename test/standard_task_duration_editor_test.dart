@@ -70,7 +70,7 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 void main() {
   late Directory directory;
   late AppState appState;
-  late OpenedHiveBoxes openedBoxes;
+  OpenedHiveBoxes? openedBoxes;
 
   setUp(() async {
     print('[duration-editor] setUp: start');
@@ -101,12 +101,15 @@ void main() {
     print('[duration-editor] tearDown: appState disposed');
 
     // Close boxes separately to identify which Hive box blocks shutdown.
-    await _closeBoxForTest(openedBoxes.trackedActivitiesBox, 'trackedActivities');
-    await _closeBoxForTest(openedBoxes.standardTasksBox, 'standardTasks');
-    await _closeBoxForTest(openedBoxes.notesBox, 'notes');
-    await _closeBoxForTest(openedBoxes.historyBox, 'history');
-    await _closeBoxForTest(openedBoxes.settingsBox, 'settings');
-    await _closeBoxForTest(openedBoxes.templatesBox, 'templates');
+    final boxes = openedBoxes;
+    if (boxes != null) {
+      await _closeBoxForTest(boxes.trackedActivitiesBox, 'trackedActivities');
+      await _closeBoxForTest(boxes.standardTasksBox, 'standardTasks');
+      await _closeBoxForTest(boxes.notesBox, 'notes');
+      await _closeBoxForTest(boxes.historyBox, 'history');
+      await _closeBoxForTest(boxes.settingsBox, 'settings');
+      await _closeBoxForTest(boxes.templatesBox, 'templates');
+    }
 
     print('[duration-editor] tearDown: all boxes closed');
     await directory.delete(recursive: true);
