@@ -171,18 +171,25 @@ void main() {
       expect(history.length, 0);
     });
 
-    test('deleteEntryById removes only that log', () {
-      final n = durationNode('Работа');
+    test('deleteEntryById removes only one session and preserves task progress', () {
+      final n = Node.leaf('Йога', stepType: 'single');
       final day = DateTime(2026, 10, 25);
+      HistoryService.recordUniqueToggle(
+        bookId: 'b', node: n, newValue: true, targetDate: day,
+      );
       final first = HistoryService.recordDurationLog(
-          bookId: 'b', node: n, minutes: 25, targetDate: day)!;
+        bookId: 'b', node: n, minutes: 25, targetDate: day,
+      )!;
       HistoryService.recordDurationLog(
-          bookId: 'b', node: n, minutes: 30, targetDate: day);
+        bookId: 'b', node: n, minutes: 30, targetDate: day,
+      );
+
       expect(HistoryService.deleteEntryById(first), isTrue);
       expect(HistoryService.deleteEntryById(first), isFalse);
       final left = HistoryService.getEntriesForDay(day);
-      expect(left.length, 1);
-      expect(left.single.minutes, 30);
+      expect(left.where((e) => e.stepType == 'duration').length, 1);
+      expect(left.singleWhere((e) => e.stepType == 'single').completed, isTrue);
+      expect(left.singleWhere((e) => e.stepType == 'duration').minutes, 30);
     });
 
     test('minutes survive a close and reopen of the box', () async {

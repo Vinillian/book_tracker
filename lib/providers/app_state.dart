@@ -162,6 +162,7 @@ class AppState extends ChangeNotifier {
       );
     }
   }
+
   void deleteNode(dynamic key) {
     _nodeService.delete(key);
     notifyListeners();

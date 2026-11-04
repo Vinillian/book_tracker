@@ -108,7 +108,10 @@ class NodeTile extends StatelessWidget {
                           ? ' · ${_durationText()}'
                           : ''),
                 )
-              : hasChildren && node.isDuration
+              : hasChildren && node.stepType == 'single' &&
+                      node.timeTrackingEnabled
+                  ? Text('Учёт времени: ${_durationText()}')
+                  : hasChildren && node.isDuration
                   ? Text(_durationText())
                   : null,
           trailing: _buildTrailing(),

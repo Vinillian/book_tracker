@@ -98,7 +98,7 @@ class Node {
         String? trackingId,
         this.targetMinutes,
         this.loggedMinutes = 0,
-    this.timeTrackingEnabled = false,
+        this.timeTrackingEnabled = false,
       }) : children = [],
         isExpanded = false,
         completed = false,
