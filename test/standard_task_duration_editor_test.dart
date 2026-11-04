@@ -158,7 +158,7 @@ void main() {
   testWidgets('item-card picker copies duration goal and tracking identity',
       (tester) async {
     activeTester = tester;
-    appState.addStandardTask(
+    await appState.addStandardTask(
       StandardTask(
         name: 'Бег',
         stepType: 'duration',
@@ -221,8 +221,8 @@ void main() {
       stepType: 'single',
       trackingId: 'reading-tracking',
     );
-    appState.addStandardTask(task);
-    appState.addTrackedActivity(
+    await appState.addStandardTask(task);
+    await appState.addTrackedActivity(
       TrackedActivity(
         id: 'reading-activity',
         nodeId: 'reading-tracking',
