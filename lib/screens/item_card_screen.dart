@@ -37,7 +37,6 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   late int _totalSteps;
   late int _completedSteps;
   late bool _excludeFromHistory;
-  late bool _timeTrackingEnabled;
   int? _startMinutes;
   bool _didSave = false;
 
@@ -50,7 +49,6 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _totalSteps = _workingCopy.totalSteps;
     _completedSteps = _workingCopy.completedSteps;
     _excludeFromHistory = _workingCopy.excludeFromHistory;
-    _timeTrackingEnabled = _workingCopy.timeTrackingEnabled;
     _startMinutes = _workingCopy.startMinutes;
     _totalStepsController = TextEditingController(text: _totalSteps.toString());
     _targetMinutes = _workingCopy.targetMinutes;
@@ -80,22 +78,14 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
     _workingCopy.startMinutes = _startMinutes;
-    _workingCopy.timeTrackingEnabled =
-        (_stepType == 'single' || _stepType == 'stepByStep') &&
-        _timeTrackingEnabled;
     if (_stepType == 'single') {
-      _workingCopy.completed = _completedSteps > 0;
       _workingCopy.completedSteps = 0;
     } else if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
       _workingCopy.completed = false;
-    } else if (_stepType == 'duration') {
-      // Logged minutes stay as they are; only the goal is edited here.
-      _workingCopy.targetMinutes = _targetMinutes;
-      _workingCopy.totalSteps = 1;
-      _workingCopy.completedSteps = 0;
-      _workingCopy.completed = false;
     }
+    // Time is an independent measurement for both supported progress types.
+    _workingCopy.targetMinutes = _targetMinutes;
     Navigator.pop(context, _workingCopy);
   }
 
@@ -119,14 +109,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
     _workingCopy.startMinutes = _startMinutes;
-    _workingCopy.timeTrackingEnabled =
-        (_stepType == 'single' || _stepType == 'stepByStep') &&
-        _timeTrackingEnabled;
     if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
-    }
-    if (_stepType == 'duration') {
-      _workingCopy.targetMinutes = _targetMinutes;
     }
     final updated = await Navigator.push(
       context,
@@ -142,8 +126,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
         _totalSteps = _workingCopy.totalSteps;
         _completedSteps = _workingCopy.completedSteps;
         _excludeFromHistory = _workingCopy.excludeFromHistory;
-        _timeTrackingEnabled = _workingCopy.timeTrackingEnabled;
-        _startMinutes = _workingCopy.startMinutes;
+            _startMinutes = _workingCopy.startMinutes;
         _totalStepsController.text = _totalSteps.toString();
         _targetMinutes = _workingCopy.targetMinutes;
         _targetController.text = _targetMinutes?.toString() ?? '';
@@ -188,14 +171,13 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     // keeps its own progress next to them.
     setState(() {
       _stepType = newType;
-      if (newType == 'duration') _timeTrackingEnabled = false;
       if (newType == 'single') {
         _totalSteps = 1;
         _completedSteps = 0;
       } else if (newType == 'stepByStep') {
         _totalSteps = 3;
         _completedSteps = 0;
-      } else if (newType == 'duration' || newType == 'folder') {
+      } else if (newType == 'folder') {
         _totalSteps = 1;
         _completedSteps = 0;
       }
@@ -339,17 +321,15 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                   segments: const [
                     ButtonSegment(value: 'single', label: Text('Чекбокс')),
                     ButtonSegment(value: 'stepByStep', label: Text('Шаги')),
-                    ButtonSegment(value: 'duration', label: Text('Длительность')),
                   ],
                   selected: {_stepType},
                   showSelectedIcon: false,
                   onSelectionChanged: (s) => _onStepTypeChanged(s.first),
                 ),
               ),
-              if (_stepType == 'duration') ...[
-                const SizedBox(height: 16),
-                const Text(
-                  'Цель, минут (необязательно):',
+              const SizedBox(height: 16),
+              const Text(
+                  'Цель времени, минут (необязательно):'
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -360,8 +340,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     hintText: 'Без цели',
-                    helperText: 'Выполнена, когда набрано нужное время; '
-                        'без цели - когда записано любое время.',
+                    helperText: 'Время учитывается отдельно и не влияет '
+                        'на выполнение чекбокса или шагов.',
                     helperMaxLines: 2,
                   ),
                   onChanged: _updateTarget,
@@ -374,7 +354,6 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                       style: const TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ),
-              ],
               if (_stepType == 'stepByStep') ...[
                 const SizedBox(height: 16),
                 const Text(
@@ -414,17 +393,6 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                   ],
                 ),
               ],
-              if (_stepType == 'single' || _stepType == 'stepByStep')
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Вести учёт времени'),
-                  subtitle: const Text(
-                    'Сессии времени хранятся отдельно и не влияют на выполнение задачи.',
-                  ),
-                  value: _timeTrackingEnabled,
-                  onChanged: (value) =>
-                      setState(() => _timeTrackingEnabled = value),
-                ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: _openStructureEditor,
