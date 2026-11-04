@@ -5,7 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:book_tracker/models/node.dart';
 import 'package:book_tracker/utils/node_copy.dart';
 
-Node duration(String name, {int? target, int logged = 0}) => Node(
+Node legacyDuration(String name, {int? target, int logged = 0}) => Node(
       name: name,
       children: [],
       stepType: 'duration',
@@ -14,103 +14,109 @@ Node duration(String name, {int? target, int logged = 0}) => Node(
     );
 
 void main() {
-  group('duration progress', () {
-    test('with a goal: one unit, done when the goal is reached', () {
-      final n = duration('Работа', target: 60, logged: 59);
-      expect(n.totalLeaves, 1);
-      expect(n.completedLeaves, 0);
-      n.loggedMinutes = 60;
-      expect(n.completedLeaves, 1);
-      n.loggedMinutes = 90;
-      expect(n.completedLeaves, 1);
+  group('legacy duration task migration', () {
+    test('converts duration to checkbox and preserves an unreached goal', () {
+      final task = legacyDuration('Чтение', target: 60, logged: 45);
+      expect(task.stepType, 'single');
+      expect(task.targetMinutes, 60);
+      expect(task.loggedMinutes, 45);
+      expect(task.completed, isFalse);
+      expect(task.totalLeaves, 1);
+      expect(task.completedLeaves, 0);
     });
 
-    test('without a goal: done once any time is logged', () {
-      final n = duration('Прогулка');
-      expect(n.completedLeaves, 0);
-      n.loggedMinutes = 5;
-      expect(n.completedLeaves, 1);
-      final zeroGoal = duration('Прогулка', target: 0, logged: 5);
-      expect(zeroGoal.completedLeaves, 1);
+    test('carries a previously reached goal into checkbox completion once', () {
+      final task = legacyDuration('Чтение', target: 60, logged: 60);
+      expect(task.stepType, 'single');
+      expect(task.completed, isTrue);
+      task.loggedMinutes = 0;
+      expect(task.completedLeaves, 1);
+      task.completed = false;
+      task.loggedMinutes = 120;
+      expect(task.completedLeaves, 0);
     });
 
-    test('excludeFromHistory still hides it', () {
-      final n = duration('Отдых', target: 30, logged: 30)
+    test('a legacy task without a goal keeps its old done state once time existed', () {
+      final task = legacyDuration('Прогулка', logged: 5);
+      expect(task.stepType, 'single');
+      expect(task.completed, isTrue);
+      task.loggedMinutes = 0;
+      expect(task.completedLeaves, 1);
+    });
+
+    test('time changes never complete a current checkbox task', () {
+      final task = Node.leaf('Йога', stepType: 'single', targetMinutes: 60)
+        ..loggedMinutes = 120;
+      expect(task.totalLeaves, 1);
+      expect(task.completedLeaves, 0);
+      task.completed = true;
+      task.loggedMinutes = 0;
+      expect(task.completedLeaves, 1);
+    });
+
+    test('time changes never increase step completion', () {
+      final task = Node.leaf(
+        'Чтение',
+        stepType: 'stepByStep',
+        totalSteps: 4,
+        targetMinutes: 90,
+      )
+        ..completedSteps = 2
+        ..loggedMinutes = 180;
+      expect(task.totalLeaves, 4);
+      expect(task.completedLeaves, 2);
+      task.loggedMinutes = 0;
+      expect(task.completedLeaves, 2);
+    });
+
+    test('excludeFromHistory still hides progress', () {
+      final task = legacyDuration('Отдых', target: 30, logged: 30)
         ..excludeFromHistory = true;
-      expect(n.totalLeaves, 0);
-      expect(n.completedLeaves, 0);
-    });
-
-    test('toggle does nothing for a duration task', () {
-      final n = duration('Работа', target: 60);
-      n.toggle();
-      expect(n.completed, isFalse);
-      expect(n.loggedMinutes, 0);
-    });
-
-    test('counts together with subtasks of the parent', () {
-      final sub = Node.leaf('Подзадача')..completed = true;
-      final parent = Node(
-        name: 'Работа',
-        stepType: 'duration',
-        targetMinutes: 60,
-        loggedMinutes: 60,
-        children: [sub],
-      );
-      expect(parent.totalLeaves, 2);
-      expect(parent.completedLeaves, 2);
-    });
-
-    test('step-by-step and single tasks are unchanged', () {
-      final single = Node.leaf('a')..completed = true;
-      final steps = Node.leaf('b', stepType: 'stepByStep', totalSteps: 4)
-        ..completedSteps = 3;
-      final folder = Node(name: 'f', stepType: 'folder', children: []);
-      expect([single.totalLeaves, single.completedLeaves], [1, 1]);
-      expect([steps.totalLeaves, steps.completedLeaves], [4, 3]);
-      expect([folder.totalLeaves, folder.completedLeaves], [0, 0]);
+      expect(task.totalLeaves, 0);
+      expect(task.completedLeaves, 0);
     });
   });
 
-  group('duration fields', () {
-    test('survive toJson / fromJson and deepCopy', () {
-      final n = duration('Работа', target: 90, logged: 25);
-      final fromJson = Node.fromJson(n.toJson());
-      expect(fromJson.stepType, 'duration');
-      expect(fromJson.targetMinutes, 90);
-      expect(fromJson.loggedMinutes, 25);
-      final copy = n.deepCopy();
+  group('time goal persistence and copies', () {
+    test('time goal and logged minutes survive JSON and deepCopy', () {
+      final task = Node.leaf('Работа', targetMinutes: 90)..loggedMinutes = 25;
+      final restored = Node.fromJson(task.toJson());
+      expect(restored.stepType, 'single');
+      expect(restored.targetMinutes, 90);
+      expect(restored.loggedMinutes, 25);
+      final copy = task.deepCopy();
       expect(copy.targetMinutes, 90);
       expect(copy.loggedMinutes, 25);
     });
 
-    test('old JSON without the fields imports with no goal and 0 logged', () {
-      final json = Node.leaf('Old').toJson()
-        ..remove('targetMinutes')
-        ..remove('loggedMinutes');
-      final n = Node.fromJson(json);
-      expect(n.targetMinutes, isNull);
-      expect(n.loggedMinutes, 0);
-    });
-
-    test('copyAndReset resets logged time and keeps the goal', () {
-      final original = duration('Работа', target: 60, logged: 45);
+    test('copyAndReset clears logged time but keeps the goal', () {
+      final original = Node.leaf('Работа', targetMinutes: 60)
+        ..loggedMinutes = 45;
       final copy = copyAndReset(original);
       expect(copy.loggedMinutes, 0);
       expect(copy.targetMinutes, 60);
       expect(original.loggedMinutes, 45);
     });
 
-    test('Hive adapter stores and restores them', () async {
-      final dir = Directory.systemTemp.createTempSync('node_duration_');
+    test('old JSON without time fields still loads', () {
+      final json = Node.leaf('Old').toJson()
+        ..remove('targetMinutes')
+        ..remove('loggedMinutes');
+      final task = Node.fromJson(json);
+      expect(task.targetMinutes, isNull);
+      expect(task.loggedMinutes, 0);
+    });
+
+    test('Hive adapter stores checkbox and supplementary time fields', () async {
+      final dir = Directory.systemTemp.createTempSync('node_time_goal_');
       Hive.init(dir.path);
       Hive.registerAdapter(NodeAdapter());
       var box = await Hive.openBox<Node>('nodes');
-      await box.put('a', duration('A', target: 120, logged: 35));
+      await box.put('a', Node.leaf('A', targetMinutes: 120)..loggedMinutes = 35);
       await box.put('b', Node.leaf('B'));
       await box.close();
       box = await Hive.openBox<Node>('nodes');
-      expect(box.get('a')!.stepType, 'duration');
+      expect(box.get('a')!.stepType, 'single');
       expect(box.get('a')!.targetMinutes, 120);
       expect(box.get('a')!.loggedMinutes, 35);
       expect(box.get('b')!.targetMinutes, isNull);
