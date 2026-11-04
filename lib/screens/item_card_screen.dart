@@ -109,6 +109,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
     _workingCopy.startMinutes = _startMinutes;
+    _workingCopy.targetMinutes = _targetMinutes;
     if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
     }
@@ -329,31 +330,31 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                  'Цель времени, минут (необязательно):'
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                'Цель времени, минут (необязательно):',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _targetController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Без цели',
+                  helperText: 'Время учитывается отдельно и не влияет '
+                      'на выполнение чекбокса или шагов.',
+                  helperMaxLines: 2,
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _targetController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Без цели',
-                    helperText: 'Время учитывается отдельно и не влияет '
-                        'на выполнение чекбокса или шагов.',
-                    helperMaxLines: 2,
+                onChanged: _updateTarget,
+              ),
+              if (_workingCopy.loggedMinutes > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Записано: ${formatDuration(_workingCopy.loggedMinutes)}',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
                   ),
-                  onChanged: _updateTarget,
                 ),
-                if (_workingCopy.loggedMinutes > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Записано: ${formatDuration(_workingCopy.loggedMinutes)}',
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                  ),
               if (_stepType == 'stepByStep') ...[
                 const SizedBox(height: 16),
                 const Text(
