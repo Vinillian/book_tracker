@@ -298,27 +298,27 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
               ),
             ),
             const SizedBox(height: 16),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Цель времени, минут (необязательно):',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Цель времени, минут (необязательно):',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _targetController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Без цели',
-                  helperText: 'Время учитывается отдельно и не влияет '
-                      'на выполнение чекбокса или шагов.',
-                  helperMaxLines: 2,
-                ),
-                onChanged: _updateTarget,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _targetController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Без цели',
+                helperText: 'Время учитывается отдельно и не влияет '
+                    'на выполнение чекбокса или шагов.',
+                helperMaxLines: 2,
               ),
+              onChanged: _updateTarget,
+            ),
             if (_stepType == 'stepByStep') ...[
               const SizedBox(height: 16),
               const Text(
