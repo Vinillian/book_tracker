@@ -201,7 +201,6 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
         _stepType = selected.stepType;
         _totalSteps = selected.stepType == 'stepByStep' ? selected.totalSteps : 1;
         _excludeFromHistory = selected.excludeFromHistory;
-        _timeTrackingEnabled = selected.timeTrackingEnabled;
         _targetMinutes = selected.targetMinutes;
         _targetController.text = _targetMinutes?.toString() ?? '';
         _workingCopy.targetMinutes = selected.targetMinutes;
