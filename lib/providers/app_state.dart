@@ -121,7 +121,47 @@ class AppState extends ChangeNotifier {
   List<Node> get templates => _visible(_nodeService.templates);
 
   void addNode(Node node) { _nodeService.add(node); notifyListeners(); }
-  void updateNode(dynamic key, Node node) { _nodeService.update(key, node); notifyListeners(); }
+
+  void updateNode(dynamic key, Node node) {
+    _nodeService.update(key, node);
+    _syncTrackedActivityForNode(node);
+    notifyListeners();
+  }
+
+  bool _hasDurationHistory(String trackingId) => _historyBox.values.any(
+        (entry) =>
+            entry.trackingId == trackingId && entry.stepType == 'duration',
+      );
+
+  void _syncTrackedActivityForNode(Node node) {
+    final hasDurationHistory = _hasDurationHistory(node.trackingId);
+    for (final key in _trackedActivitiesBox.keys.toList()) {
+      final activity = _trackedActivitiesBox.get(key);
+      if (activity == null || activity.nodeId != node.trackingId) continue;
+      final updatedTimeTracking = activity.timeTrackingEnabled ||
+          node.timeTrackingEnabled ||
+          hasDurationHistory;
+      if (activity.name == node.name &&
+          activity.stepType == node.stepType &&
+          activity.timeTrackingEnabled == updatedTimeTracking) {
+        continue;
+      }
+      _trackedActivitiesBox.put(
+        key,
+        TrackedActivity(
+          id: activity.id,
+          nodeId: activity.nodeId,
+          name: node.name,
+          colorValue: activity.colorValue,
+          stepType: node.stepType,
+          isActive: activity.isActive,
+          isRoutine: activity.isRoutine,
+          order: activity.order,
+          timeTrackingEnabled: updatedTimeTracking,
+        ),
+      );
+    }
+  }
   void deleteNode(dynamic key) {
     _nodeService.delete(key);
     notifyListeners();
@@ -286,6 +326,7 @@ class AppState extends ChangeNotifier {
         activity,
         task,
         previousTrackingId: previousTrackingId,
+        hasDurationHistory: _hasDurationHistory(task.trackingId),
       );
       if (updated != null) _trackedActivitiesBox.put(key, updated);
     }
