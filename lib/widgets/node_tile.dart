@@ -83,7 +83,7 @@ class NodeTile extends StatelessWidget {
                     fontWeight: hasChildren ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
-                trailing: hasChildren ? _buildTrailing() : null,
+                trailing: _buildTrailing(),
                 onTap: onTap,
               ),
             ),
@@ -144,9 +144,20 @@ class NodeTile extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: Text(
-              '${node.completedLeaves}/${node.totalLeaves}',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${node.completedLeaves}/${node.totalLeaves}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                if (node.timeTrackingEnabled)
+                  Text(
+                    _durationText(),
+                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  ),
+              ],
             ),
           ),
           SizedBox(
@@ -186,8 +197,27 @@ class NodeTile extends StatelessWidget {
     } else if (node.stepType == 'stepByStep') {
       return Padding(
         padding: const EdgeInsets.only(right: 8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '${node.completedSteps}/${node.totalSteps}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            if (node.timeTrackingEnabled)
+              Text(
+                _durationText(),
+                style: const TextStyle(fontSize: 10, color: Colors.grey),
+              ),
+          ],
+        ),
+      );
+    } else if (node.timeTrackingEnabled) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8.0),
         child: Text(
-          '${node.completedSteps}/${node.totalSteps}',
+          _durationText(),
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
       );

@@ -61,6 +61,10 @@ class Node {
   @HiveField(15, defaultValue: 0)
   int loggedMinutes;
 
+  /// Independent time logging for checkbox and step tasks (#190).
+  @HiveField(16, defaultValue: false)
+  bool timeTrackingEnabled;
+
   Node({
     required this.name,
     required this.children,
@@ -78,6 +82,7 @@ class Node {
     this.templateTarget,
     this.targetMinutes,
     this.loggedMinutes = 0,
+    this.timeTrackingEnabled = false,
   }) : id = id ?? const Uuid().v4(),
         trackingId = trackingId ?? const Uuid().v4();
 
@@ -93,6 +98,7 @@ class Node {
         String? trackingId,
         this.targetMinutes,
         this.loggedMinutes = 0,
+        this.timeTrackingEnabled = false,
       }) : children = [],
         isExpanded = false,
         completed = false,
@@ -117,6 +123,7 @@ class Node {
       templateTarget: templateTarget,
       targetMinutes: targetMinutes,
       loggedMinutes: loggedMinutes,
+      timeTrackingEnabled: timeTrackingEnabled,
     );
   }
 
@@ -131,6 +138,9 @@ class Node {
       children.isEmpty ? stepType != 'folder' : hasOwnProgress;
 
   bool get isDuration => stepType == 'duration';
+
+  /// Whether this task can accept independent duration sessions.
+  bool get isTimeTrackingEnabled => isDuration || timeTrackingEnabled;
 
   /// A `duration` task counts as one unit in the statistics: done once its goal
   /// is reached, or, when it has no goal, once any time is logged (#112).
@@ -207,6 +217,7 @@ class Node {
       'templateTarget': templateTarget,
       'targetMinutes': targetMinutes,
       'loggedMinutes': loggedMinutes,
+      'timeTrackingEnabled': timeTrackingEnabled,
     };
   }
 
@@ -231,6 +242,7 @@ class Node {
       templateTarget: json['templateTarget'] as String?,
       targetMinutes: json['targetMinutes'] as int?,
       loggedMinutes: json['loggedMinutes'] as int? ?? 0,
+      timeTrackingEnabled: json['timeTrackingEnabled'] as bool? ?? false,
     );
   }
 }

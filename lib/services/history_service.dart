@@ -70,7 +70,7 @@ class HistoryService {
     // Один nodeId — одна запись, независимо от того, на какую дату она
     // была записана раньше (защита от рассинхрона дат, а не только от
     // повторных тогглов в один и тот же день).
-    _deleteEntryByNodeId(node.id);
+    _deleteProgressEntriesByNodeId(node.id);
 
     if (newValue) {
       final newEntry = HistoryEntry.forSingle(
@@ -93,7 +93,7 @@ class HistoryService {
   }) {
     final eventDate = targetDate ?? DateTime.now();
 
-    _deleteEntryByNodeId(node.id);
+    _deleteProgressEntriesByNodeId(node.id);
 
     if (newSteps > 0) {
       final newEntry = HistoryEntry.forStep(
@@ -153,21 +153,37 @@ class HistoryService {
     return false;
   }
 
-  /// Удаляет любую существующую запись для данного nodeId, независимо от
-  /// её даты. Один экземпляр задачи (nodeId) не может законно иметь
-  /// больше одной актуальной записи в истории.
-  static void _deleteEntryByNodeId(String nodeId) {
-    dynamic keyToDelete;
-    for (var key in _box.keys) {
+  /// Removes progress entries for one node but never touches duration sessions.
+  static void _deleteProgressEntriesByNodeId(String nodeId) {
+    final keysToDelete = <dynamic>[];
+    for (final key in _box.keys) {
       final entry = _box.get(key);
-      if (entry != null && entry.nodeId == nodeId) {
-        keyToDelete = key;
-        break;
+      if (entry != null &&
+          entry.nodeId == nodeId &&
+          entry.stepType != 'duration') {
+        keysToDelete.add(key);
       }
     }
-    if (keyToDelete != null) {
-      _box.delete(keyToDelete);
+    for (final key in keysToDelete) {
+      _box.delete(key);
     }
+  }
+
+  /// Updates one duration session without changing any other session or progress.
+  static bool updateDurationLog({
+    required String id,
+    required int minutes,
+  }) {
+    if (minutes <= 0) return false;
+    for (final key in _box.keys) {
+      final entry = _box.get(key);
+      if (entry != null && entry.id == id && entry.stepType == 'duration') {
+        entry.minutes = minutes;
+        _box.put(key, entry);
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Most frequent date (without time) among the entries recorded for

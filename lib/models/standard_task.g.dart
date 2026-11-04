@@ -25,13 +25,14 @@ class StandardTaskAdapter extends TypeAdapter<StandardTask> {
       colorValue: fields[5] as int?,
       trackingId: fields[6] as String?,
       targetMinutes: fields[7] as int?,
+      timeTrackingEnabled: fields[8] == null ? false : fields[8] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, StandardTask obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class StandardTaskAdapter extends TypeAdapter<StandardTask> {
       ..writeByte(6)
       ..write(obj.trackingId)
       ..writeByte(7)
-      ..write(obj.targetMinutes);
+      ..write(obj.targetMinutes)
+      ..writeByte(8)
+      ..write(obj.timeTrackingEnabled);
   }
 
   @override

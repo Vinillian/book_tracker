@@ -73,6 +73,8 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
           isActive: true,
           isRoutine: existing.isRoutine,
           order: existing.order,
+          timeTrackingEnabled:
+              existing.timeTrackingEnabled || selectedNode.isTimeTrackingEnabled,
         );
         appState.updateTrackedActivity(existing.id, updated);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -104,6 +106,13 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       stepType: selectedNode.stepType,
       isActive: true,
       order: newOrder,
+      timeTrackingEnabled: selectedNode.timeTrackingEnabled ||
+          selectedNode.isDuration ||
+          appState.historyBox.values.any(
+            (entry) =>
+                entry.trackingId == selectedNode.trackingId &&
+                entry.stepType == 'duration',
+          ),
     );
 
     appState.addTrackedActivity(newActivity);
@@ -148,6 +157,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       isActive: activity.isActive,
       isRoutine: activity.isRoutine,
       order: activity.order,
+      timeTrackingEnabled: activity.timeTrackingEnabled,
     );
     appState.updateTrackedActivity(activity.id, updated);
     _loadActivities();
@@ -165,6 +175,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       isActive: value,
       isRoutine: activity.isRoutine,
       order: activity.order,
+      timeTrackingEnabled: activity.timeTrackingEnabled,
     );
     appState.updateTrackedActivity(activity.id, updated);
     _loadActivities();
@@ -219,6 +230,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
           isActive: activity.isActive,
           isRoutine: activity.isRoutine,
           order: i,
+          timeTrackingEnabled: activity.timeTrackingEnabled,
         );
         appState.updateTrackedActivity(activity.id, updated);
       }
@@ -273,11 +285,15 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
                   ),
                   title: Text(activity.name),
                   subtitle: Text(
-                    activity.stepType == 'single'
-                        ? 'Одиночная'
-                        : activity.stepType == 'duration'
-                            ? 'Длительность'
-                            : 'Пошаговая',
+                    (activity.stepType == 'single'
+                            ? 'Одиночная'
+                            : activity.stepType == 'duration'
+                                ? 'Длительность'
+                                : 'Пошаговая') +
+                        (activity.timeTrackingEnabled &&
+                                activity.stepType != 'duration'
+                            ? ' · учёт времени'
+                            : ''),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,

@@ -121,7 +121,52 @@ class AppState extends ChangeNotifier {
   List<Node> get templates => _visible(_nodeService.templates);
 
   void addNode(Node node) { _nodeService.add(node); notifyListeners(); }
-  void updateNode(dynamic key, Node node) { _nodeService.update(key, node); notifyListeners(); }
+
+  void updateNode(dynamic key, Node node) {
+    _nodeService.update(key, node);
+    _syncTimeTrackingForNodeTree(node);
+    notifyListeners();
+  }
+
+  bool _hasDurationHistory(String trackingId) => _historyBox.values.any(
+        (entry) =>
+            entry.trackingId == trackingId && entry.stepType == 'duration',
+      );
+
+  /// The updated node may be a plan/book root. Sync the time-tracking heatmap
+  /// flag recursively so edits to nested tasks also reach their tracked row.
+  void _syncTimeTrackingForNodeTree(Node node) {
+    final hasDurationHistory = _hasDurationHistory(node.trackingId);
+    for (final key in _trackedActivitiesBox.keys.toList()) {
+      final activity = _trackedActivitiesBox.get(key);
+      if (activity == null || activity.nodeId != node.trackingId) continue;
+
+      final enabled = activity.timeTrackingEnabled ||
+          node.isTimeTrackingEnabled ||
+          hasDurationHistory;
+      if (activity.timeTrackingEnabled == enabled) continue;
+
+      _trackedActivitiesBox.put(
+        key,
+        TrackedActivity(
+          id: activity.id,
+          nodeId: activity.nodeId,
+          name: activity.name,
+          colorValue: activity.colorValue,
+          stepType: activity.stepType,
+          isActive: activity.isActive,
+          isRoutine: activity.isRoutine,
+          order: activity.order,
+          timeTrackingEnabled: enabled,
+        ),
+      );
+    }
+
+    for (final child in node.children) {
+      _syncTimeTrackingForNodeTree(child);
+    }
+  }
+
   void deleteNode(dynamic key) {
     _nodeService.delete(key);
     notifyListeners();
@@ -286,6 +331,7 @@ class AppState extends ChangeNotifier {
         activity,
         task,
         previousTrackingId: previousTrackingId,
+        hasDurationHistory: _hasDurationHistory(task.trackingId),
       );
       if (updated != null) _trackedActivitiesBox.put(key, updated);
     }

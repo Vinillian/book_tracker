@@ -93,6 +93,77 @@ void main() {
       expect(entries.map((e) => e.minutes).toList()..sort(), [25, 30]);
     });
 
+    test('checkbox progress changes preserve every duration session', () {
+      final n = Node.leaf('Йога', stepType: 'single');
+      final day = DateTime(2026, 10, 25);
+      HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 20, targetDate: day,
+      );
+      HistoryService.recordUniqueToggle(
+        bookId: 'b', node: n, newValue: true, targetDate: day,
+      );
+      HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 30, targetDate: day,
+      );
+      HistoryService.recordUniqueToggle(
+        bookId: 'b', node: n, newValue: false, targetDate: day,
+      );
+
+      final entries = HistoryService.getEntriesForDay(day);
+      expect(
+        entries.where((e) => e.stepType == 'duration').map((e) => e.minutes).toList()..sort(),
+        [20, 30],
+      );
+      expect(entries.where((e) => e.stepType != 'duration'), isEmpty);
+    });
+
+    test('step progress replaces only the progress entry and preserves sessions', () {
+      final n = Node.leaf('Чтение', stepType: 'stepByStep', totalSteps: 5);
+      final day = DateTime(2026, 10, 25);
+      HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 15, targetDate: day,
+      );
+      HistoryService.recordUniqueProgress(
+        bookId: 'b', node: n, newSteps: 2, targetDate: day,
+      );
+      HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 25, targetDate: day,
+      );
+      HistoryService.recordUniqueProgress(
+        bookId: 'b', node: n, newSteps: 4, targetDate: day,
+      );
+
+      final entries = HistoryService.getEntriesForDay(day);
+      expect(entries.where((e) => e.stepType == 'duration').length, 2);
+      final progress = entries.where((e) => e.stepType == 'stepByStep').toList();
+      expect(progress.length, 1);
+      expect(progress.single.completedSteps, 4);
+    });
+
+    test('editing one duration session leaves other sessions unchanged', () {
+      final n = durationNode('Работа');
+      final day = DateTime(2026, 10, 25);
+      final editedId = HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 20, targetDate: day,
+      )!;
+      HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 35, targetDate: day,
+      );
+
+      expect(
+        HistoryService.updateDurationLog(id: editedId, minutes: 50),
+        isTrue,
+      );
+      expect(
+        HistoryService.getDurationEntriesForNode(n.id).map((e) => e.minutes).toSet(),
+        {50, 35},
+      );
+      expect(
+        HistoryService.updateDurationLog(id: editedId, minutes: 0),
+        isFalse,
+      );
+    });
+
     test('non-positive minutes are not recorded', () {
       final n = durationNode('Работа');
       expect(HistoryService.recordDurationLog(bookId: 'b', node: n, minutes: 0),
@@ -100,18 +171,25 @@ void main() {
       expect(history.length, 0);
     });
 
-    test('deleteEntryById removes only that log', () {
-      final n = durationNode('Работа');
+    test('deleteEntryById removes only one session and preserves task progress', () {
+      final n = Node.leaf('Йога', stepType: 'single');
       final day = DateTime(2026, 10, 25);
+      HistoryService.recordUniqueToggle(
+        bookId: 'b', node: n, newValue: true, targetDate: day,
+      );
       final first = HistoryService.recordDurationLog(
-          bookId: 'b', node: n, minutes: 25, targetDate: day)!;
+        bookId: 'b', node: n, minutes: 25, targetDate: day,
+      )!;
       HistoryService.recordDurationLog(
-          bookId: 'b', node: n, minutes: 30, targetDate: day);
+        bookId: 'b', node: n, minutes: 30, targetDate: day,
+      );
+
       expect(HistoryService.deleteEntryById(first), isTrue);
       expect(HistoryService.deleteEntryById(first), isFalse);
       final left = HistoryService.getEntriesForDay(day);
-      expect(left.length, 1);
-      expect(left.single.minutes, 30);
+      expect(left.where((e) => e.stepType == 'duration').length, 1);
+      expect(left.singleWhere((e) => e.stepType == 'single').completed, isTrue);
+      expect(left.singleWhere((e) => e.stepType == 'duration').minutes, 30);
     });
 
     test('minutes survive a close and reopen of the box', () async {
@@ -227,6 +305,37 @@ void main() {
       final data = HeatmapService(history, tracked).getIntensityData();
       expect(data[day]!['single-tracking'], 1.0);
       expect(data[day]!['steps-tracking'], 4.0);
+    });
+
+    test('heatmap combines checkbox progress with independent time points', () async {
+      final n = Node.leaf(
+        'Тайчи',
+        stepType: 'single',
+        timeTrackingEnabled: true,
+      );
+      final day = DateTime(2026, 10, 25);
+      await history.add(HistoryEntry.forSingle(
+        bookId: 'b',
+        nodeId: n.id,
+        nodeName: n.name,
+        completed: true,
+        trackingId: n.trackingId,
+        date: day,
+      ));
+      HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 30, targetDate: day,
+      );
+      await tracked.add(TrackedActivity(
+        nodeId: n.trackingId,
+        name: n.name,
+        colorValue: 0xFF2196F3,
+        stepType: 'single',
+        timeTrackingEnabled: true,
+      ));
+
+      final data = HeatmapService(history, tracked).getIntensityData();
+      // One checkbox point plus 30 minutes / 20 = 1.5 time points.
+      expect(data[day]![n.trackingId], 2.5);
     });
 
     test('heatmap ignores untracked tasks', () {
