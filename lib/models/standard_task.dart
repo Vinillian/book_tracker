@@ -25,7 +25,12 @@ class StandardTask {
   int? colorValue;
 
   @HiveField(6)
-  String trackingId;   // новый поле
+  String trackingId;
+
+  /// Optional completion goal for duration-based standard tasks, in minutes.
+  /// Missing values in older Hive records remain null.
+  @HiveField(7)
+  int? targetMinutes;
 
   StandardTask({
     String? id,
@@ -35,6 +40,7 @@ class StandardTask {
     this.excludeFromHistory = false,
     this.colorValue,
     String? trackingId,
+    this.targetMinutes,
   }) : id = id ?? const Uuid().v4(),
         trackingId = trackingId ?? const Uuid().v4();
 
@@ -46,7 +52,24 @@ class StandardTask {
     'excludeFromHistory': excludeFromHistory,
     'colorValue': colorValue,
     'trackingId': trackingId,
+    'targetMinutes': targetMinutes,
   };
+
+  String get progressDescription {
+    switch (stepType) {
+      case 'single':
+        return 'Одиночный чекбокс';
+      case 'stepByStep':
+        return 'Пошаговый ($totalSteps шагов)';
+      case 'duration':
+        final goal = targetMinutes;
+        return goal != null && goal > 0
+            ? 'Длительность · цель: $goal мин'
+            : 'Длительность · без цели';
+      default:
+        return stepType;
+    }
+  }
 
   factory StandardTask.fromJson(Map<String, dynamic> json) => StandardTask(
     id: json['id'],
@@ -56,6 +79,7 @@ class StandardTask {
     excludeFromHistory: json['excludeFromHistory'] ?? false,
     colorValue: json['colorValue'],
     trackingId: json['trackingId'] ?? const Uuid().v4(),
+    targetMinutes: json['targetMinutes'] as int?,
   );
 
   Node toNode() {
@@ -64,7 +88,8 @@ class StandardTask {
       stepType: stepType,
       totalSteps: totalSteps,
       excludeFromHistory: excludeFromHistory,
-      trackingId: trackingId,   // важно: передаём сохранённый trackingId
+      trackingId: trackingId,
+      targetMinutes: stepType == 'duration' ? targetMinutes : null,
     );
   }
 }
