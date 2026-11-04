@@ -124,7 +124,7 @@ class AppState extends ChangeNotifier {
 
   void updateNode(dynamic key, Node node) {
     _nodeService.update(key, node);
-    _syncTrackedActivityForNode(node);
+    _syncTimeTrackingForNodeTree(node);
     notifyListeners();
   }
 
@@ -133,33 +133,37 @@ class AppState extends ChangeNotifier {
             entry.trackingId == trackingId && entry.stepType == 'duration',
       );
 
-  void _syncTrackedActivityForNode(Node node) {
+  /// The updated node may be a plan/book root. Sync the time-tracking heatmap
+  /// flag recursively so edits to nested tasks also reach their tracked row.
+  void _syncTimeTrackingForNodeTree(Node node) {
     final hasDurationHistory = _hasDurationHistory(node.trackingId);
     for (final key in _trackedActivitiesBox.keys.toList()) {
       final activity = _trackedActivitiesBox.get(key);
       if (activity == null || activity.nodeId != node.trackingId) continue;
-      final updatedTimeTracking = activity.timeTrackingEnabled ||
-          node.timeTrackingEnabled ||
+
+      final enabled = activity.timeTrackingEnabled ||
+          node.isTimeTrackingEnabled ||
           hasDurationHistory;
-      if (activity.name == node.name &&
-          activity.stepType == node.stepType &&
-          activity.timeTrackingEnabled == updatedTimeTracking) {
-        continue;
-      }
+      if (activity.timeTrackingEnabled == enabled) continue;
+
       _trackedActivitiesBox.put(
         key,
         TrackedActivity(
           id: activity.id,
           nodeId: activity.nodeId,
-          name: node.name,
+          name: activity.name,
           colorValue: activity.colorValue,
-          stepType: node.stepType,
+          stepType: activity.stepType,
           isActive: activity.isActive,
           isRoutine: activity.isRoutine,
           order: activity.order,
-          timeTrackingEnabled: updatedTimeTracking,
+          timeTrackingEnabled: enabled,
         ),
       );
+    }
+
+    for (final child in node.children) {
+      _syncTimeTrackingForNodeTree(child);
     }
   }
 

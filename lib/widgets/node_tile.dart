@@ -152,9 +152,20 @@ class NodeTile extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: Text(
-              '${node.completedLeaves}/${node.totalLeaves}',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${node.completedLeaves}/${node.totalLeaves}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                if (node.timeTrackingEnabled)
+                  Text(
+                    _durationText(),
+                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  ),
+              ],
             ),
           ),
           SizedBox(

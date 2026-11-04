@@ -74,7 +74,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
           isRoutine: existing.isRoutine,
           order: existing.order,
           timeTrackingEnabled:
-              existing.timeTrackingEnabled || selectedNode.timeTrackingEnabled,
+              existing.timeTrackingEnabled || selectedNode.isTimeTrackingEnabled,
         );
         appState.updateTrackedActivity(existing.id, updated);
         ScaffoldMessenger.of(context).showSnackBar(
