@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/node.dart';
@@ -25,8 +23,6 @@ class AppState extends ChangeNotifier {
   late final Box<StandardTask> _standardTasksBox;
   late final Box<TrackedActivity> _trackedActivitiesBox;
   late final Box<AppSettings> _settingsBox;
-  late final StreamSubscription<BoxEvent> _historySubscription;
-  late final StreamSubscription<BoxEvent> _trackedActivitiesSubscription;
 
   String _themeMode = 'system';
   String get themeMode => _themeMode;
@@ -54,29 +50,8 @@ class AppState extends ChangeNotifier {
     _nodeService.migratePlannedDates(); // #114
     _nodeService.migrateNestedBookCategories(); // #139
 
-    _historySubscription =
-        _historyBox.watch().listen((_) => notifyListeners());
-    _trackedActivitiesSubscription =
-        _trackedActivitiesBox.watch().listen((_) => notifyListeners());
-  }
-
-  Future<void>? _watchSubscriptionsCancellation;
-
-  /// Cancels Hive listeners and completes when both stream cancellations finish.
-  /// Tests and explicit storage shutdown can await this before closing Hive.
-  Future<void> cancelWatchSubscriptions() {
-    return _watchSubscriptionsCancellation ??= Future.wait<void>([
-      _historySubscription.cancel(),
-      _trackedActivitiesSubscription.cancel(),
-    ]);
-  }
-
-  @override
-  void dispose() {
-    // Provider disposal is synchronous; explicit shutdown can await the same
-    // cancellation future through cancelWatchSubscriptions().
-    unawaited(cancelWatchSubscriptions());
-    super.dispose();
+    _historyBox.watch().listen((_) => notifyListeners());
+    _trackedActivitiesBox.watch().listen((_) => notifyListeners());
   }
 
   void _loadTheme() {
@@ -285,20 +260,17 @@ class AppState extends ChangeNotifier {
 
   List<StandardTask> get standardTasks => _standardTasksBox.values.toList();
 
-  Future<void> addStandardTask(StandardTask task) async {
-    await _standardTasksBox.put(task.id, task);
+  void addStandardTask(StandardTask task) {
+    _standardTasksBox.put(task.id, task);
     notifyListeners();
   }
 
-  Future<void> updateStandardTask(String id, StandardTask task) async {
+  void updateStandardTask(String id, StandardTask task) {
     final key = findKeyById<StandardTask>(_standardTasksBox, (t) => t.id, id);
     if (key != null) {
       final previousTrackingId = _standardTasksBox.get(key)?.trackingId;
-      await _standardTasksBox.put(key, task);
-      await _syncTrackedActivities(
-        task,
-        previousTrackingId ?? task.trackingId,
-      );
+      _standardTasksBox.put(key, task);
+      _syncTrackedActivities(task, previousTrackingId ?? task.trackingId);
       notifyListeners();
     }
   }
@@ -306,10 +278,7 @@ class AppState extends ChangeNotifier {
   /// A tracked activity follows its standard task: the name and the type of an
   /// edited task reach it (#173). Plan and template tasks are copies and keep
   /// what they were made with.
-  Future<void> _syncTrackedActivities(
-    StandardTask task,
-    String previousTrackingId,
-  ) async {
+  void _syncTrackedActivities(StandardTask task, String previousTrackingId) {
     for (final key in _trackedActivitiesBox.keys.toList()) {
       final activity = _trackedActivitiesBox.get(key);
       if (activity == null) continue;
@@ -318,9 +287,7 @@ class AppState extends ChangeNotifier {
         task,
         previousTrackingId: previousTrackingId,
       );
-      if (updated != null) {
-        await _trackedActivitiesBox.put(key, updated);
-      }
+      if (updated != null) _trackedActivitiesBox.put(key, updated);
     }
   }
 
@@ -334,8 +301,8 @@ class AppState extends ChangeNotifier {
 
   List<TrackedActivity> get trackedActivities => _trackedActivitiesBox.values.toList();
 
-  Future<void> addTrackedActivity(TrackedActivity activity) async {
-    await _trackedActivitiesBox.put(activity.id, activity);
+  void addTrackedActivity(TrackedActivity activity) {
+    _trackedActivitiesBox.put(activity.id, activity);
     notifyListeners();
   }
 

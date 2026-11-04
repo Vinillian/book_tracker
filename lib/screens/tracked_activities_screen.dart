@@ -106,7 +106,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       order: newOrder,
     );
 
-    await appState.addTrackedActivity(newActivity);
+    appState.addTrackedActivity(newActivity);
     _loadActivities();
     setState(() {});
   }

@@ -1,5 +1,4 @@
-import 'dart:async';
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,29 +45,6 @@ Future<void> _openEditor(
   await _pumpRouteTransition(tester);
 }
 
-Future<void> _closeBoxForTest<T>(Box<T> box, String name) async {
-  await box.close().timeout(
-    const Duration(seconds: 10),
-    onTimeout: () => throw TimeoutException('Timed out closing $name'),
-  );
-}
-
-/// Windows may briefly lock a freshly closed Hive directory (for example,
-/// while another process scans its files). Retry sharing violations only.
-Future<void> _deleteTempDirectoryWithRetry(Directory directory) async {
-  const maxAttempts = 50;
-  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      await directory.delete(recursive: true);
-      return;
-    } on FileSystemException catch (error) {
-      final isWindowsSharingViolation = error.osError?.errorCode == 32;
-      if (!isWindowsSharingViolation || attempt == maxAttempts) rethrow;
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-  }
-}
-
 Future<void> _pumpRouteTransition(WidgetTester tester) async {
   // Avoid waiting for the blinking cursor of an autofocus TextField.
   // Material route transitions finish within 500 ms.
@@ -77,19 +53,17 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 }
 
 void main() {
-  late Directory directory;
   late AppState appState;
-  OpenedHiveBoxes? openedBoxes;
-  WidgetTester? activeTester;
 
   setUp(() async {
-    directory = await Directory.systemTemp.createTemp('standard_task_editor');
-    Hive.init(directory.path);
     registerAppHiveAdapters();
-    openedBoxes = await HiveStartup(
-      openBox: <T>(String name) => Hive.openBox<T>(name),
+    // In-memory boxes: file-backed Hive operations started inside a
+    // testWidgets body run in the fake-async zone and do not complete
+    // reliably (close() hung, #193). Memory boxes need no file I/O.
+    final boxes = await HiveStartup(
+      openBox: <T>(String name) =>
+          Hive.openBox<T>(name, bytes: Uint8List(0)),
     ).open();
-    final boxes = openedBoxes!;
     appState = AppState(
       templatesBox: boxes.templatesBox,
       notesBox: boxes.notesBox,
@@ -101,34 +75,12 @@ void main() {
   });
 
   tearDown(() async {
-    await appState.cancelWatchSubscriptions();
     appState.dispose();
-
-    // Close boxes separately to identify which Hive box blocks shutdown.
-    final boxes = openedBoxes;
-    if (boxes != null) {
-      await _closeBoxForTest(boxes.trackedActivitiesBox, 'trackedActivities');
-      await _closeBoxForTest(boxes.standardTasksBox, 'standardTasks');
-      await _closeBoxForTest(boxes.notesBox, 'notes');
-      await _closeBoxForTest(boxes.historyBox, 'history');
-      await _closeBoxForTest(boxes.settingsBox, 'settings');
-      await _closeBoxForTest(boxes.templatesBox, 'templates');
-    }
-
-    final tester = activeTester;
-    if (tester != null) {
-      // Use real async time for Windows sharing-violation retries; widget tests
-      // otherwise run inside a fake-async zone.
-      await tester.runAsync(() => _deleteTempDirectoryWithRetry(directory));
-    } else {
-      await directory.delete(recursive: true);
-    }
-    activeTester = null;
+    await Hive.close();
   });
 
   testWidgets('creates a duration standard task with an optional goal',
       (tester) async {
-    activeTester = tester;
     await _openEditor(
       tester,
       appState,
@@ -157,8 +109,7 @@ void main() {
 
   testWidgets('item-card picker copies duration goal and tracking identity',
       (tester) async {
-    activeTester = tester;
-    await appState.addStandardTask(
+    appState.addStandardTask(
       StandardTask(
         name: 'Бег',
         stepType: 'duration',
@@ -215,14 +166,13 @@ void main() {
 
   testWidgets('editing duration task preserves tracking id and updates tracked activity',
       (tester) async {
-    activeTester = tester;
     final task = StandardTask(
       name: 'Чтение',
       stepType: 'single',
       trackingId: 'reading-tracking',
     );
-    await appState.addStandardTask(task);
-    await appState.addTrackedActivity(
+    appState.addStandardTask(task);
+    appState.addTrackedActivity(
       TrackedActivity(
         id: 'reading-activity',
         nodeId: 'reading-tracking',

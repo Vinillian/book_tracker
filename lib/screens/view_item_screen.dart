@@ -206,7 +206,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     return null;
   }
 
-  Future<void> _quickAddToTracking(AppState appState, TrackedActivity? existing) async {
+  void _quickAddToTracking(AppState appState, TrackedActivity? existing) {
     if (existing != null) {
       // Уже была запись, но неактивна (снята с отслеживания ранее) — включаем обратно.
       final updated = TrackedActivity(
@@ -233,7 +233,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         isActive: true,
         order: maxOrder + 1,
       );
-      await appState.addTrackedActivity(newActivity);
+      appState.addTrackedActivity(newActivity);
     }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
