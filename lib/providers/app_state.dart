@@ -66,8 +66,12 @@ class AppState extends ChangeNotifier {
     _nodeService.migratePlannedDates(); // #114
     _nodeService.migrateNestedBookCategories(); // #139
 
-    _historyBox.watch().listen((_) => _invalidateHeatmapIntensityCache());
-    _trackedActivitiesBox.watch().listen((_) => _invalidateHeatmapIntensityCache());
+    _historyBox.watch().listen(
+      (_) => _invalidateHeatmapIntensityCache(),
+    );
+    _trackedActivitiesBox.watch().listen(
+      (_) => _invalidateHeatmapIntensityCache(),
+    );
   }
 
   void _loadTheme() {
