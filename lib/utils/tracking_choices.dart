@@ -18,17 +18,10 @@ class TrackingChoice {
     this.timeTrackingEnabled = false,
   });
 
-  /// Task type plus optional independent time logging.
-  String get description {
-    final typeDescription = stepType == 'single'
-        ? 'Одиночный чекбокс'
-        : stepType == 'duration'
-            ? 'Длительность'
-            : 'Пошаговая ($totalSteps шагов)';
-    return timeTrackingEnabled && stepType != 'duration'
-        ? '$typeDescription · учёт времени'
-        : typeDescription;
-  }
+  /// The primary completion mode; time sessions are available separately.
+  String get description => stepType == 'stepByStep'
+      ? 'Пошаговая ($totalSteps шагов)'
+      : 'Одиночный чекбокс';
 
   /// A throw-away task carrying what the tracking needs (name, type, tracking
   /// id and time tracking option); it is not stored anywhere.
