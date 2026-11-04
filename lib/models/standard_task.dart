@@ -72,10 +72,8 @@ class StandardTask {
         description = 'Пошаговый ($totalSteps шагов)';
         break;
       case 'duration':
-        final goal = targetMinutes;
-        description = goal != null && goal > 0
-            ? 'Длительность · цель: $goal мин'
-            : 'Длительность · без цели';
+        // Defensive fallback for a manually mutated legacy instance.
+        description = 'Одиночный чекбокс';
         break;
       default:
         description = stepType;
