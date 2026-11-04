@@ -196,7 +196,7 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
     setState(() => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null);
   }
 
-  void _save() {
+  Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -240,10 +240,11 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       targetMinutes: _stepType == 'duration' ? _targetMinutes : null,
     );
     if (widget.isNew) {
-      appState.addStandardTask(updatedTask);
+      await appState.addStandardTask(updatedTask);
     } else {
-      appState.updateStandardTask(widget.task.id, updatedTask);
+      await appState.updateStandardTask(widget.task.id, updatedTask);
     }
+    if (!mounted) return;
     Navigator.pop(context);
   }
 
