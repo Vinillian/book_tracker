@@ -102,16 +102,8 @@ class NodeTile extends StatelessWidget {
             ),
           ),
           subtitle: hasChildren && node.stepType == 'stepByStep'
-              ? Text(
-                  'Шаги: ${node.completedSteps}/${node.totalSteps}' +
-                      (node.timeTrackingEnabled
-                          ? ' · ${_durationText()}'
-                          : ''),
-                )
-              : hasChildren && node.stepType == 'single' &&
-                      node.timeTrackingEnabled
-                  ? Text('Учёт времени: ${_durationText()}')
-                  : hasChildren && node.isDuration
+              ? Text('Шаги: ${node.completedSteps}/${node.totalSteps}')
+              : hasChildren && node.isDuration
                   ? Text(_durationText())
                   : null,
           trailing: _buildTrailing(),
