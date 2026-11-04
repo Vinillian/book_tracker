@@ -435,13 +435,21 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
               const SizedBox(height: 8),
               Text(
                 durationProgressLabel(_node.loggedMinutes, _node.targetMinutes),
-                style: const TextStyle(fontSize: 18),
+                style: TextStyle(
+                  fontSize: 18,
+                  color: _node.timeGoalReached ? Colors.green : null,
+                ),
               ),
               if ((_node.targetMinutes ?? 0) > 0) ...[
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
                   value: (_node.loggedMinutes / _node.targetMinutes!)
                       .clamp(0.0, 1.0),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _node.timeGoalReached
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ],
               const SizedBox(height: 8),
