@@ -23,8 +23,8 @@ class TrackingChoice {
       ? 'Пошаговая ($totalSteps шагов)'
       : 'Одиночный чекбокс';
 
-  /// A throw-away task carrying what the tracking needs (name, type, tracking
-  /// id and time tracking option); it is not stored anywhere.
+  /// A throw-away task carrying the primary progress type and tracking id;
+  /// independent time sessions are available for all task progress types.
   Node toNode() => Node.leaf(
         name,
         stepType: stepType,
