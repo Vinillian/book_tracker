@@ -272,7 +272,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         isRoutine: existing.isRoutine,
         order: existing.order,
         timeTrackingEnabled:
-            existing.timeTrackingEnabled || _node.timeTrackingEnabled,
+            existing.timeTrackingEnabled || _node.isTimeTrackingEnabled,
       );
       appState.updateTrackedActivity(existing.id, updated);
     } else {
@@ -287,7 +287,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         stepType: _node.stepType,
         isActive: true,
         order: maxOrder + 1,
-        timeTrackingEnabled: _node.timeTrackingEnabled ||
+        timeTrackingEnabled: _node.isTimeTrackingEnabled ||
             appState.historyBox.values.any(
               (entry) =>
                   entry.trackingId == _node.trackingId &&
