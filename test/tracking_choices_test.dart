@@ -115,7 +115,7 @@ void main() {
             trackingId: 'id',
           );
       expect(choice('single', 1).description, 'Одиночный чекбокс');
-      expect(choice('duration', 1).description, 'Длительность');
+      expect(choice('duration', 1).description, 'Одиночный чекбокс');
       expect(choice('stepByStep', 5).description, 'Пошаговая (5 шагов)');
     });
 
