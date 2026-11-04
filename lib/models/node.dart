@@ -159,6 +159,11 @@ class Node {
   /// The old opt-in flag is intentionally ignored.
   bool get isTimeTrackingEnabled => hasOwnProgress;
 
+  /// True when the separate time goal is reached; this never affects task
+  /// completion or plan progress.
+  bool get timeGoalReached =>
+      (targetMinutes ?? 0) > 0 && loggedMinutes >= targetMinutes!;
+
   int get _ownTotal {
     if (stepType == 'single') return 1;
     if (stepType == 'stepByStep') return totalSteps;
