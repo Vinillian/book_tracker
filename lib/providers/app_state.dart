@@ -285,17 +285,20 @@ class AppState extends ChangeNotifier {
 
   List<StandardTask> get standardTasks => _standardTasksBox.values.toList();
 
-  void addStandardTask(StandardTask task) {
-    _standardTasksBox.put(task.id, task);
+  Future<void> addStandardTask(StandardTask task) async {
+    await _standardTasksBox.put(task.id, task);
     notifyListeners();
   }
 
-  void updateStandardTask(String id, StandardTask task) {
+  Future<void> updateStandardTask(String id, StandardTask task) async {
     final key = findKeyById<StandardTask>(_standardTasksBox, (t) => t.id, id);
     if (key != null) {
       final previousTrackingId = _standardTasksBox.get(key)?.trackingId;
-      _standardTasksBox.put(key, task);
-      _syncTrackedActivities(task, previousTrackingId ?? task.trackingId);
+      await _standardTasksBox.put(key, task);
+      await _syncTrackedActivities(
+        task,
+        previousTrackingId ?? task.trackingId,
+      );
       notifyListeners();
     }
   }
@@ -303,7 +306,10 @@ class AppState extends ChangeNotifier {
   /// A tracked activity follows its standard task: the name and the type of an
   /// edited task reach it (#173). Plan and template tasks are copies and keep
   /// what they were made with.
-  void _syncTrackedActivities(StandardTask task, String previousTrackingId) {
+  Future<void> _syncTrackedActivities(
+    StandardTask task,
+    String previousTrackingId,
+  ) async {
     for (final key in _trackedActivitiesBox.keys.toList()) {
       final activity = _trackedActivitiesBox.get(key);
       if (activity == null) continue;
@@ -312,7 +318,9 @@ class AppState extends ChangeNotifier {
         task,
         previousTrackingId: previousTrackingId,
       );
-      if (updated != null) _trackedActivitiesBox.put(key, updated);
+      if (updated != null) {
+        await _trackedActivitiesBox.put(key, updated);
+      }
     }
   }
 
@@ -326,8 +334,8 @@ class AppState extends ChangeNotifier {
 
   List<TrackedActivity> get trackedActivities => _trackedActivitiesBox.values.toList();
 
-  void addTrackedActivity(TrackedActivity activity) {
-    _trackedActivitiesBox.put(activity.id, activity);
+  Future<void> addTrackedActivity(TrackedActivity activity) async {
+    await _trackedActivitiesBox.put(activity.id, activity);
     notifyListeners();
   }
 
