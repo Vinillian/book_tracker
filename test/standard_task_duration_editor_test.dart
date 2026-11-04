@@ -47,7 +47,6 @@ Future<void> _openEditor(
 
 Future<void> _pumpRouteTransition(WidgetTester tester) async {
   // Avoid waiting for the blinking cursor of an autofocus TextField.
-  // Material route transitions finish within 500 ms.
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
 }
@@ -57,9 +56,6 @@ void main() {
 
   setUp(() async {
     registerAppHiveAdapters();
-    // In-memory boxes: file-backed Hive operations started inside a
-    // testWidgets body run in the fake-async zone and do not complete
-    // reliably (close() hung, #193). Memory boxes need no file I/O.
     final boxes = await HiveStartup(
       openBox: <T>(String name) =>
           Hive.openBox<T>(name, bytes: Uint8List(0)),
@@ -79,7 +75,7 @@ void main() {
     await Hive.close();
   });
 
-  testWidgets('creates a duration standard task with an optional goal',
+  testWidgets('creates a checkbox standard task with an optional time goal',
       (tester) async {
     await _openEditor(
       tester,
@@ -89,11 +85,6 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField).first, 'Чтение');
-    await tester.ensureVisible(find.text('Длительность'));
-    await tester.tap(find.text('Длительность'));
-    await tester.pump();
-
-    expect(find.text('Цель, минут (необязательно):'), findsOneWidget);
     final targetField = find.byType(TextField).at(1);
     await tester.ensureVisible(targetField);
     await tester.enterText(targetField, '45');
@@ -102,17 +93,17 @@ void main() {
 
     expect(appState.standardTasks, hasLength(1));
     expect(appState.standardTasks.single.name, 'Чтение');
-    expect(appState.standardTasks.single.stepType, 'duration');
+    expect(appState.standardTasks.single.stepType, 'single');
     expect(appState.standardTasks.single.targetMinutes, 45);
   }, timeout: const Timeout(Duration(seconds: 60)));
 
-
-  testWidgets('item-card picker copies duration goal and tracking identity',
+  testWidgets('item-card picker copies step progress and time goal',
       (tester) async {
     appState.addStandardTask(
       StandardTask(
         name: 'Бег',
-        stepType: 'duration',
+        stepType: 'stepByStep',
+        totalSteps: 4,
         targetMinutes: 45,
         trackingId: 'running-standard-task',
       ),
@@ -159,16 +150,18 @@ void main() {
     await _pumpRouteTransition(tester);
 
     expect(createdNode, isNotNull);
-    expect(createdNode!.stepType, 'duration');
+    expect(createdNode!.stepType, 'stepByStep');
+    expect(createdNode!.totalSteps, 4);
     expect(createdNode!.targetMinutes, 45);
     expect(createdNode!.trackingId, 'running-standard-task');
   });
 
-  testWidgets('editing duration task preserves tracking id and updates tracked activity',
+  testWidgets('editing legacy duration standard task keeps its time goal and tracking row',
       (tester) async {
     final task = StandardTask(
       name: 'Чтение',
-      stepType: 'single',
+      stepType: 'duration',
+      targetMinutes: 60,
       trackingId: 'reading-tracking',
     );
     appState.addStandardTask(task);
@@ -178,30 +171,28 @@ void main() {
         nodeId: 'reading-tracking',
         name: 'Чтение',
         colorValue: 0xFF2196F3,
-        stepType: 'single',
+        stepType: 'duration',
       ),
     );
 
+    expect(task.stepType, 'single');
     await _openEditor(tester, appState, task, isNew: false);
     await tester.enterText(find.byType(TextField).first, 'Чтение книг');
-    await tester.ensureVisible(find.text('Длительность'));
-    await tester.tap(find.text('Длительность'));
-    await tester.pump();
     final targetField = find.byType(TextField).at(1);
     await tester.ensureVisible(targetField);
-    await tester.enterText(targetField, '60');
+    await tester.enterText(targetField, '75');
     await tester.tap(find.byIcon(Icons.check));
     await _pumpRouteTransition(tester);
 
     final updatedTask = appState.standardTasks.single;
     final tracked = appState.trackedActivities.single;
     expect(updatedTask.name, 'Чтение книг');
-    expect(updatedTask.stepType, 'duration');
-    expect(updatedTask.targetMinutes, 60);
+    expect(updatedTask.stepType, 'single');
+    expect(updatedTask.targetMinutes, 75);
     expect(updatedTask.trackingId, 'reading-tracking');
     expect(tracked.id, 'reading-activity');
     expect(tracked.nodeId, 'reading-tracking');
     expect(tracked.name, 'Чтение книг');
-    expect(tracked.stepType, 'duration');
+    expect(tracked.stepType, 'single');
   });
 }

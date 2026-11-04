@@ -338,6 +338,13 @@ class _EditorScreenState extends State<EditorScreen> {
     });
   }
 
+  String _timeSuffix(Node node) {
+    if ((node.targetMinutes ?? 0) <= 0 && node.loggedMinutes <= 0) {
+      return '';
+    }
+    return ' · время ${durationProgressLabel(node.loggedMinutes, node.targetMinutes)}';
+  }
+
   void _editChild(int index) async {
     final child = _workingCopy.children[index];
     final result = await Navigator.push(
@@ -526,20 +533,18 @@ class _EditorScreenState extends State<EditorScreen> {
                         ? Text(
                             child.hasOwnProgress
                                 ? '${child.children.length} подэлементов · '
-                                    '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : child.isDuration ? "время ${durationProgressLabel(child.loggedMinutes, child.targetMinutes)}" : "чекбокс"}'
+                                    '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : "чекбокс"}'
+                                    '${_timeSuffix(child)}'
                                 : '${child.children.length} подэлементов',
                           )
                         : child.stepType == 'stepByStep'
-                        ? Text(
-                      '${child.completedSteps}/${child.totalSteps}',
-                    )
-                        : child.isDuration
-                        ? Text(
-                      'Длительность: ${durationProgressLabel(child.loggedMinutes, child.targetMinutes)}',
-                    )
-                        : child.stepType == 'single'
-                        ? const Text('Одиночный чекбокс')
-                        : const Text('Папка'),
+                            ? Text(
+                                'Шаги: ${child.completedSteps}/${child.totalSteps}'
+                                '${_timeSuffix(child)}',
+                              )
+                            : child.stepType == 'single'
+                                ? Text('Чекбокс${_timeSuffix(child)}')
+                                : const Text('Папка'),
                     trailing: _multiSelect
                         ? null
                         : Row(

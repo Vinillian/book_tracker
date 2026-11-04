@@ -82,7 +82,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   /// Logs [minutes] on this duration task: adds them to the task and, unless
   /// the task is excluded from History, records one History entry (#112).
   void _addMinutes(int minutes) {
-    if (minutes <= 0 || !_node.isTimeTrackingEnabled) return;
+    if (minutes <= 0 || !_node.hasOwnProgress) return;
     setState(() => _node.loggedMinutes += minutes);
     if (!_node.excludeFromHistory) {
       HistoryService.recordDurationLog(
@@ -309,9 +309,8 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   Widget build(BuildContext context) {
     final bool hasChildren = _node.children.isNotEmpty;
     // Own progress is shown for leaves and for parents that keep it (#111).
-    final bool isLeaf = !hasChildren || _node.hasOwnProgress;
+    final bool isLeaf = _node.hasOwnProgress;
     final bool isSingle = _node.stepType == 'single';
-    final bool isDuration = _node.isDuration;
     final bool isTrackable = isLeaf && !_node.excludeFromHistory;
 
     final appState = context.watch<AppState>();
@@ -338,7 +337,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : isDuration ? 'Длительность' : 'Пошаговый') : 'Папка'}',
+                      'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : 'Пошаговый') : 'Папка'}',
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     if (hasChildren && isLeaf)
@@ -399,23 +398,6 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                 value: _node.completed,
                 onChanged: _onToggle,
               ),
-            ] else if (isLeaf && isDuration) ...[
-              const Text(
-                'Выполнение по времени:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                durationProgressLabel(_node.loggedMinutes, _node.targetMinutes),
-                style: const TextStyle(fontSize: 18),
-              ),
-              if ((_node.targetMinutes ?? 0) > 0) ...[
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: (_node.loggedMinutes / _node.targetMinutes!)
-                      .clamp(0.0, 1.0),
-                ),
-              ],
             ] else if (isLeaf) ...[
               const Text(
                 'Прогресс:',
@@ -444,12 +426,32 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                 style: TextStyle(fontSize: 16),
               ),
             ],
-            if (isLeaf && _node.isTimeTrackingEnabled) ...[
+            if (isLeaf) ...[
               const SizedBox(height: 20),
               const Text(
                 'Учёт времени:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 8),
+              Text(
+                durationProgressLabel(_node.loggedMinutes, _node.targetMinutes),
+                style: TextStyle(
+                  fontSize: 18,
+                  color: _node.timeGoalReached ? Colors.green : null,
+                ),
+              ),
+              if ((_node.targetMinutes ?? 0) > 0) ...[
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (_node.loggedMinutes / _node.targetMinutes!)
+                      .clamp(0.0, 1.0),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _node.timeGoalReached
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -467,7 +469,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                 ],
               ),
               ..._buildLogList(),
-            ] else if (isLeaf) ..._buildLogList(),
+            ],
           ],
         ),
         ),

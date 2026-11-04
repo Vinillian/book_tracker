@@ -382,22 +382,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget? _taskTrailing(Node task) {
-    if (task.children.isEmpty && task.isDuration) {
-      return Text(
-        durationProgressLabel(task.loggedMinutes, task.targetMinutes),
-        style: TextStyle(color: task.durationReached ? Colors.green : null),
-      );
-    }
     final total = task.totalLeaves;
-    if (total == 0) return null;
-    final done = task.completedLeaves;
-    if (done >= total) {
-      return const Icon(Icons.check_circle, color: Colors.green);
+    Widget? progress;
+    if (total > 0) {
+      final done = task.completedLeaves;
+      if (done >= total) {
+        progress = const Icon(Icons.check_circle, color: Colors.green);
+      } else if (task.children.isEmpty && task.stepType == 'single') {
+        progress = const Icon(Icons.radio_button_unchecked, color: Colors.grey);
+      } else {
+        progress = Text('$done/$total');
+      }
     }
-    if (task.children.isEmpty && task.stepType == 'single') {
-      return const Icon(Icons.radio_button_unchecked, color: Colors.grey);
-    }
-    return Text('$done/$total');
+
+    final hasTime = (task.targetMinutes ?? 0) > 0 || task.loggedMinutes > 0;
+    if (!hasTime) return progress;
+    final time = Text(
+      durationProgressLabel(task.loggedMinutes, task.targetMinutes),
+      style: TextStyle(
+        fontSize: 12,
+        color: task.timeGoalReached ? Colors.green : Colors.grey,
+      ),
+    );
+    if (progress == null) return time;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [progress, time],
+    );
   }
 
   List<Widget> _historyCards(List<HistoryEntry> events) {

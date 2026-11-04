@@ -59,7 +59,7 @@ void main() {
 
       final restored = StandardTask.fromJson(task.toJson());
 
-      expect(restored.stepType, 'duration');
+      expect(restored.stepType, 'single');
       expect(restored.targetMinutes, 45);
       expect(restored.trackingId, 'reading');
       expect(restored.toNode().targetMinutes, 45);
@@ -92,26 +92,28 @@ void main() {
 
       final node = task.toNode();
 
-      expect(node.stepType, 'duration');
+      expect(node.stepType, 'single');
       expect(node.targetMinutes, 90);
       expect(node.trackingId, 'practice-tracking');
       expect(node.excludeFromHistory, isTrue);
-      expect(node.durationReached, isFalse);
+      expect(node.timeGoalReached, isFalse);
 
       node.loggedMinutes = 90;
-      expect(node.durationReached, isTrue);
+      expect(node.timeGoalReached, isTrue);
     });
 
-    test('duration without a goal keeps the existing any-time completion rule', () {
+    test('a task without a time goal can still log time independently', () {
       final node = StandardTask(
         name: 'Свободная практика',
         stepType: 'duration',
       ).toNode();
 
+      expect(node.stepType, 'single');
       expect(node.targetMinutes, isNull);
-      expect(node.durationReached, isFalse);
+      expect(node.timeGoalReached, isFalse);
+      expect(node.isTimeTrackingEnabled, isTrue);
       node.loggedMinutes = 1;
-      expect(node.durationReached, isTrue);
+      expect(node.timeGoalReached, isFalse);
     });
 
     test('progress description includes an optional goal', () {
@@ -121,12 +123,12 @@ void main() {
           stepType: 'duration',
           targetMinutes: 30,
         ).progressDescription,
-        'Длительность · цель: 30 мин',
+        'Одиночный чекбокс · цель времени: 30 мин',
       );
       expect(
         StandardTask(name: 'Медитация', stepType: 'duration')
             .progressDescription,
-        'Длительность · без цели',
+        'Одиночный чекбокс',
       );
     });
   });
@@ -164,6 +166,7 @@ void main() {
       await Hive.close();
       box = await Hive.openBox<StandardTask>('standard_tasks');
 
+      expect(box.get('duration')!.stepType, 'single');
       expect(box.get('duration')!.targetMinutes, 60);
       expect(box.get('duration')!.trackingId, 'running');
     });

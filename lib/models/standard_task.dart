@@ -27,8 +27,7 @@ class StandardTask {
   @HiveField(6)
   String trackingId;
 
-  /// Optional completion goal for duration-based standard tasks, in minutes.
-  /// Missing values in older Hive records remain null.
+  /// Optional time goal in minutes, independent of checkbox/step completion.
   @HiveField(7)
   int? targetMinutes;
 
@@ -46,7 +45,10 @@ class StandardTask {
     this.targetMinutes,
     this.timeTrackingEnabled = false,
   }) : id = id ?? const Uuid().v4(),
-        trackingId = trackingId ?? const Uuid().v4();
+        trackingId = trackingId ?? const Uuid().v4() {
+    // Convert pre-existing duration-only templates to checkbox + time goal.
+    if (stepType == 'duration') stepType = 'single';
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -70,16 +72,15 @@ class StandardTask {
         description = 'Пошаговый ($totalSteps шагов)';
         break;
       case 'duration':
-        final goal = targetMinutes;
-        description = goal != null && goal > 0
-            ? 'Длительность · цель: $goal мин'
-            : 'Длительность · без цели';
+        // Defensive fallback for a manually mutated legacy instance.
+        description = 'Одиночный чекбокс';
         break;
       default:
         description = stepType;
     }
-    if (timeTrackingEnabled && stepType != 'duration') {
-      return '$description · учёт времени';
+    final goal = targetMinutes;
+    if (goal != null && goal > 0) {
+      return '$description · цель времени: $goal мин';
     }
     return description;
   }
@@ -103,7 +104,7 @@ class StandardTask {
       totalSteps: totalSteps,
       excludeFromHistory: excludeFromHistory,
       trackingId: trackingId,
-      targetMinutes: stepType == 'duration' ? targetMinutes : null,
+      targetMinutes: targetMinutes,
       timeTrackingEnabled: timeTrackingEnabled,
     );
   }

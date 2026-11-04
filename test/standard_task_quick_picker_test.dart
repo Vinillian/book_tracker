@@ -36,7 +36,7 @@ void main() {
     expect(find.text('Чтение'), findsOneWidget);
     expect(find.text('Одиночный чекбокс'), findsOneWidget);
     expect(find.text('Пошаговый (3 шагов)'), findsOneWidget);
-    expect(find.text('Длительность · цель: 45 мин'), findsOneWidget);
+    expect(find.text('Одиночный чекбокс · цель времени: 45 мин'), findsOneWidget);
   });
 
   testWidgets('search filters by name, ignoring case', (tester) async {
@@ -84,7 +84,7 @@ void main() {
 
     await tester.tap(find.text('Бег'));
     await tester.pump();
-    expect(picked.last.stepType, 'duration');
+    expect(picked.last.stepType, 'single');
     expect(picked.last.targetMinutes, 45);
     expect(picked.last.trackingId, 'running');
   });

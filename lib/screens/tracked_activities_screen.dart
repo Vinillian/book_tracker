@@ -106,8 +106,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       stepType: selectedNode.stepType,
       isActive: true,
       order: newOrder,
-      timeTrackingEnabled: selectedNode.timeTrackingEnabled ||
-          selectedNode.isDuration ||
+      timeTrackingEnabled: selectedNode.isTimeTrackingEnabled ||
           appState.historyBox.values.any(
             (entry) =>
                 entry.trackingId == selectedNode.trackingId &&
@@ -285,15 +284,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
                   ),
                   title: Text(activity.name),
                   subtitle: Text(
-                    (activity.stepType == 'single'
-                            ? 'Одиночная'
-                            : activity.stepType == 'duration'
-                                ? 'Длительность'
-                                : 'Пошаговая') +
-                        (activity.timeTrackingEnabled &&
-                                activity.stepType != 'duration'
-                            ? ' · учёт времени'
-                            : ''),
+                    activity.stepType == 'single' ? 'Чекбокс' : 'Шаги',
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
