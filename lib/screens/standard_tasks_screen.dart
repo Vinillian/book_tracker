@@ -319,7 +319,6 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
                 ),
                 onChanged: _updateTarget,
               ),
-            ],
             if (_stepType == 'stepByStep') ...[
               const SizedBox(height: 16),
               const Text(
