@@ -285,15 +285,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
                   ),
                   title: Text(activity.name),
                   subtitle: Text(
-                    (activity.stepType == 'single'
-                            ? 'Одиночная'
-                            : activity.stepType == 'duration'
-                                ? 'Длительность'
-                                : 'Пошаговая') +
-                        (activity.timeTrackingEnabled &&
-                                activity.stepType != 'duration'
-                            ? ' · учёт времени'
-                            : ''),
+                    activity.stepType == 'single' ? 'Чекбокс' : 'Шаги',
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
