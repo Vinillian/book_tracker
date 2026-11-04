@@ -316,8 +316,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                               : color.withValues(
                                             alpha: heatAlpha(
                                               intensity,
-                                              isDuration: activity.stepType == 'duration' ||
-                                                  activity.timeTrackingEnabled,
+                                              isDuration: true,
                                             ),
                                           ),
                                           borderRadius: BorderRadius.circular(2),
