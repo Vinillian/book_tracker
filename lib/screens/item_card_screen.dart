@@ -127,7 +127,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
         _totalSteps = _workingCopy.totalSteps;
         _completedSteps = _workingCopy.completedSteps;
         _excludeFromHistory = _workingCopy.excludeFromHistory;
-            _startMinutes = _workingCopy.startMinutes;
+        _startMinutes = _workingCopy.startMinutes;
         _totalStepsController.text = _totalSteps.toString();
         _targetMinutes = _workingCopy.targetMinutes;
         _targetController.text = _targetMinutes?.toString() ?? '';
