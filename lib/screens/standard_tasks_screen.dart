@@ -170,6 +170,7 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
   late int _totalSteps;
   int? _targetMinutes;
   late bool _excludeFromHistory;
+  late bool _timeTrackingEnabled;
 
   @override
   void initState() {
@@ -182,6 +183,7 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
     _stepType = widget.task.stepType;
     _totalSteps = widget.task.totalSteps;
     _excludeFromHistory = widget.task.excludeFromHistory;
+    _timeTrackingEnabled = widget.task.timeTrackingEnabled;
   }
 
   @override
@@ -238,6 +240,9 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       excludeFromHistory: _excludeFromHistory,
       trackingId: trackingId,
       targetMinutes: _stepType == 'duration' ? _targetMinutes : null,
+      timeTrackingEnabled:
+          (_stepType == 'single' || _stepType == 'stepByStep') &&
+          _timeTrackingEnabled,
     );
     if (widget.isNew) {
       appState.addStandardTask(updatedTask);
@@ -277,7 +282,12 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
             RadioGroup<String>(
               groupValue: _stepType,
               onChanged: (value) {
-                if (value != null) setState(() => _stepType = value);
+                if (value != null) {
+                  setState(() {
+                    _stepType = value;
+                    if (value == 'duration') _timeTrackingEnabled = false;
+                  });
+                }
               },
               child: const Column(
                 mainAxisSize: MainAxisSize.min,
@@ -340,6 +350,17 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
                 },
               ),
             ],
+            if (_stepType == 'single' || _stepType == 'stepByStep')
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Вести учёт времени'),
+                subtitle: const Text(
+                  'Сессии времени хранятся отдельно от выполнения задачи.',
+                ),
+                value: _timeTrackingEnabled,
+                onChanged: (value) =>
+                    setState(() => _timeTrackingEnabled = value),
+              ),
             const SizedBox(height: 16),
             CheckboxListTile(
               title: const Text('Не учитывать в прогрессе (рутина)'),

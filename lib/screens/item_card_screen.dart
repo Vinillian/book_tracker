@@ -37,6 +37,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   late int _totalSteps;
   late int _completedSteps;
   late bool _excludeFromHistory;
+  late bool _timeTrackingEnabled;
   int? _startMinutes;
   bool _didSave = false;
 
@@ -49,6 +50,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _totalSteps = _workingCopy.totalSteps;
     _completedSteps = _workingCopy.completedSteps;
     _excludeFromHistory = _workingCopy.excludeFromHistory;
+    _timeTrackingEnabled = _workingCopy.timeTrackingEnabled;
     _startMinutes = _workingCopy.startMinutes;
     _totalStepsController = TextEditingController(text: _totalSteps.toString());
     _targetMinutes = _workingCopy.targetMinutes;
@@ -78,6 +80,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
     _workingCopy.startMinutes = _startMinutes;
+    _workingCopy.timeTrackingEnabled =
+        (_stepType == 'single' || _stepType == 'stepByStep') &&
+        _timeTrackingEnabled;
     if (_stepType == 'single') {
       _workingCopy.completed = _completedSteps > 0;
       _workingCopy.completedSteps = 0;
@@ -114,6 +119,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
     _workingCopy.startMinutes = _startMinutes;
+    _workingCopy.timeTrackingEnabled =
+        (_stepType == 'single' || _stepType == 'stepByStep') &&
+        _timeTrackingEnabled;
     if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
     }
@@ -134,6 +142,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
         _totalSteps = _workingCopy.totalSteps;
         _completedSteps = _workingCopy.completedSteps;
         _excludeFromHistory = _workingCopy.excludeFromHistory;
+        _timeTrackingEnabled = _workingCopy.timeTrackingEnabled;
         _startMinutes = _workingCopy.startMinutes;
         _totalStepsController.text = _totalSteps.toString();
         _targetMinutes = _workingCopy.targetMinutes;
@@ -179,6 +188,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     // keeps its own progress next to them.
     setState(() {
       _stepType = newType;
+      if (newType == 'duration') _timeTrackingEnabled = false;
       if (newType == 'single') {
         _totalSteps = 1;
         _completedSteps = 0;
@@ -208,6 +218,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
         _stepType = selected.stepType;
         _totalSteps = selected.stepType == 'stepByStep' ? selected.totalSteps : 1;
         _excludeFromHistory = selected.excludeFromHistory;
+        _timeTrackingEnabled = selected.timeTrackingEnabled;
         _targetMinutes = selected.targetMinutes;
         _targetController.text = _targetMinutes?.toString() ?? '';
         _workingCopy.targetMinutes = selected.targetMinutes;
@@ -403,6 +414,17 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                   ],
                 ),
               ],
+              if (_stepType == 'single' || _stepType == 'stepByStep')
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Вести учёт времени'),
+                  subtitle: const Text(
+                    'Сессии времени хранятся отдельно и не влияют на выполнение задачи.',
+                  ),
+                  value: _timeTrackingEnabled,
+                  onChanged: (value) =>
+                      setState(() => _timeTrackingEnabled = value),
+                ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: _openStructureEditor,
