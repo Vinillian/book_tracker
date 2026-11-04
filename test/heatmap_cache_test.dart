@@ -77,14 +77,15 @@ void main() {
 
       // A new History record invalidates the cached aggregate.
       await history.add(
-        HistoryEntry.forDuration(
+        HistoryEntry(
           id: 'reading-session',
           bookId: 'book',
           nodeId: 'reading-task',
+          date: date,
           nodeName: 'Чтение',
+          stepType: 'duration',
           minutes: 20,
           trackingId: trackingId,
-          date: date,
         ),
       );
       await Future<void>.delayed(Duration.zero);
