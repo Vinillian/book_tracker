@@ -469,6 +469,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                 ],
               ),
               ..._buildLogList(),
+            ],
           ],
         ),
         ),
