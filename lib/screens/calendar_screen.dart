@@ -399,7 +399,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (!hasTime) return progress;
     final time = Text(
       durationProgressLabel(task.loggedMinutes, task.targetMinutes),
-      style: const TextStyle(fontSize: 12, color: Colors.grey),
+      style: TextStyle(
+        fontSize: 12,
+        color: task.timeGoalReached ? Colors.green : Colors.grey,
+      ),
     );
     if (progress == null) return time;
     return Column(
