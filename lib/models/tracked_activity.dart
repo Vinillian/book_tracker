@@ -42,7 +42,11 @@ class TrackedActivity {
     this.isRoutine = false,
     this.order = 0,
     this.timeTrackingEnabled = false,
-  }) : id = id ?? const Uuid().v4();
+  }) : id = id ?? const Uuid().v4() {
+    // Old heatmap rows used duration as their primary type. Keep their row,
+    // but normalize it to the checkbox progress type used by current tasks.
+    if (stepType == 'duration') stepType = 'single';
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
