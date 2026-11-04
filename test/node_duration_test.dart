@@ -44,6 +44,18 @@ void main() {
       expect(task.completedLeaves, 1);
     });
 
+    test('time goal status is independent of task completion', () {
+      final task = Node.leaf('Йога', targetMinutes: 60)
+        ..completed = false
+        ..loggedMinutes = 60;
+      expect(task.timeGoalReached, isTrue);
+      expect(task.completedLeaves, 0);
+      task.completed = true;
+      task.loggedMinutes = 0;
+      expect(task.timeGoalReached, isFalse);
+      expect(task.completedLeaves, 1);
+    });
+
     test('time changes never complete a current checkbox task', () {
       final task = Node.leaf('Йога', stepType: 'single', targetMinutes: 60)
         ..loggedMinutes = 120;
