@@ -26,8 +26,11 @@ class TrackedActivity {
   @HiveField(6)
   bool isRoutine;
 
-  @HiveField(7, defaultValue: 0)   // <-- новое поле с дефолтом
+  @HiveField(7, defaultValue: 0)
   int order;
+
+  @HiveField(8, defaultValue: false)
+  bool timeTrackingEnabled;
 
   TrackedActivity({
     String? id,
@@ -38,6 +41,7 @@ class TrackedActivity {
     this.isActive = true,
     this.isRoutine = false,
     this.order = 0,
+    this.timeTrackingEnabled = false,
   }) : id = id ?? const Uuid().v4();
 
   Map<String, dynamic> toJson() => {
@@ -49,6 +53,7 @@ class TrackedActivity {
     'isActive': isActive,
     'isRoutine': isRoutine,
     'order': order,
+    'timeTrackingEnabled': timeTrackingEnabled,
   };
 
   factory TrackedActivity.fromJson(Map<String, dynamic> json) => TrackedActivity(
@@ -60,5 +65,6 @@ class TrackedActivity {
     isActive: json['isActive'] ?? true,
     isRoutine: json['isRoutine'] ?? false,
     order: json['order'] ?? 0,
+    timeTrackingEnabled: json['timeTrackingEnabled'] as bool? ?? false,
   );
 }

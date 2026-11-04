@@ -32,6 +32,9 @@ class StandardTask {
   @HiveField(7)
   int? targetMinutes;
 
+  @HiveField(8, defaultValue: false)
+  bool timeTrackingEnabled;
+
   StandardTask({
     String? id,
     required this.name,
@@ -41,6 +44,7 @@ class StandardTask {
     this.colorValue,
     String? trackingId,
     this.targetMinutes,
+    this.timeTrackingEnabled = false,
   }) : id = id ?? const Uuid().v4(),
         trackingId = trackingId ?? const Uuid().v4();
 
@@ -53,22 +57,31 @@ class StandardTask {
     'colorValue': colorValue,
     'trackingId': trackingId,
     'targetMinutes': targetMinutes,
+    'timeTrackingEnabled': timeTrackingEnabled,
   };
 
   String get progressDescription {
+    String description;
     switch (stepType) {
       case 'single':
-        return 'Одиночный чекбокс';
+        description = 'Одиночный чекбокс';
+        break;
       case 'stepByStep':
-        return 'Пошаговый ($totalSteps шагов)';
+        description = 'Пошаговый ($totalSteps шагов)';
+        break;
       case 'duration':
         final goal = targetMinutes;
-        return goal != null && goal > 0
+        description = goal != null && goal > 0
             ? 'Длительность · цель: $goal мин'
             : 'Длительность · без цели';
+        break;
       default:
-        return stepType;
+        description = stepType;
     }
+    if (timeTrackingEnabled && stepType != 'duration') {
+      return '$description · учёт времени';
+    }
+    return description;
   }
 
   factory StandardTask.fromJson(Map<String, dynamic> json) => StandardTask(
@@ -80,6 +93,7 @@ class StandardTask {
     colorValue: json['colorValue'],
     trackingId: json['trackingId'] ?? const Uuid().v4(),
     targetMinutes: json['targetMinutes'] as int?,
+    timeTrackingEnabled: json['timeTrackingEnabled'] as bool? ?? false,
   );
 
   Node toNode() {
@@ -90,6 +104,7 @@ class StandardTask {
       excludeFromHistory: excludeFromHistory,
       trackingId: trackingId,
       targetMinutes: stepType == 'duration' ? targetMinutes : null,
+      timeTrackingEnabled: timeTrackingEnabled,
     );
   }
 }
