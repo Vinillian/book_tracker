@@ -106,8 +106,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       stepType: selectedNode.stepType,
       isActive: true,
       order: newOrder,
-      timeTrackingEnabled: selectedNode.timeTrackingEnabled ||
-          selectedNode.isDuration ||
+      timeTrackingEnabled: selectedNode.isTimeTrackingEnabled ||
           appState.historyBox.values.any(
             (entry) =>
                 entry.trackingId == selectedNode.trackingId &&
