@@ -1,8 +1,6 @@
 ## [Unreleased]
 ### Changed
 - Heatmap intensity data is cached in `AppState` across screen rebuilds and recalculated only when History or tracked activities change (#81).
-
-### Changed
 - Tasks: time is now an independent measurement for every checkbox or step task, with an optional time goal in task and Standard Task editors. The task detail screen logs multiple editable sessions; logged / target time is shown separately in task lists, plans and the calendar and never changes checkbox/step completion. Heatmap points combine progress and time (20 minutes = 1 point). Legacy duration-only tasks load as checkbox + time without losing their goal, logged minutes or session history (#190)
 - Plans tab: the folder button (templates screen) is removed from the app bar; the templates screen is in the menu only, and "+" creates a day from a template (#179)
 - The deprecated `Radio` (`groupValue` / `onChanged`) and `MaterialStateProperty` APIs are replaced by `RadioGroup` and `WidgetStateProperty`, an unused import is gone: `flutter analyze` has no issues left (#89)
