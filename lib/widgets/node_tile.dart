@@ -159,7 +159,10 @@ class NodeTile extends StatelessWidget {
                 if (node.hasOwnProgress && _hasTimeInfo)
                   Text(
                     _durationText(),
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: node.timeGoalReached ? Colors.green : Colors.grey,
+                    ),
                   ),
               ],
             ),
@@ -201,7 +204,10 @@ class NodeTile extends StatelessWidget {
             if (_hasTimeInfo)
               Text(
                 _durationText(),
-                style: const TextStyle(fontSize: 10, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: node.timeGoalReached ? Colors.green : Colors.grey,
+                ),
               ),
           ],
         ),
@@ -211,7 +217,10 @@ class NodeTile extends StatelessWidget {
         padding: const EdgeInsets.only(right: 8.0),
         child: Text(
           _durationText(),
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 12,
+            color: node.timeGoalReached ? Colors.green : Colors.grey,
+          ),
         ),
       );
     }
