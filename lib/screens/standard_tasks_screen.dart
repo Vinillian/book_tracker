@@ -152,7 +152,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
   }
 }
 
-// Editor for reusable single, step-by-step, and duration task definitions.
+// Editor for reusable checkbox and step-based task definitions.
 class StandardTaskEditorScreen extends StatefulWidget {
   final StandardTask task;
   final bool isNew;
@@ -170,7 +170,6 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
   late int _totalSteps;
   int? _targetMinutes;
   late bool _excludeFromHistory;
-  late bool _timeTrackingEnabled;
 
   @override
   void initState() {
@@ -183,7 +182,6 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
     _stepType = widget.task.stepType;
     _totalSteps = widget.task.totalSteps;
     _excludeFromHistory = widget.task.excludeFromHistory;
-    _timeTrackingEnabled = widget.task.timeTrackingEnabled;
   }
 
   @override
@@ -239,10 +237,7 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       totalSteps: _stepType == 'stepByStep' ? _totalSteps : 1,
       excludeFromHistory: _excludeFromHistory,
       trackingId: trackingId,
-      targetMinutes: _stepType == 'duration' ? _targetMinutes : null,
-      timeTrackingEnabled:
-          (_stepType == 'single' || _stepType == 'stepByStep') &&
-          _timeTrackingEnabled,
+      targetMinutes: _targetMinutes,
     );
     if (widget.isNew) {
       appState.addStandardTask(updatedTask);
@@ -285,7 +280,6 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
                 if (value != null) {
                   setState(() {
                     _stepType = value;
-                    if (value == 'duration') _timeTrackingEnabled = false;
                   });
                 }
               },
@@ -300,19 +294,14 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
                     title: Text('Пошаговый'),
                     value: 'stepByStep',
                   ),
-                  RadioListTile<String>(
-                    title: Text('Длительность'),
-                    value: 'duration',
-                  ),
                 ],
               ),
             ),
-            if (_stepType == 'duration') ...[
-              const SizedBox(height: 16),
+            const SizedBox(height: 16),
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Цель, минут (необязательно):',
+                  'Цель времени, минут (необязательно):',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -324,8 +313,8 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Без цели',
-                  helperText: 'Без цели задача считается выполненной после '
-                      'первой записи времени.',
+                  helperText: 'Время учитывается отдельно и не влияет '
+                      'на выполнение чекбокса или шагов.',
                   helperMaxLines: 2,
                 ),
                 onChanged: _updateTarget,
@@ -350,17 +339,6 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
                 },
               ),
             ],
-            if (_stepType == 'single' || _stepType == 'stepByStep')
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Вести учёт времени'),
-                subtitle: const Text(
-                  'Сессии времени хранятся отдельно от выполнения задачи.',
-                ),
-                value: _timeTrackingEnabled,
-                onChanged: (value) =>
-                    setState(() => _timeTrackingEnabled = value),
-              ),
             const SizedBox(height: 16),
             CheckboxListTile(
               title: const Text('Не учитывать в прогрессе (рутина)'),
