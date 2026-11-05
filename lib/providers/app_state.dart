@@ -9,6 +9,7 @@ import '../models/settings.dart';
 import '../services/node_service.dart';
 import '../services/note_service.dart';
 import '../services/history_service.dart';
+import '../services/heatmap_service.dart';
 import '../utils/box_keys.dart';
 import '../utils/node_copy.dart';
 import '../utils/plan_date.dart';
@@ -23,6 +24,21 @@ class AppState extends ChangeNotifier {
   late final Box<StandardTask> _standardTasksBox;
   late final Box<TrackedActivity> _trackedActivitiesBox;
   late final Box<AppSettings> _settingsBox;
+
+  Map<DateTime, Map<String, double>>? _heatmapIntensityCache;
+
+  /// Heatmap intensities are shared across screen rebuilds and recalculated
+  /// only after History or tracked activities change.
+  Map<DateTime, Map<String, double>> get heatmapIntensityData =>
+      _heatmapIntensityCache ??= HeatmapService(
+        _historyBox,
+        _trackedActivitiesBox,
+      ).getIntensityData();
+
+  void _invalidateHeatmapIntensityCache() {
+    _heatmapIntensityCache = null;
+    notifyListeners();
+  }
 
   String _themeMode = 'system';
   String get themeMode => _themeMode;
@@ -50,8 +66,12 @@ class AppState extends ChangeNotifier {
     _nodeService.migratePlannedDates(); // #114
     _nodeService.migrateNestedBookCategories(); // #139
 
-    _historyBox.watch().listen((_) => notifyListeners());
-    _trackedActivitiesBox.watch().listen((_) => notifyListeners());
+    _historyBox.watch().listen(
+      (_) => _invalidateHeatmapIntensityCache(),
+    );
+    _trackedActivitiesBox.watch().listen(
+      (_) => _invalidateHeatmapIntensityCache(),
+    );
   }
 
   void _loadTheme() {

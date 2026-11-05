@@ -64,7 +64,7 @@ class HeatmapService {
     return result;
   }
 
-  List<DateTime> getDateRange(DateTime start, DateTime end) {
+  static List<DateTime> getDateRange(DateTime start, DateTime end) {
     final List<DateTime> days = [];
     for (var d = start;
         d.isBefore(end) || d.isAtSameMomentAs(end);
