@@ -32,6 +32,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   late TextEditingController _nameController;
   late TextEditingController _totalStepsController;
   late TextEditingController _targetController;
+  late TrackingIdIndex _trackingIdIndex;
   int? _targetMinutes;
   late String _stepType;
   late int _totalSteps;
@@ -54,6 +55,11 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _targetMinutes = _workingCopy.targetMinutes;
     _targetController =
         TextEditingController(text: _targetMinutes?.toString() ?? '');
+    final appState = context.read<AppState>();
+    _trackingIdIndex = TrackingIdIndex(
+      tracked: appState.trackedActivities,
+      roots: [...appState.books, ...appState.plans, ...appState.templates],
+    );
   }
 
   @override
@@ -211,13 +217,11 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     }
   }
 
-  /// Поиск существующего trackingId для задачи с таким же именем
+  /// Resolve from the snapshot built when this editor opened. Repeated
+  /// TextField changes therefore perform constant-time lookups.
   String _findExistingTrackingId(String name, {String? fallback}) {
-    final appState = context.read<AppState>();
-    return resolveTrackingId(
+    return _trackingIdIndex.resolve(
       name,
-      tracked: appState.trackedActivities,
-      roots: [...appState.books, ...appState.plans, ...appState.templates],
       fallback: fallback ?? const Uuid().v4(),
     );
   }

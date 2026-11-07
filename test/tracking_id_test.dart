@@ -98,4 +98,43 @@ void main() {
       expect(id, 'standard-1');
     });
   });
+  group('TrackingIdIndex', () {
+    test('keeps the first depth-first matching trackable node', () {
+      final index = TrackingIdIndex(
+        tracked: const [],
+        roots: [
+          Node(name: 'Неделя', children: [
+            leaf('Тайчи', 'first'),
+            Node(name: 'День', children: [leaf('Тайчи', 'second')]),
+          ]),
+        ],
+      );
+
+      expect(index.resolve(' ТАЙЧИ ', fallback: 'fallback'), 'first');
+    });
+
+    test('does not index folders', () {
+      final index = TrackingIdIndex(
+        tracked: const [],
+        roots: [
+          Node(name: 'Тайчи', children: [], stepType: 'folder'),
+        ],
+      );
+
+      expect(index.resolve('Тайчи', fallback: 'fallback'), 'fallback');
+    });
+
+    test('active tracked activity wins over inactive and node matches', () {
+      final index = TrackingIdIndex(
+        tracked: [
+          activity('Тайчи', 'inactive', active: false),
+          activity('Тайчи', 'active'),
+        ],
+        roots: [leaf('Тайчи', 'node')],
+      );
+
+      expect(index.resolve('Тайчи', fallback: 'fallback'), 'active');
+    });
+  });
+
 }
