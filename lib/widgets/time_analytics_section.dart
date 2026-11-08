@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -318,7 +316,8 @@ class _TimeTrendChart extends StatelessWidget {
 
     final maxMinutes = buckets.fold<int>(
       0,
-      (maximum, bucket) => math.max(maximum, bucket.minutes),
+      (maximum, bucket) =>
+          maximum > bucket.minutes ? maximum : bucket.minutes,
     );
     final primary = Theme.of(context).colorScheme.primary;
 
