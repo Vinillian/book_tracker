@@ -163,7 +163,7 @@ class _TimeAnalyticsSectionState extends State<TimeAnalyticsSection> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 12),
-              _buildSummary(context, result),
+              _buildSummary(result),
               if (!result.isEmpty) ...[
                 const SizedBox(height: 20),
                 const Text(
@@ -239,7 +239,7 @@ class _TimeAnalyticsSectionState extends State<TimeAnalyticsSection> {
     );
   }
 
-  Widget _buildSummary(BuildContext context, TimeAnalyticsResult result) {
+  Widget _buildSummary(TimeAnalyticsResult result) {
     return Row(
       children: [
         Expanded(
@@ -329,9 +329,9 @@ class _TimeTrendChart extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: buckets.map((bucket) {
-            final barHeight = maxMinutes == 0
+            final double barHeight = maxMinutes == 0
                 ? 0.0
-                : (bucket.minutes / maxMinutes * 82).clamp(2.0, 82.0);
+                : (bucket.minutes / maxMinutes * 82).clamp(2.0, 82.0).toDouble();
             return SizedBox(
               width: period == TimeAnalyticsPeriod.week ||
                       period == TimeAnalyticsPeriod.month
