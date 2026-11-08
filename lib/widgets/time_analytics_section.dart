@@ -12,9 +12,13 @@ class TimeAnalyticsSection extends StatefulWidget {
   State<TimeAnalyticsSection> createState() => _TimeAnalyticsSectionState();
 }
 
-class _TimeAnalyticsSectionState extends State<TimeAnalyticsSection> {
+class _TimeAnalyticsSectionState extends State<TimeAnalyticsSection>
+    with AutomaticKeepAliveClientMixin<TimeAnalyticsSection> {
   TimeAnalyticsPeriod _period = TimeAnalyticsPeriod.month;
   Set<String>? _selectedTrackingIds;
+
+  @override
+  bool get wantKeepAlive => true;
 
   void _selectAll() {
     setState(() => _selectedTrackingIds = null);
@@ -41,6 +45,7 @@ class _TimeAnalyticsSectionState extends State<TimeAnalyticsSection> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final appState = context.watch<AppState>();
     final entries = appState.historyBox.values.toList();
     final activities = TimeAnalyticsService.getAvailableActivities(
