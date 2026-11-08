@@ -99,6 +99,17 @@ class _QuickAddBarState extends State<QuickAddBar> {
                 onPressed: _pickStartTime,
               ),
               if (_startMinutes != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(
+                    formatMinutes(_startMinutes!),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              if (_startMinutes != null)
                 IconButton(
                   icon: const Icon(Icons.close),
                   tooltip: 'Убрать время',
