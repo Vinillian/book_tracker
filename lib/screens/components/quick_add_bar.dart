@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../utils/day_part.dart';
 
 /// Bottom bar of the day screen: type a name and press Enter to add a task,
 /// or open the standard-task picker with the "+" button (#109).
+/// A selected start time is optional and is reused for consecutive quick adds.
 class QuickAddBar extends StatefulWidget {
-  final ValueChanged<String> onAdd;
-  final VoidCallback onOpenPicker;
+  final void Function(String name, int? startMinutes) onAdd;
+  final ValueChanged<int?> onOpenPicker;
 
   const QuickAddBar({
     super.key,
@@ -19,6 +21,7 @@ class QuickAddBar extends StatefulWidget {
 class _QuickAddBarState extends State<QuickAddBar> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  int? _startMinutes;
 
   @override
   void dispose() {
@@ -27,10 +30,24 @@ class _QuickAddBarState extends State<QuickAddBar> {
     super.dispose();
   }
 
+  Future<void> _pickStartTime() async {
+    final initial = _startMinutes ?? 9 * 60;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: initial ~/ 60, minute: initial % 60),
+      builder: (ctx, child) => MediaQuery(
+        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _startMinutes = picked.hour * 60 + picked.minute);
+  }
+
   void _submit([String? _]) {
     final name = _controller.text.trim();
     if (name.isEmpty) return;
-    widget.onAdd(name);
+    widget.onAdd(name, _startMinutes);
     _controller.clear();
     // Enter closes the keyboard by default; keep it open to add several tasks.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -52,7 +69,7 @@ class _QuickAddBarState extends State<QuickAddBar> {
               IconButton(
                 icon: const Icon(Icons.add_circle_outline),
                 tooltip: 'Стандартные задачи',
-                onPressed: widget.onOpenPicker,
+                onPressed: () => widget.onOpenPicker(_startMinutes),
               ),
               Expanded(
                 child: TextField(
@@ -67,6 +84,22 @@ class _QuickAddBarState extends State<QuickAddBar> {
                   onSubmitted: _submit,
                 ),
               ),
+              IconButton(
+                icon: Icon(
+                  _startMinutes == null ? Icons.schedule : Icons.schedule_send,
+                ),
+                tooltip: _startMinutes == null
+                    ? 'Назначить время'
+                    : 'Время: ${formatMinutes(_startMinutes!)} · Изменить',
+                onPressed: _pickStartTime,
+              ),
+              if (_startMinutes != null)
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Убрать время',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => setState(() => _startMinutes = null),
+                ),
               IconButton(
                 icon: const Icon(Icons.send),
                 tooltip: 'Добавить',
