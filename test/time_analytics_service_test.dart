@@ -106,6 +106,41 @@ void main() {
       expect(result.minutesByActivity, {'rest': 45});
     });
 
+
+    test('all-time average starts with the earliest selected activity session', () {
+      final entries = [
+        durationEntry(
+          trackingId: 'older-activity',
+          name: 'Старая активность',
+          minutes: 60,
+          date: DateTime(2025, 1, 1),
+        ),
+        durationEntry(
+          trackingId: 'selected',
+          name: 'Выбранная активность',
+          minutes: 30,
+          date: DateTime(2026, 11, 7),
+        ),
+        durationEntry(
+          trackingId: 'selected',
+          name: 'Выбранная активность',
+          minutes: 30,
+          date: DateTime(2026, 11, 8),
+        ),
+      ];
+
+      final result = TimeAnalyticsService.calculate(
+        entries: entries,
+        selectedTrackingIds: {'selected'},
+        period: TimeAnalyticsPeriod.allTime,
+        now: now,
+      );
+
+      expect(result.startDate, DateTime(2026, 11, 7));
+      expect(result.daysInPeriod, 2);
+      expect(result.averageMinutesPerDay, 30);
+    });
+
     test('returns zero metrics when no activities are selected', () {
       final result = TimeAnalyticsService.calculate(
         entries: [
