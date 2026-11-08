@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
 import '../utils/format_minutes.dart';
-import '../utils/day_part.dart';
 import '../utils/reorder.dart';
 import '../utils/node_copy.dart';
 import '../utils/plan_task_order.dart';
@@ -377,213 +376,6 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
 
-  String _scheduledTimeLabel(int minutes) {
-    final hour = (minutes ~/ 60).toString().padLeft(2, '0');
-    final minute = (minutes % 60).toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
-  Widget _plannerTaskSubtitle(Node child) {
-    final progress = child.children.isNotEmpty
-        ? (child.hasOwnProgress
-            ? '${child.children.length} подэлементов · '
-                '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : "чекбокс"}'
-                '${_timeSuffix(child)}'
-            : '${child.children.length} подэлементов')
-        : child.stepType == 'stepByStep'
-            ? 'Шаги: ${child.completedSteps}/${child.totalSteps}${_timeSuffix(child)}'
-            : child.stepType == 'single'
-                ? 'Чекбокс${_timeSuffix(child)}'
-                : 'Папка';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (child.startMinutes != null)
-          Text('Время: ${_scheduledTimeLabel(child.startMinutes!)}'),
-        Text(progress),
-      ],
-    );
-  }
-
-  Widget _buildPlannerTaskRow(
-    Node child,
-    int originalIndex, {
-    required bool reorderable,
-    required int reorderIndex,
-  }) {
-    final isSelected = _selectedIndices.contains(originalIndex);
-    return Dismissible(
-      key: ValueKey(child.id),
-      direction: _multiSelect
-          ? DismissDirection.none
-          : DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        padding: const EdgeInsets.only(right: 20),
-        alignment: Alignment.centerRight,
-        color: Colors.red,
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      confirmDismiss: (_) => _confirmSubtreeDelete([child]),
-      onDismissed: (_) => _removeWithUndo([originalIndex]),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: ListTile(
-          leading: _multiSelect
-              ? Checkbox(
-                  value: isSelected,
-                  onChanged: (value) {
-                    setState(() {
-                      if (value == true) {
-                        _selectedIndices.add(originalIndex);
-                      } else {
-                        _selectedIndices.remove(originalIndex);
-                      }
-                    });
-                  },
-                )
-              : reorderable
-                  ? ReorderableDragStartListener(
-                      index: reorderIndex,
-                      child: const Icon(Icons.drag_handle),
-                    )
-                  : const Icon(Icons.schedule),
-          title: Text(child.name.isEmpty ? '[Без названия]' : child.name),
-          subtitle: _plannerTaskSubtitle(child),
-          trailing: _multiSelect
-              ? null
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _editChild(originalIndex),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.drive_file_move_outlined),
-                      tooltip: 'Переместить в…',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => _moveWithPicker([originalIndex]),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () => _deleteWithConfirm([originalIndex]),
-                    ),
-                  ],
-                ),
-          onTap: () {
-            if (_multiSelect) {
-              setState(() {
-                if (isSelected) {
-                  _selectedIndices.remove(originalIndex);
-                } else {
-                  _selectedIndices.add(originalIndex);
-                }
-              });
-            } else {
-              _editChild(originalIndex);
-            }
-          },
-          onLongPress: () {
-            if (!_multiSelect) {
-              setState(() {
-                _multiSelect = true;
-                _selectedIndices = {originalIndex};
-              });
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlannerTaskList() {
-    final groups = groupPlanTasks(_workingCopy.children);
-    return CustomScrollView(
-      slivers: [
-        if (groups.timed.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-              child: Text(
-                'По времени · ${groups.timed.length}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ),
-          ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final child = groups.timed[index];
-                final originalIndex = _workingCopy.children.indexWhere(
-                  (item) => identical(item, child),
-                );
-                return _buildPlannerTaskRow(
-                  child,
-                  originalIndex,
-                  reorderable: false,
-                  reorderIndex: -1,
-                );
-              },
-              childCount: groups.timed.length,
-            ),
-          ),
-        ],
-        if (groups.untimed.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-              child: Text(
-                'Без времени · ${groups.untimed.length}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ),
-          ),
-          SliverReorderableList(
-            itemCount: groups.untimed.length,
-            onReorder: (oldIndex, newIndex) {
-              if (_multiSelect) return;
-              setState(() {
-                _workingCopy.children = reorderUntimedPlanTasks(
-                  _workingCopy.children,
-                  oldIndex,
-                  newIndex,
-                );
-              });
-            },
-            itemBuilder: (context, index) {
-              final child = groups.untimed[index];
-              final originalIndex = _workingCopy.children.indexWhere(
-                (item) => identical(item, child),
-              );
-              return _buildPlannerTaskRow(
-                child,
-                originalIndex,
-                reorderable: true,
-                reorderIndex: index,
-              );
-            },
-          ),
-        ],
-        if (groups.timed.isEmpty && groups.untimed.isEmpty)
-          const SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(child: Text('Нет дочерних элементов.')),
-          ),
-      ],
-    );
-  }
-
   bool get _isDayPlan => _category == 'planner';
 
   Widget _sectionHeader(String label, int count) {
@@ -635,10 +427,9 @@ class _EditorScreenState extends State<EditorScreen> {
       );
     }
 
-    final timed = sortedByStartTime(
-      all.where((child) => child.startMinutes != null).toList(),
-    );
-    final untimed = all.where((child) => child.startMinutes == null).toList();
+    final groups = groupPlanTasks(all);
+    final timed = groups.timed;
+    final untimed = groups.untimed;
 
     return CustomScrollView(
       slivers: [
@@ -671,8 +462,11 @@ class _EditorScreenState extends State<EditorScreen> {
             onReorder: (oldIndex, newIndex) {
               if (_multiSelect) return;
               setState(() {
-                _workingCopy.children =
-                    reorderSubset(all, untimed, oldIndex, newIndex);
+                _workingCopy.children = reorderUntimedPlanTasks(
+                  _workingCopy.children,
+                  oldIndex,
+                  newIndex,
+                );
               });
             },
             itemBuilder: (context, index) {
