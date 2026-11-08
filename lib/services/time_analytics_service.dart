@@ -94,7 +94,9 @@ class TimeAnalyticsService {
 
     final namesById = <String, String>{};
     for (final entry in entries) {
-      if (entry.stepType != 'duration' || (entry.minutes ?? 0) <= 0) {
+      if (entry.stepType != 'duration' ||
+          (entry.minutes ?? 0) <= 0 ||
+          entry.trackingId.isEmpty) {
         continue;
       }
       namesById.putIfAbsent(entry.trackingId, () => entry.nodeName);
@@ -149,8 +151,12 @@ class TimeAnalyticsService {
             entry.stepType == 'duration' && (entry.minutes ?? 0) > 0)
         .toList();
 
+    final selectedDurationEntries = durationEntries
+        .where((entry) => selectedTrackingIds.contains(entry.trackingId))
+        .toList();
+
     DateTime? firstSessionDate;
-    for (final entry in durationEntries) {
+    for (final entry in selectedDurationEntries) {
       final day = _day(entry.date);
       if (firstSessionDate == null || day.isBefore(firstSessionDate)) {
         firstSessionDate = day;
@@ -168,9 +174,8 @@ class TimeAnalyticsService {
     final byActivity = <String, int>{};
     final byDay = <DateTime, int>{};
 
-    if (selectedTrackingIds.isNotEmpty && daysInPeriod > 0) {
-      for (final entry in durationEntries) {
-        if (!selectedTrackingIds.contains(entry.trackingId)) continue;
+    if (selectedDurationEntries.isNotEmpty && daysInPeriod > 0) {
+      for (final entry in selectedDurationEntries) {
         final day = _day(entry.date);
         if (day.isBefore(start) || day.isAfter(end)) continue;
 
