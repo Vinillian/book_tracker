@@ -48,7 +48,7 @@ void main() {
     await tester.pump();
     expect(added, [('Зарядка', null)]);
   });
-  
+
   testWidgets('selected time is attached to a typed quick-add task',
       (tester) async {
     final added = await pumpBar(
