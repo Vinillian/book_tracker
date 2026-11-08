@@ -7,11 +7,13 @@ import '../../utils/day_part.dart';
 class QuickAddBar extends StatefulWidget {
   final void Function(String name, int? startMinutes) onAdd;
   final ValueChanged<int?> onOpenPicker;
+  final Future<TimeOfDay?> Function(BuildContext, TimeOfDay)? timePicker;
 
   const QuickAddBar({
     super.key,
     required this.onAdd,
     required this.onOpenPicker,
+    this.timePicker,
   });
 
   @override
@@ -32,14 +34,17 @@ class _QuickAddBarState extends State<QuickAddBar> {
 
   Future<void> _pickStartTime() async {
     final initial = _startMinutes ?? 9 * 60;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: initial ~/ 60, minute: initial % 60),
-      builder: (ctx, child) => MediaQuery(
-        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
-        child: child!,
-      ),
-    );
+    final initialTime = TimeOfDay(hour: initial ~/ 60, minute: initial % 60);
+    final picked = widget.timePicker != null
+        ? await widget.timePicker!(context, initialTime)
+        : await showTimePicker(
+            context: context,
+            initialTime: initialTime,
+            builder: (ctx, child) => MediaQuery(
+              data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+              child: child!,
+            ),
+          );
     if (picked == null || !mounted) return;
     setState(() => _startMinutes = picked.hour * 60 + picked.minute);
   }
