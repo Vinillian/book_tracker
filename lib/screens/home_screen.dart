@@ -23,6 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late int _selectedIndex;
   String _searchQuery = '';
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<PlannerTabViewState> _plannerTabKey =
+      GlobalKey<PlannerTabViewState>();
 
   @override
   void initState() {
@@ -253,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
         searchQuery: _searchQuery,
         onSearchChanged: (value) => setState(() => _searchQuery = value),
       )
-          : const PlannerTabView(),
+          : PlannerTabView(key: _plannerTabKey),
     );
   }
 
@@ -274,6 +276,18 @@ class _HomeScreenState extends State<HomeScreen> {
       ];
     } else {
       return [
+        TextButton.icon(
+          icon: const Icon(Icons.today),
+          label: const Text('Сегодня'),
+          onPressed: () {
+            final moved = _plannerTabKey.currentState?.scrollToToday() ?? false;
+            if (!moved && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Нет планов с указанной датой')),
+              );
+            }
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.add),
           onPressed: _showNewDayDialog,
