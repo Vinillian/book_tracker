@@ -62,14 +62,16 @@ class _BookScreenState extends State<BookScreen> {
     widget.onNodeUpdated();
   }
 
-  Future<void> _openStandardTaskPicker() {
+  Future<void> _openStandardTaskPicker([int? startMinutes]) {
     final appState = context.read<AppState>();
     return showStandardTaskQuickPicker(
       context,
-      onPick: (task) {
+      startMinutes: startMinutes,
+      onPick: (task, startMinutes) {
         // Join the habit's existing line in History and the heatmap instead
         // of starting a second one (#149).
         final node = task.toNode();
+        node.startMinutes = startMinutes;
         node.trackingId = resolveTrackingId(
           task.name,
           tracked: appState.trackedActivities,
@@ -309,8 +311,11 @@ class _BookScreenState extends State<BookScreen> {
           ),
           if (_node.category == 'planner')
             QuickAddBar(
-              onAdd: (name) => _addTask(Node.leaf(name)),
-              onOpenPicker: _openStandardTaskPicker,
+              onAdd: (name, startMinutes) => _addTask(
+                Node.leaf(name)..startMinutes = startMinutes,
+              ),
+              onOpenPicker: (startMinutes) =>
+                  _openStandardTaskPicker(startMinutes),
             ),
         ],
       ),
