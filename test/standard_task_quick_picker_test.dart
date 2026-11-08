@@ -98,8 +98,6 @@ void main() {
     expect(picked.last.$1.trackingId, 'running');
     expect(picked.last.$2, isNull);
   });
-}
-
 
   testWidgets('passes the selected start time with every picked task',
       (tester) async {
@@ -114,3 +112,4 @@ void main() {
     await tester.pump();
     expect(picked, [(tasks[1], startMinutes)]);
   });
+}
