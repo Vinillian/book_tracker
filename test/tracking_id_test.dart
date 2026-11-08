@@ -3,15 +3,17 @@ import 'package:book_tracker/models/node.dart';
 import 'package:book_tracker/models/tracked_activity.dart';
 import 'package:book_tracker/utils/tracking_id.dart';
 
-TrackedActivity activity(String name, String trackingId,
-        {bool active = true}) =>
-    TrackedActivity(
-      nodeId: trackingId,
-      name: name,
-      colorValue: 0xFF2196F3,
-      stepType: 'single',
-      isActive: active,
-    );
+TrackedActivity activity(
+  String name,
+  String trackingId, {
+  bool active = true,
+}) => TrackedActivity(
+  nodeId: trackingId,
+  name: name,
+  colorValue: 0xFF2196F3,
+  stepType: 'single',
+  isActive: active,
+);
 
 Node leaf(String name, String trackingId) =>
     Node.leaf(name, stepType: 'single', trackingId: trackingId);
@@ -53,20 +55,25 @@ void main() {
       expect(id, 'old');
     });
 
-    test('without tracking, a task with the same name is reused (nested too)',
-        () {
-      final id = resolveTrackingId(
-        'Тайчи',
-        tracked: const [],
-        roots: [
-          Node(name: 'Неделя', children: [
-            Node(name: 'День', children: [leaf('Тайчи', 'node-1')]),
-          ]),
-        ],
-        fallback: 'standard-1',
-      );
-      expect(id, 'node-1');
-    });
+    test(
+      'without tracking, a task with the same name is reused (nested too)',
+      () {
+        final id = resolveTrackingId(
+          'Тайчи',
+          tracked: const [],
+          roots: [
+            Node(
+              name: 'Неделя',
+              children: [
+                Node(name: 'День', children: [leaf('Тайчи', 'node-1')]),
+              ],
+            ),
+          ],
+          fallback: 'standard-1',
+        );
+        expect(id, 'node-1');
+      },
+    );
 
     test('names are compared ignoring case and spaces', () {
       final id = resolveTrackingId(
@@ -103,10 +110,13 @@ void main() {
       final index = TrackingIdIndex(
         tracked: const [],
         roots: [
-          Node(name: 'Неделя', children: [
-            leaf('Тайчи', 'first'),
-            Node(name: 'День', children: [leaf('Тайчи', 'second')]),
-          ]),
+          Node(
+            name: 'Неделя',
+            children: [
+              leaf('Тайчи', 'first'),
+              Node(name: 'День', children: [leaf('Тайчи', 'second')]),
+            ],
+          ),
         ],
       );
 
@@ -116,9 +126,7 @@ void main() {
     test('does not index folders', () {
       final index = TrackingIdIndex(
         tracked: const [],
-        roots: [
-          Node(name: 'Тайчи', children: [], stepType: 'folder'),
-        ],
+        roots: [Node(name: 'Тайчи', children: [], stepType: 'folder')],
       );
 
       expect(index.resolve('Тайчи', fallback: 'fallback'), 'fallback');
@@ -136,5 +144,4 @@ void main() {
       expect(index.resolve('Тайчи', fallback: 'fallback'), 'active');
     });
   });
-
 }

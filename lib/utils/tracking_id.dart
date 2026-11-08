@@ -31,7 +31,9 @@ class TrackingIdIndex {
   void _indexNodes(Iterable<Node> nodes) {
     for (final node in nodes) {
       final key = _normalize(node.name);
-      if (node.isTrackableTask && node.trackingId.isNotEmpty && key.isNotEmpty) {
+      if (node.isTrackableTask &&
+          node.trackingId.isNotEmpty &&
+          key.isNotEmpty) {
         _nodes.putIfAbsent(key, () => node.trackingId);
       }
       _indexNodes(node.children);
@@ -58,6 +60,8 @@ String resolveTrackingId(
   required Iterable<Node> roots,
   required String fallback,
 }) {
-  return TrackingIdIndex(tracked: tracked, roots: roots)
-      .resolve(name, fallback: fallback);
+  return TrackingIdIndex(
+    tracked: tracked,
+    roots: roots,
+  ).resolve(name, fallback: fallback);
 }

@@ -53,8 +53,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _startMinutes = _workingCopy.startMinutes;
     _totalStepsController = TextEditingController(text: _totalSteps.toString());
     _targetMinutes = _workingCopy.targetMinutes;
-    _targetController =
-        TextEditingController(text: _targetMinutes?.toString() ?? '');
+    _targetController = TextEditingController(
+      text: _targetMinutes?.toString() ?? '',
+    );
     final appState = context.read<AppState>();
     _trackingIdIndex = TrackingIdIndex(
       tracked: appState.trackedActivities,
@@ -169,7 +170,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
 
   void _updateTarget(String value) {
     final parsed = int.tryParse(value.trim());
-    setState(() => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null);
+    setState(
+      () => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null,
+    );
   }
 
   void _onStepTypeChanged(String? newType) {
@@ -200,12 +203,16 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     if (selected != null) {
       final name = selected.name;
       // The standard task's own id is the fallback, as in the quick picker.
-      final existingId =
-          _findExistingTrackingId(name, fallback: selected.trackingId);
+      final existingId = _findExistingTrackingId(
+        name,
+        fallback: selected.trackingId,
+      );
       setState(() {
         _nameController.text = name;
         _stepType = selected.stepType;
-        _totalSteps = selected.stepType == 'stepByStep' ? selected.totalSteps : 1;
+        _totalSteps = selected.stepType == 'stepByStep'
+            ? selected.totalSteps
+            : 1;
         _excludeFromHistory = selected.excludeFromHistory;
         _targetMinutes = selected.targetMinutes;
         _targetController.text = _targetMinutes?.toString() ?? '';
@@ -344,7 +351,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Без цели',
-                  helperText: 'Время учитывается отдельно и не влияет '
+                  helperText:
+                      'Время учитывается отдельно и не влияет '
                       'на выполнение чекбокса или шагов.',
                   helperMaxLines: 2,
                 ),
