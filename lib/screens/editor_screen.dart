@@ -735,10 +735,15 @@ class _EditorScreenState extends State<EditorScreen> {
                   },
                 )
               : reorderable
-                  ? ReorderableDragStartListener(
-                      index: dragIndex,
-                      child: const Icon(Icons.drag_handle),
-                    )
+                  ? (_isDayPlan
+                      ? ReorderableDragStartListener(
+                          index: dragIndex,
+                          child: const Icon(Icons.drag_handle),
+                        )
+                      : ReorderableDelayedDragStartListener(
+                          index: dragIndex,
+                          child: const Icon(Icons.drag_handle),
+                        ))
                   : const Icon(Icons.schedule),
           title: Row(
             children: [
