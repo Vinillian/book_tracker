@@ -22,8 +22,9 @@ void main() {
     return added;
   }
 
-  testWidgets('Enter adds the trimmed name and clears the field',
-      (tester) async {
+  testWidgets('Enter adds the trimmed name and clears the field', (
+    tester,
+  ) async {
     final added = await pumpBar(tester);
     await tester.enterText(find.byType(TextField), '  Прогулка  ');
     await tester.testTextInput.receiveAction(TextInputAction.done);
@@ -49,11 +50,12 @@ void main() {
     expect(added, [('Зарядка', null)]);
   });
 
-  testWidgets('selected time is attached to a typed quick-add task',
-      (tester) async {
+  testWidgets('selected time is attached to a typed quick-add task', (
+    tester,
+  ) async {
     final added = await pumpBar(
       tester,
-      timePicker: (_, __) async => const TimeOfDay(hour: 16, minute: 0),
+      timePicker: (_, _) async => const TimeOfDay(hour: 16, minute: 0),
     );
 
     await tester.tap(find.byTooltip('Назначить время'));

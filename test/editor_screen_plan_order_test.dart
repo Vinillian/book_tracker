@@ -17,9 +17,7 @@ void main() {
         ],
       );
 
-      await tester.pumpWidget(
-        MaterialApp(home: EditorScreen(node: day)),
-      );
+      await tester.pumpWidget(MaterialApp(home: EditorScreen(node: day)));
       await tester.pumpAndSettle();
 
       final morningY = tester.getTopLeft(find.text('Утренняя практика')).dy;
@@ -33,29 +31,26 @@ void main() {
     },
   );
 
-  testWidgets(
-    'long-press multi-select does not expose a drag handle',
-    (tester) async {
-      final day = Node(
-        name: 'План на день',
-        category: 'planner',
-        children: [
-          Node.leaf('Задача без времени'),
-          Node.leaf('Задача на 10')..startMinutes = 10 * 60,
-        ],
-      );
+  testWidgets('long-press multi-select does not expose a drag handle', (
+    tester,
+  ) async {
+    final day = Node(
+      name: 'План на день',
+      category: 'planner',
+      children: [
+        Node.leaf('Задача без времени'),
+        Node.leaf('Задача на 10')..startMinutes = 10 * 60,
+      ],
+    );
 
-      await tester.pumpWidget(
-        MaterialApp(home: EditorScreen(node: day)),
-      );
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(MaterialApp(home: EditorScreen(node: day)));
+    await tester.pumpAndSettle();
 
-      await tester.longPress(find.text('Задача без времени'));
-      await tester.pumpAndSettle();
+    await tester.longPress(find.text('Задача без времени'));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(Checkbox), findsOneWidget);
-      expect(find.byIcon(Icons.drag_handle), findsNothing);
-      expect(find.text('Выбрано: 1'), findsOneWidget);
-    },
-  );
+    expect(find.byType(Checkbox), findsNWidgets(2));
+    expect(find.byIcon(Icons.drag_handle), findsNothing);
+    expect(find.text('Выбрано: 1'), findsOneWidget);
+  });
 }

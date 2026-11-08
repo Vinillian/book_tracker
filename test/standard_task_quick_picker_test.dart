@@ -41,7 +41,10 @@ void main() {
     expect(find.text('Чтение'), findsOneWidget);
     expect(find.text('Одиночный чекбокс'), findsOneWidget);
     expect(find.text('Пошаговый (3 шагов)'), findsOneWidget);
-    expect(find.text('Одиночный чекбокс · цель времени: 45 мин'), findsOneWidget);
+    expect(
+      find.text('Одиночный чекбокс · цель времени: 45 мин'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('search filters by name, ignoring case', (tester) async {
@@ -67,8 +70,9 @@ void main() {
     );
   });
 
-  testWidgets('a tap adds right away and counts repeated additions',
-      (tester) async {
+  testWidgets('a tap adds right away and counts repeated additions', (
+    tester,
+  ) async {
     final picked = await pumpList(tester, tasks);
     expect(find.textContaining('✓'), findsNothing);
 
@@ -85,11 +89,7 @@ void main() {
     // The list is still there: several different tasks in a row.
     await tester.tap(find.text('Чтение'));
     await tester.pump();
-    expect(picked, [
-      (tasks[0], null),
-      (tasks[0], null),
-      (tasks[1], null),
-    ]);
+    expect(picked, [(tasks[0], null), (tasks[0], null), (tasks[1], null)]);
 
     await tester.tap(find.text('Бег'));
     await tester.pump();
@@ -99,14 +99,11 @@ void main() {
     expect(picked.last.$2, isNull);
   });
 
-  testWidgets('passes the selected start time with every picked task',
-      (tester) async {
+  testWidgets('passes the selected start time with every picked task', (
+    tester,
+  ) async {
     const startMinutes = 16 * 60;
-    final picked = await pumpList(
-      tester,
-      tasks,
-      startMinutes: startMinutes,
-    );
+    final picked = await pumpList(tester, tasks, startMinutes: startMinutes);
 
     await tester.tap(find.text('Чтение'));
     await tester.pump();

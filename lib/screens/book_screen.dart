@@ -311,9 +311,8 @@ class _BookScreenState extends State<BookScreen> {
           ),
           if (_node.category == 'planner')
             QuickAddBar(
-              onAdd: (name, startMinutes) => _addTask(
-                Node.leaf(name)..startMinutes = startMinutes,
-              ),
+              onAdd: (name, startMinutes) =>
+                  _addTask(Node.leaf(name)..startMinutes = startMinutes),
               onOpenPicker: (startMinutes) =>
                   _openStandardTaskPicker(startMinutes),
             ),

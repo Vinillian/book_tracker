@@ -43,11 +43,7 @@ PlanTaskGroups groupPlanTasks(List<Node> children) {
 ///
 /// [oldIndex] and [newIndex] are local to the untimed group and follow
 /// ReorderableListView's newIndex convention.
-List<Node> reorderUntimedPlanTasks(
-  List<Node> all,
-  int oldIndex,
-  int newIndex,
-) {
+List<Node> reorderUntimedPlanTasks(List<Node> all, int oldIndex, int newIndex) {
   final groups = groupPlanTasks(all);
   return reorderSubset(all, groups.untimed, oldIndex, newIndex);
 }

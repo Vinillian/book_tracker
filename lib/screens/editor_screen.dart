@@ -60,9 +60,9 @@ class _EditorScreenState extends State<EditorScreen> {
     if (withChildren.isEmpty) return true;
     final text = nodes.length == 1
         ? '«${withChildren.first.name}» содержит подэлементов: '
-            '${withChildren.first.children.length}. Удалить вместе с ними?'
+              '${withChildren.first.children.length}. Удалить вместе с ними?'
         : 'Среди выбранных есть элементы с подэлементами. Удалить их вместе '
-            'с содержимым?';
+              'с содержимым?';
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -201,9 +201,7 @@ class _EditorScreenState extends State<EditorScreen> {
       messenger.showSnackBar(
         const SnackBar(
           duration: Duration(seconds: 4),
-          content: Text(
-            'Некуда перемещать: добавьте рядом задачу или папку.',
-          ),
+          content: Text('Некуда перемещать: добавьте рядом задачу или папку.'),
         ),
       );
       return;
@@ -236,8 +234,9 @@ class _EditorScreenState extends State<EditorScreen> {
           onPressed: () {
             if (!mounted) return;
             setState(() {
-              target.children
-                  .removeWhere((c) => moving.any((m) => identical(m, c)));
+              target.children.removeWhere(
+                (c) => moving.any((m) => identical(m, c)),
+              );
               for (final e in removed) {
                 final at = e.$1.clamp(0, _workingCopy.children.length);
                 _workingCopy.children.insert(at, e.$2);
@@ -376,7 +375,6 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
-
   bool get _isDayPlan => _category == 'planner';
 
   Widget _sectionHeader(String label, int count) {
@@ -409,8 +407,12 @@ class _EditorScreenState extends State<EditorScreen> {
             onReorder: (oldIndex, newIndex) {
               if (_multiSelect) return;
               setState(() {
-                _workingCopy.children =
-                    reorderSubset(all, all, oldIndex, newIndex);
+                _workingCopy.children = reorderSubset(
+                  all,
+                  all,
+                  oldIndex,
+                  newIndex,
+                );
               });
             },
             itemBuilder: (context, index) {
@@ -439,19 +441,16 @@ class _EditorScreenState extends State<EditorScreen> {
             child: _sectionHeader('Со временем', timed.length),
           ),
           SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final child = timed[index];
-                return _buildChildRow(
-                  context,
-                  child,
-                  storageIndex: all.indexOf(child),
-                  reorderable: false,
-                  dragIndex: -1,
-                );
-              },
-              childCount: timed.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final child = timed[index];
+              return _buildChildRow(
+                context,
+                child,
+                storageIndex: all.indexOf(child),
+                reorderable: false,
+                dragIndex: -1,
+              );
+            }, childCount: timed.length),
           ),
         ],
         if (untimed.isNotEmpty) ...[
@@ -530,22 +529,20 @@ class _EditorScreenState extends State<EditorScreen> {
                   },
                 )
               : reorderable
-                  ? (_isDayPlan
-                      ? ReorderableDragStartListener(
-                          index: dragIndex,
-                          child: const Icon(Icons.drag_handle),
-                        )
-                      : ReorderableDelayedDragStartListener(
-                          index: dragIndex,
-                          child: const Icon(Icons.drag_handle),
-                        ))
-                  : const Icon(Icons.schedule),
+              ? (_isDayPlan
+                    ? ReorderableDragStartListener(
+                        index: dragIndex,
+                        child: const Icon(Icons.drag_handle),
+                      )
+                    : ReorderableDelayedDragStartListener(
+                        index: dragIndex,
+                        child: const Icon(Icons.drag_handle),
+                      ))
+              : const Icon(Icons.schedule),
           title: Row(
             children: [
               Expanded(
-                child: Text(
-                  child.name.isEmpty ? '[Без названия]' : child.name,
-                ),
+                child: Text(child.name.isEmpty ? '[Без названия]' : child.name),
               ),
               if (_isDayPlan && currentStartMinutes != null)
                 Padding(
@@ -564,18 +561,18 @@ class _EditorScreenState extends State<EditorScreen> {
               ? Text(
                   child.hasOwnProgress
                       ? '${child.children.length} подэлементов · '
-                          '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : "чекбокс"}'
-                          '${_timeSuffix(child)}'
+                            '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : "чекбокс"}'
+                            '${_timeSuffix(child)}'
                       : '${child.children.length} подэлементов',
                 )
               : child.stepType == 'stepByStep'
-                  ? Text(
-                      'Шаги: ${child.completedSteps}/${child.totalSteps}'
-                      '${_timeSuffix(child)}',
-                    )
-                  : child.stepType == 'single'
-                      ? Text('Чекбокс${_timeSuffix(child)}')
-                      : const Text('Папка'),
+              ? Text(
+                  'Шаги: ${child.completedSteps}/${child.totalSteps}'
+                  '${_timeSuffix(child)}',
+                )
+              : child.stepType == 'single'
+              ? Text('Чекбокс${_timeSuffix(child)}')
+              : const Text('Папка'),
           trailing: _multiSelect
               ? null
               : Row(
@@ -639,10 +636,7 @@ class _EditorScreenState extends State<EditorScreen> {
         ),
         actions: [
           if (!_multiSelect)
-            IconButton(
-              icon: const Icon(Icons.check),
-              onPressed: _saveAndClose,
-            ),
+            IconButton(icon: const Icon(Icons.check), onPressed: _saveAndClose),
         ],
       ),
       body: Column(
