@@ -59,6 +59,7 @@ void main() {
     await tester.tap(find.byTooltip('Назначить время'));
     await tester.pump();
     expect(find.byTooltip('Время: 16:00 · Изменить'), findsOneWidget);
+    expect(find.text('16:00'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Основы математики');
     await tester.tap(find.byIcon(Icons.send));
