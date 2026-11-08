@@ -5,10 +5,11 @@ import '../../providers/app_state.dart';
 
 /// Bottom sheet with a searchable list of standard tasks. Tapping a task calls
 /// [onPick] right away and the sheet stays open, so several tasks can be added
-/// in a row (#109).
+/// in a row (#109). The optional start time comes from the day quick-add bar.
 Future<void> showStandardTaskQuickPicker(
   BuildContext context, {
-  required ValueChanged<StandardTask> onPick,
+  required void Function(StandardTask task, int? startMinutes) onPick,
+  int? startMinutes,
 }) {
   final tasks = context.read<AppState>().standardTasks;
   return showModalBottomSheet<void>(
@@ -19,7 +20,11 @@ Future<void> showStandardTaskQuickPicker(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
       child: SizedBox(
         height: MediaQuery.sizeOf(ctx).height * 0.6,
-        child: StandardTaskQuickPickerList(tasks: tasks, onPick: onPick),
+        child: StandardTaskQuickPickerList(
+          tasks: tasks,
+          onPick: onPick,
+          startMinutes: startMinutes,
+        ),
       ),
     ),
   );
@@ -29,12 +34,14 @@ Future<void> showStandardTaskQuickPicker(
 /// caller, so it does not depend on `AppState` (and is easy to test).
 class StandardTaskQuickPickerList extends StatefulWidget {
   final List<StandardTask> tasks;
-  final ValueChanged<StandardTask> onPick;
+  final void Function(StandardTask task, int? startMinutes) onPick;
+  final int? startMinutes;
 
   const StandardTaskQuickPickerList({
     super.key,
     required this.tasks,
     required this.onPick,
+    this.startMinutes,
   });
 
   @override
@@ -97,7 +104,7 @@ class _StandardTaskQuickPickerListState
                               ),
                             ),
                       onTap: () {
-                        widget.onPick(task);
+                        widget.onPick(task, widget.startMinutes);
                         setState(() => _added[task.id] = count + 1);
                       },
                     );

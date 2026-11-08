@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/node.dart';
 import '../utils/format_minutes.dart';
+import '../utils/day_part.dart';
+import '../utils/reorder.dart';
 import '../utils/node_copy.dart';
+import '../utils/plan_task_order.dart';
 import 'item_card_screen.dart';
 import 'template_manager_screen.dart';
 
@@ -57,9 +60,9 @@ class _EditorScreenState extends State<EditorScreen> {
     if (withChildren.isEmpty) return true;
     final text = nodes.length == 1
         ? '«${withChildren.first.name}» содержит подэлементов: '
-            '${withChildren.first.children.length}. Удалить вместе с ними?'
+              '${withChildren.first.children.length}. Удалить вместе с ними?'
         : 'Среди выбранных есть элементы с подэлементами. Удалить их вместе '
-            'с содержимым?';
+              'с содержимым?';
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -198,9 +201,7 @@ class _EditorScreenState extends State<EditorScreen> {
       messenger.showSnackBar(
         const SnackBar(
           duration: Duration(seconds: 4),
-          content: Text(
-            'Некуда перемещать: добавьте рядом задачу или папку.',
-          ),
+          content: Text('Некуда перемещать: добавьте рядом задачу или папку.'),
         ),
       );
       return;
@@ -233,8 +234,9 @@ class _EditorScreenState extends State<EditorScreen> {
           onPressed: () {
             if (!mounted) return;
             setState(() {
-              target.children
-                  .removeWhere((c) => moving.any((m) => identical(m, c)));
+              target.children.removeWhere(
+                (c) => moving.any((m) => identical(m, c)),
+              );
               for (final e in removed) {
                 final at = e.$1.clamp(0, _workingCopy.children.length);
                 _workingCopy.children.insert(at, e.$2);
@@ -373,6 +375,251 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
+  bool get _isDayPlan => _category == 'planner';
+
+  Widget _sectionHeader(String label, int count) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Text(
+        '$label · $count',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChildrenList(BuildContext context) {
+    final all = _workingCopy.children;
+    if (all.isEmpty) {
+      return const Center(
+        child: Text('Нет дочерних элементов. Нажмите "+" для создания.'),
+      );
+    }
+
+    if (!_isDayPlan) {
+      return CustomScrollView(
+        slivers: [
+          SliverReorderableList(
+            itemCount: all.length,
+            onReorder: (oldIndex, newIndex) {
+              if (_multiSelect) return;
+              setState(() {
+                _workingCopy.children = reorderSubset(
+                  all,
+                  all,
+                  oldIndex,
+                  newIndex,
+                );
+              });
+            },
+            itemBuilder: (context, index) {
+              final child = all[index];
+              return _buildChildRow(
+                context,
+                child,
+                storageIndex: index,
+                reorderable: true,
+                dragIndex: index,
+              );
+            },
+          ),
+        ],
+      );
+    }
+
+    final groups = groupPlanTasks(all);
+    final timed = groups.timed;
+    final untimed = groups.untimed;
+
+    return CustomScrollView(
+      slivers: [
+        if (timed.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: _sectionHeader('Со временем', timed.length),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final child = timed[index];
+              return _buildChildRow(
+                context,
+                child,
+                storageIndex: all.indexOf(child),
+                reorderable: false,
+                dragIndex: -1,
+              );
+            }, childCount: timed.length),
+          ),
+        ],
+        if (untimed.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: _sectionHeader('Без времени', untimed.length),
+          ),
+          SliverReorderableList(
+            itemCount: untimed.length,
+            onReorder: (oldIndex, newIndex) {
+              if (_multiSelect) return;
+              setState(() {
+                _workingCopy.children = reorderUntimedPlanTasks(
+                  _workingCopy.children,
+                  oldIndex,
+                  newIndex,
+                );
+              });
+            },
+            itemBuilder: (context, index) {
+              final child = untimed[index];
+              return _buildChildRow(
+                context,
+                child,
+                storageIndex: all.indexOf(child),
+                reorderable: true,
+                dragIndex: index,
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildChildRow(
+    BuildContext context,
+    Node child, {
+    required int storageIndex,
+    required bool reorderable,
+    required int dragIndex,
+  }) {
+    final isSelected = _selectedIndices.contains(storageIndex);
+    final currentStartMinutes = child.startMinutes;
+
+    return Dismissible(
+      key: ValueKey(child.id),
+      direction: _multiSelect
+          ? DismissDirection.none
+          : DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.only(right: 20),
+        alignment: Alignment.centerRight,
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (_) => _confirmSubtreeDelete([child]),
+      onDismissed: (_) {
+        final index = _workingCopy.children.indexOf(child);
+        if (index >= 0) _removeWithUndo([index]);
+      },
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: ListTile(
+          leading: _multiSelect
+              ? Checkbox(
+                  value: isSelected,
+                  onChanged: (value) {
+                    setState(() {
+                      if (value == true) {
+                        _selectedIndices.add(storageIndex);
+                      } else {
+                        _selectedIndices.remove(storageIndex);
+                      }
+                    });
+                  },
+                )
+              : reorderable
+              ? (_isDayPlan
+                    ? ReorderableDragStartListener(
+                        index: dragIndex,
+                        child: const Icon(Icons.drag_handle),
+                      )
+                    : ReorderableDelayedDragStartListener(
+                        index: dragIndex,
+                        child: const Icon(Icons.drag_handle),
+                      ))
+              : const Icon(Icons.schedule),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(child.name.isEmpty ? '[Без названия]' : child.name),
+              ),
+              if (_isDayPlan && currentStartMinutes != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    formatMinutes(currentStartMinutes),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          subtitle: child.children.isNotEmpty
+              ? Text(
+                  child.hasOwnProgress
+                      ? '${child.children.length} подэлементов · '
+                            '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : "чекбокс"}'
+                            '${_timeSuffix(child)}'
+                      : '${child.children.length} подэлементов',
+                )
+              : child.stepType == 'stepByStep'
+              ? Text(
+                  'Шаги: ${child.completedSteps}/${child.totalSteps}'
+                  '${_timeSuffix(child)}',
+                )
+              : child.stepType == 'single'
+              ? Text('Чекбокс${_timeSuffix(child)}')
+              : const Text('Папка'),
+          trailing: _multiSelect
+              ? null
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () => _editChild(storageIndex),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.drive_file_move_outlined),
+                      tooltip: 'Переместить в…',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _moveWithPicker([storageIndex]),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => _deleteWithConfirm([storageIndex]),
+                    ),
+                  ],
+                ),
+          onTap: () {
+            if (_multiSelect) {
+              setState(() {
+                if (isSelected) {
+                  _selectedIndices.remove(storageIndex);
+                } else {
+                  _selectedIndices.add(storageIndex);
+                }
+              });
+            } else {
+              _editChild(storageIndex);
+            }
+          },
+          onLongPress: () {
+            if (!_multiSelect) {
+              setState(() {
+                _multiSelect = true;
+                _selectedIndices = {storageIndex};
+              });
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildScaffold(BuildContext context) {
     final bool isRoot = widget.node.category != null;
 
@@ -389,10 +636,7 @@ class _EditorScreenState extends State<EditorScreen> {
         ),
         actions: [
           if (!_multiSelect)
-            IconButton(
-              icon: const Icon(Icons.check),
-              onPressed: _saveAndClose,
-            ),
+            IconButton(icon: const Icon(Icons.check), onPressed: _saveAndClose),
         ],
       ),
       body: Column(
@@ -466,133 +710,7 @@ class _EditorScreenState extends State<EditorScreen> {
               ],
             ),
           ),
-          Expanded(
-            child: _workingCopy.children.isEmpty
-                ? const Center(
-              child: Text(
-                'Нет дочерних элементов. Нажмите "+" для создания.',
-              ),
-            )
-                : ReorderableListView.builder(
-              itemCount: _workingCopy.children.length,
-              onReorder: (oldIndex, newIndex) {
-                if (_multiSelect) return;
-                setState(() {
-                  if (newIndex > oldIndex) newIndex--;
-                  final item = _workingCopy.children.removeAt(oldIndex);
-                  _workingCopy.children.insert(newIndex, item);
-                });
-              },
-              itemBuilder: (context, index) {
-                final child = _workingCopy.children[index];
-                final isSelected = _selectedIndices.contains(index);
-                return Dismissible(
-                  key: ValueKey(child),
-                  direction: _multiSelect
-                      ? DismissDirection.none
-                      : DismissDirection.endToStart,
-                  background: Container(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    padding: const EdgeInsets.only(right: 20),
-                    alignment: Alignment.centerRight,
-                    color: Colors.red,
-                    child: const Icon(Icons.delete, color: Colors.white),
-                  ),
-                  confirmDismiss: (_) => _confirmSubtreeDelete([child]),
-                  onDismissed: (_) => _removeWithUndo([index]),
-                  child: Card(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  child: ListTile(
-                    leading: _multiSelect
-                        ? Checkbox(
-                      value: isSelected,
-                      onChanged: (val) {
-                        setState(() {
-                          if (val == true) {
-                            _selectedIndices.add(index);
-                          } else {
-                            _selectedIndices.remove(index);
-                          }
-                        });
-                      },
-                    )
-                        : ReorderableDragStartListener(
-                      index: index,
-                      child: const Icon(Icons.drag_handle),
-                    ),
-                    title: Text(
-                      child.name.isEmpty ? '[Без названия]' : child.name,
-                    ),
-                    subtitle: child.children.isNotEmpty
-                        ? Text(
-                            child.hasOwnProgress
-                                ? '${child.children.length} подэлементов · '
-                                    '${child.stepType == 'stepByStep' ? "шаги ${child.completedSteps}/${child.totalSteps}" : "чекбокс"}'
-                                    '${_timeSuffix(child)}'
-                                : '${child.children.length} подэлементов',
-                          )
-                        : child.stepType == 'stepByStep'
-                            ? Text(
-                                'Шаги: ${child.completedSteps}/${child.totalSteps}'
-                                '${_timeSuffix(child)}',
-                              )
-                            : child.stepType == 'single'
-                                ? Text('Чекбокс${_timeSuffix(child)}')
-                                : const Text('Папка'),
-                    trailing: _multiSelect
-                        ? null
-                        : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _editChild(index),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.drive_file_move_outlined),
-                          tooltip: 'Переместить в…',
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => _moveWithPicker([index]),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteWithConfirm([index]),
-                        ),
-                      ],
-                    ),
-                    onTap: () {
-                      if (_multiSelect) {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedIndices.remove(index);
-                          } else {
-                            _selectedIndices.add(index);
-                          }
-                        });
-                      } else {
-                        _editChild(index);
-                      }
-                    },
-                    onLongPress: () {
-                      if (!_multiSelect) {
-                        setState(() {
-                          _multiSelect = true;
-                          _selectedIndices = {index};
-                        });
-                      }
-                    },
-                  ),
-                  ),
-                );
-              },
-            ),
-          ),
+          Expanded(child: _buildChildrenList(context)),
           if (_multiSelect)
             Container(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
