@@ -32,6 +32,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   late TextEditingController _nameController;
   late TextEditingController _totalStepsController;
   late TextEditingController _targetController;
+  late TrackingIdIndex _trackingIdIndex;
   int? _targetMinutes;
   late String _stepType;
   late int _totalSteps;
@@ -52,8 +53,14 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _startMinutes = _workingCopy.startMinutes;
     _totalStepsController = TextEditingController(text: _totalSteps.toString());
     _targetMinutes = _workingCopy.targetMinutes;
-    _targetController =
-        TextEditingController(text: _targetMinutes?.toString() ?? '');
+    _targetController = TextEditingController(
+      text: _targetMinutes?.toString() ?? '',
+    );
+    final appState = context.read<AppState>();
+    _trackingIdIndex = TrackingIdIndex(
+      tracked: appState.trackedActivities,
+      roots: [...appState.books, ...appState.plans, ...appState.templates],
+    );
   }
 
   @override
@@ -163,7 +170,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
 
   void _updateTarget(String value) {
     final parsed = int.tryParse(value.trim());
-    setState(() => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null);
+    setState(
+      () => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null,
+    );
   }
 
   void _onStepTypeChanged(String? newType) {
@@ -194,12 +203,16 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     if (selected != null) {
       final name = selected.name;
       // The standard task's own id is the fallback, as in the quick picker.
-      final existingId =
-          _findExistingTrackingId(name, fallback: selected.trackingId);
+      final existingId = _findExistingTrackingId(
+        name,
+        fallback: selected.trackingId,
+      );
       setState(() {
         _nameController.text = name;
         _stepType = selected.stepType;
-        _totalSteps = selected.stepType == 'stepByStep' ? selected.totalSteps : 1;
+        _totalSteps = selected.stepType == 'stepByStep'
+            ? selected.totalSteps
+            : 1;
         _excludeFromHistory = selected.excludeFromHistory;
         _targetMinutes = selected.targetMinutes;
         _targetController.text = _targetMinutes?.toString() ?? '';
@@ -211,13 +224,11 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     }
   }
 
-  /// Поиск существующего trackingId для задачи с таким же именем
+  /// Resolve from the snapshot built when this editor opened. Repeated
+  /// TextField changes therefore perform constant-time lookups.
   String _findExistingTrackingId(String name, {String? fallback}) {
-    final appState = context.read<AppState>();
-    return resolveTrackingId(
+    return _trackingIdIndex.resolve(
       name,
-      tracked: appState.trackedActivities,
-      roots: [...appState.books, ...appState.plans, ...appState.templates],
       fallback: fallback ?? const Uuid().v4(),
     );
   }
@@ -340,7 +351,8 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Без цели',
-                  helperText: 'Время учитывается отдельно и не влияет '
+                  helperText:
+                      'Время учитывается отдельно и не влияет '
                       'на выполнение чекбокса или шагов.',
                   helperMaxLines: 2,
                 ),
