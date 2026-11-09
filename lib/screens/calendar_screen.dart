@@ -31,12 +31,12 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  // Marker object meaning "a plan exists on this day" (history entries are
-  // HistoryEntry instances), so the two kinds can be drawn differently.
   static const Object _planMarker = Object();
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  CalendarFormat _calendarFormat = CalendarFormat.twoWeeks;
+
   Map<DateTime, List<HistoryEntry>> _events = {};
 
   @override
@@ -72,14 +72,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
   );
 
   Widget _legend(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodySmall;
+    final style = Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _markerDot(filled: false),
         const SizedBox(width: 4),
         Text('План', style: style),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         _markerDot(filled: true),
         const SizedBox(width: 4),
         Text('Выполнено', style: style),
@@ -102,6 +103,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     final appState = context.read<AppState>();
     Node? created;
+
     if (choice == _NewDayChoice.empty) {
       created = appState.addEmptyDay(day);
     } else {
@@ -114,15 +116,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ),
       );
+
       if (template == null || !mounted) return;
       created = appState.addDayFromTemplate(template, day);
     }
+
     if (!mounted) return;
     await _showDay(created);
   }
 
   Future<_NewDayChoice?> _askHowToCreate(DateTime day) {
     final dateStr = DateFormat('dd.MM.yyyy').format(day);
+
     return showModalBottomSheet<_NewDayChoice>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -152,23 +157,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  /// Creates an empty plan without leaving the calendar. The quick-add bar
-  /// appears automatically after AppState notifies its listeners.
   void _createEmptyPlan(DateTime day) {
     context.read<AppState>().addEmptyDay(day);
   }
 
-  /// Adds a task directly to the selected day's existing plan.
   void _addTaskToPlan(Node plan, Node task) {
     final appState = context.read<AppState>();
     plan.children.add(task);
     appState.updateNode(appState.getKeyForNode(plan), plan);
   }
 
-  /// Reuses the same standard-task picker and tracking-ID resolution as
-  /// BookScreen, so calendar-created tasks join existing tracking lines.
   Future<void> _openStandardTaskPicker(Node plan, [int? startMinutes]) {
     final appState = context.read<AppState>();
+
     return showStandardTaskQuickPicker(
       context,
       startMinutes: startMinutes,
@@ -186,14 +187,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  /// Opens the screen that creates or deletes plans for a period; offers to
-  /// undo the whole batch afterwards (#145, #163).
   Future<void> _openPlanBatch() async {
     final result = await Navigator.push<PlanBatchResult>(
       context,
       MaterialPageRoute(builder: (_) => const PlanGeneratorScreen()),
     );
+
     if (result == null || !mounted) return;
+
     if (result.deleted.isNotEmpty) {
       deleteNodesWithUndo(
         context,
@@ -202,9 +203,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
       return;
     }
+
     if (result.created.isEmpty) return;
+
     final appState = context.read<AppState>();
     final messenger = ScaffoldMessenger.of(context);
+
     messenger.clearSnackBars();
     messenger.showSnackBar(
       SnackBar(
@@ -222,6 +226,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Future<void> _showDay(Node plan) async {
     final appState = context.read<AppState>();
     final key = appState.getKeyForNode(plan);
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -231,6 +236,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
     );
+
     if (mounted) setState(() {});
   }
 
@@ -240,17 +246,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final planDays = _planDays(appState.plans);
     final schedule = appState.workSchedule;
     final today = DateTime.now();
+
     final selectedPlan = _selectedDay == null
         ? null
         : appState.planForDate(_selectedDay!);
 
-    // Re-read History on every build: it changes elsewhere (deleting a plan,
-    // ticking tasks), and AppState notifications rebuild this screen.
     _events = HistoryService.getAllEntriesGroupedByDate();
+
     List<Object> markersForDay(DateTime day) => [
       ..._getEventsForDay(day),
       if (planDays.contains(_dayKey(day))) _planMarker,
     ];
+
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -259,7 +267,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
           alignment: Alignment.centerLeft,
           child: Text('Календарь прогресса'),
         ),
-        // With explicit actions Flutter does not add the end-drawer button.
         actions: [
           IconButton(
             icon: const Icon(Icons.auto_awesome_motion),
@@ -272,13 +279,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
       endDrawer: const AppDrawerMenu(),
       body: Column(
         children: [
+          // Календарь с переключением между двумя неделями и месяцем.
           TableCalendar<Object>(
+            locale: 'ru_RU',
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
+            calendarFormat: _calendarFormat,
+            startingDayOfWeek: StartingDayOfWeek.monday,
+            availableCalendarFormats: const {
+              CalendarFormat.twoWeeks: '2 недели',
+              CalendarFormat.month: 'Месяц',
+            },
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            // A tap only selects the day and shows its summary below; the day
-            // itself opens with the button in the summary.
+            onFormatChanged: (format) {
+              setState(() => _calendarFormat = format);
+            },
+            onPageChanged: (focusedDay) {
+              _focusedDay = focusedDay;
+            },
             onDaySelected: (selectedDay, focusedDay) {
               setState(() {
                 _selectedDay = selectedDay;
@@ -286,9 +305,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
               });
             },
             eventLoader: markersForDay,
+            headerStyle: HeaderStyle(
+              titleCentered: true,
+              formatButtonVisible: true,
+              formatButtonShowsNext: false,
+              formatButtonDecoration: BoxDecoration(
+                border: Border.all(
+                  color: scheme.outline.withValues(alpha: 0.5),
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              formatButtonTextStyle: const TextStyle(fontSize: 12),
+              titleTextFormatter: (date, locale) =>
+                  DateFormat.yMMMM('ru_RU').format(date),
+              headerPadding: const EdgeInsets.symmetric(vertical: 2),
+              leftChevronMargin: const EdgeInsets.only(left: 4),
+              rightChevronMargin: const EdgeInsets.only(right: 4),
+              leftChevronPadding: const EdgeInsets.all(4),
+              rightChevronPadding: const EdgeInsets.all(4),
+            ),
+            daysOfWeekStyle: const DaysOfWeekStyle(
+              weekdayStyle: TextStyle(fontSize: 11),
+              weekendStyle: TextStyle(fontSize: 11),
+            ),
+            calendarStyle: const CalendarStyle(
+              cellMargin: EdgeInsets.all(2),
+              cellPadding: EdgeInsets.zero,
+              outsideDaysVisible: false,
+              markersMaxCount: 2,
+              markerSize: 6,
+              markersAlignment: Alignment.bottomCenter,
+              markersOffset: PositionedOffset(bottom: 2),
+            ),
+            rowHeight: 38,
             calendarBuilders: CalendarBuilders<Object>(
-              // With a work schedule every date is tinted by its day type
-              // (#171); the markers below are still drawn over the cell.
               prioritizedBuilder: schedule == null
                   ? null
                   : (context, day, focusedDay) => ScheduleDayCell(
@@ -302,8 +352,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               markerBuilder: (context, day, events) {
                 final hasPlan = events.contains(_planMarker);
                 final hasHistory = events.any((e) => e is HistoryEntry);
+
                 return Positioned(
-                  bottom: 4,
+                  bottom: 1,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -316,13 +367,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
               },
             ),
           ),
-          _legend(context),
-          if (schedule != null) ...[
-            const SizedBox(height: 4),
-            const ScheduleLegend(),
-          ],
-          const SizedBox(height: 8),
-          Expanded(child: _buildDaySummary(appState)),
+
+          // Легенда календаря и графика.
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: _legend(context),
+          ),
+          if (schedule != null)
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: ScheduleLegend(),
+            ),
+
+          // Фиксированная информация о выбранном дне.
+          if (_selectedDay != null)
+            _buildSelectedDayHeader(appState, selectedPlan, scheme),
+
+          // Прокручивается только содержимое выбранного дня.
+          Expanded(
+            child: _selectedDay == null
+                ? const SizedBox.shrink()
+                : _buildDayTasks(appState),
+          ),
+
           if (selectedPlan != null)
             QuickAddBar(
               onAdd: (name, startMinutes) {
@@ -339,63 +406,119 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  /// A short summary of the selected day under the calendar (#145): its type,
-  /// the plan's tasks with their progress, and what History recorded.
-  Widget _buildDaySummary(AppState appState) {
-    final day = _selectedDay;
-    if (day == null) return const SizedBox.shrink();
+  /// Закреплённая панель выбранной даты, типа дня и общего прогресса.
+  Widget _buildSelectedDayHeader(
+    AppState appState,
+    Node? plan,
+    ColorScheme scheme,
+  ) {
+    final day = _selectedDay!;
+    final theme = Theme.of(context);
+
+    final total = plan?.totalLeaves ?? 0;
+    final done = plan?.completedLeaves ?? 0;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            DateFormat('dd.MM.yyyy').format(day),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              DayTypeChip(date: day),
+              const Spacer(),
+              if (plan == null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Text(
+                    'Нет плана',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 9,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () => _openDay(day),
+                child: Text(plan == null ? 'Создать план' : 'Открыть день'),
+              ),
+            ],
+          ),
+          if (plan != null && total > 0) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Text(
+                  'Выполнено $done из $total',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const Spacer(),
+                Text(
+                  '${(done / total * 100).round()}%',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(value: done / total, minHeight: 4),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Прокручиваемый список задач и записей истории выбранного дня.
+  Widget _buildDayTasks(AppState appState) {
+    final day = _selectedDay!;
     final theme = Theme.of(context);
     final plan = appState.planForDate(day);
     final events = _getEventsForDay(day);
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      DateFormat('dd.MM.yyyy').format(day),
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    DayTypeChip(date: day),
-                  ],
-                ),
-              ),
-              FilledButton.tonal(
-                onPressed: () => _openDay(day),
-                child: Text(plan == null ? 'Создать план…' : 'Открыть день'),
-              ),
-            ],
+    if (plan == null) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+        children: [
+          const Text('Плана на этот день пока нет.'),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => _createEmptyPlan(day),
+            icon: const Icon(Icons.add),
+            label: const Text('Создать пустой план'),
           ),
-        ),
-        if (plan == null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Плана на этот день нет'),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _createEmptyPlan(day),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Создать пустой план для добавления задач'),
-                ),
-              ],
-            ),
-          )
-        else
-          ..._planSummary(plan, theme),
+        ],
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 12),
+      children: [
+        ..._planSummary(plan, theme),
         if (events.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text('Выполнено', style: theme.textTheme.titleSmall),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: Text(
+              'История выполнения',
+              style: theme.textTheme.titleSmall,
+            ),
           ),
           ..._historyCards(events),
         ],
@@ -404,9 +527,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   List<Widget> _planSummary(Node plan, ThemeData theme) {
-    final total = plan.totalLeaves;
-    final done = plan.completedLeaves;
-
     final timed = sortedByStartTime([
       for (final c in plan.children)
         if (c.startMinutes != null) c,
@@ -418,27 +538,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     ];
 
     return [
-      if (total > 0)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Выполнено $done из $total'),
-              const SizedBox(height: 4),
-              LinearProgressIndicator(value: done / total),
-            ],
-          ),
-        ),
       if (plan.children.isEmpty)
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Text('В плане пока нет задач'),
         ),
       for (final task in [...timed, ...untimed])
         ListTile(
           dense: true,
           visualDensity: VisualDensity.compact,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
           leading: _taskLeading(task),
           title: Text.rich(
             TextSpan(
@@ -484,7 +593,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final total = task.totalLeaves;
     Widget? progress;
 
-    // Числовой прогресс показываем только для составных задач.
     if (total > 0 && (task.children.isNotEmpty || task.stepType != 'single')) {
       progress = Text('${task.completedLeaves}/$total');
     }
@@ -513,8 +621,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return [
       for (final entry in events)
         Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
           child: ListTile(
+            dense: true,
+            visualDensity: VisualDensity.compact,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
             leading: entry.stepType == 'single'
                 ? Icon(
                     entry.completed == true
