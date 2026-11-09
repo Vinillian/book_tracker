@@ -407,8 +407,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   /// Закреплённая панель выбранной даты, типа дня и общего прогресса.
-
-  /// Закреплённая панель выбранной даты, типа дня и общего прогресса.
   Widget _buildSelectedDayHeader(
     AppState appState,
     Node? plan,
