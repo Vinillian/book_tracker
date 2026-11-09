@@ -9,6 +9,7 @@ import '../utils/day_part.dart';
 import '../utils/delete_with_undo.dart';
 import '../utils/format_minutes.dart';
 import '../utils/plan_date.dart';
+import '../utils/tracking_id.dart';
 import 'components/day_type_chip.dart';
 import 'components/schedule_day_cell.dart';
 import '../services/history_service.dart';
@@ -16,6 +17,8 @@ import 'book_screen.dart';
 import 'plan_generator_screen.dart';
 import 'components/app_drawer_menu.dart';
 import 'components/app_menu_button.dart';
+import 'components/quick_add_bar.dart';
+import 'components/standard_task_quick_picker.dart';
 import 'template_manager_screen.dart';
 
 enum _NewDayChoice { empty, template }
@@ -149,6 +152,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  /// Creates an empty plan without leaving the calendar. The quick-add bar
+  /// appears automatically after AppState notifies its listeners.
+  void _createEmptyPlan(DateTime day) {
+    context.read<AppState>().addEmptyDay(day);
+  }
+
+  /// Adds a task directly to the selected day's existing plan.
+  void _addTaskToPlan(Node plan, Node task) {
+    final appState = context.read<AppState>();
+    plan.children.add(task);
+    appState.updateNode(appState.getKeyForNode(plan), plan);
+  }
+
+  /// Reuses the same standard-task picker and tracking-ID resolution as
+  /// BookScreen, so calendar-created tasks join existing tracking lines.
+  Future<void> _openStandardTaskPicker(Node plan, [int? startMinutes]) {
+    final appState = context.read<AppState>();
+    return showStandardTaskQuickPicker(
+      context,
+      startMinutes: startMinutes,
+      onPick: (task, selectedStartMinutes) {
+        final node = task.toNode();
+        node.startMinutes = selectedStartMinutes;
+        node.trackingId = resolveTrackingId(
+          task.name,
+          tracked: appState.trackedActivities,
+          roots: [...appState.books, ...appState.plans, ...appState.templates],
+          fallback: task.trackingId,
+        );
+        _addTaskToPlan(plan, node);
+      },
+    );
+  }
+
   /// Opens the screen that creates or deletes plans for a period; offers to
   /// undo the whole batch afterwards (#145, #163).
   Future<void> _openPlanBatch() async {
@@ -203,6 +240,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final planDays = _planDays(appState.plans);
     final schedule = appState.workSchedule;
     final today = DateTime.now();
+    final selectedPlan = _selectedDay == null
+        ? null
+        : appState.planForDate(_selectedDay!);
+
     // Re-read History on every build: it changes elsewhere (deleting a plan,
     // ticking tasks), and AppState notifications rebuild this screen.
     _events = HistoryService.getAllEntriesGroupedByDate();
@@ -213,7 +254,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Календарь прогресса'),
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text('Календарь прогресса'),
+        ),
         // With explicit actions Flutter does not add the end-drawer button.
         actions: [
           IconButton(
@@ -247,13 +292,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
               prioritizedBuilder: schedule == null
                   ? null
                   : (context, day, focusedDay) => ScheduleDayCell(
-                        dayNumber: day.day,
-                        type: schedule.dayTypeOf(day),
-                        overridden: schedule.isOverridden(day),
-                        selected: isSameDay(_selectedDay, day),
-                        today: isSameDay(today, day),
-                        outside: day.month != focusedDay.month,
-                      ),
+                      dayNumber: day.day,
+                      type: schedule.dayTypeOf(day),
+                      overridden: schedule.isOverridden(day),
+                      selected: isSameDay(_selectedDay, day),
+                      today: isSameDay(today, day),
+                      outside: day.month != focusedDay.month,
+                    ),
               markerBuilder: (context, day, events) {
                 final hasPlan = events.contains(_planMarker);
                 final hasHistory = events.any((e) => e is HistoryEntry);
@@ -278,6 +323,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ],
           const SizedBox(height: 8),
           Expanded(child: _buildDaySummary(appState)),
+          if (selectedPlan != null)
+            QuickAddBar(
+              onAdd: (name, startMinutes) {
+                _addTaskToPlan(
+                  selectedPlan,
+                  Node.leaf(name)..startMinutes = startMinutes,
+                );
+              },
+              onOpenPicker: (startMinutes) =>
+                  _openStandardTaskPicker(selectedPlan, startMinutes),
+            ),
         ],
       ),
     );
@@ -319,9 +375,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ),
         if (plan == null)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Text('Плана на этот день нет'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Плана на этот день нет'),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _createEmptyPlan(day),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Создать пустой план для добавления задач'),
+                ),
+              ],
+            ),
           )
         else
           ..._planSummary(plan, theme),
@@ -339,13 +406,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   List<Widget> _planSummary(Node plan, ThemeData theme) {
     final total = plan.totalLeaves;
     final done = plan.completedLeaves;
-    final timed = sortedByStartTime(
-      [for (final c in plan.children) if (c.startMinutes != null) c],
-    );
+
+    final timed = sortedByStartTime([
+      for (final c in plan.children)
+        if (c.startMinutes != null) c,
+    ]);
+
     final untimed = [
       for (final c in plan.children)
         if (c.startMinutes == null) c,
     ];
+
     return [
       if (total > 0)
         Padding(
@@ -368,47 +439,73 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ListTile(
           dense: true,
           visualDensity: VisualDensity.compact,
-          leading: SizedBox(
-            width: 44,
-            child: Text(
-              task.startMinutes == null ? '' : formatMinutes(task.startMinutes!),
-              style: theme.textTheme.bodySmall,
+          leading: _taskLeading(task),
+          title: Text.rich(
+            TextSpan(
+              children: [
+                if (task.startMinutes != null)
+                  TextSpan(
+                    text: '${formatMinutes(task.startMinutes!)}  ',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                TextSpan(
+                  text: task.name.isEmpty ? '[Без названия]' : task.name,
+                ),
+              ],
             ),
           ),
-          title: Text(task.name.isEmpty ? '[Без названия]' : task.name),
           trailing: _taskTrailing(task),
         ),
     ];
   }
 
+  Widget? _taskLeading(Node task) {
+    final hasChildren = task.children.isNotEmpty;
+    final isSingle = task.stepType == 'single';
+
+    final isFolder =
+        task.stepType == 'folder' || (hasChildren && !task.hasOwnProgress);
+
+    if (isSingle && (!hasChildren || task.hasOwnProgress)) {
+      return Icon(
+        task.completed ? Icons.check_circle : Icons.radio_button_unchecked,
+        color: task.completed ? Colors.green : Colors.grey,
+      );
+    }
+
+    if (isFolder) {
+      return Icon(task.isExpanded ? Icons.folder_open : Icons.folder);
+    }
+
+    return const Icon(Icons.list, color: Colors.blue);
+  }
+
   Widget? _taskTrailing(Node task) {
     final total = task.totalLeaves;
     Widget? progress;
-    if (total > 0) {
-      final done = task.completedLeaves;
-      if (done >= total) {
-        progress = const Icon(Icons.check_circle, color: Colors.green);
-      } else if (task.children.isEmpty && task.stepType == 'single') {
-        progress = const Icon(Icons.radio_button_unchecked, color: Colors.grey);
-      } else {
-        progress = Text('$done/$total');
-      }
+
+    // Числовой прогресс показываем только для составных задач.
+    if (total > 0 && (task.children.isNotEmpty || task.stepType != 'single')) {
+      progress = Text('${task.completedLeaves}/$total');
     }
 
     final hasTime = (task.targetMinutes ?? 0) > 0 || task.loggedMinutes > 0;
+
     if (!hasTime) return progress;
+
     final time = Text(
       durationProgressLabel(task.loggedMinutes, task.targetMinutes),
       style: TextStyle(
-        fontSize: 12,
+        fontSize: 11,
         color: task.timeGoalReached ? Colors.green : Colors.grey,
       ),
     );
+
     if (progress == null) return time;
-    return Column(
+
+    return Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [progress, time],
+      children: [progress, const SizedBox(width: 6), time],
     );
   }
 
@@ -426,8 +523,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     color: entry.completed == true ? Colors.green : Colors.grey,
                   )
                 : entry.stepType == 'duration'
-                    ? const Icon(Icons.timer, color: Colors.blue)
-                    : const Icon(Icons.list, color: Colors.blue),
+                ? const Icon(Icons.timer, color: Colors.blue)
+                : const Icon(Icons.list, color: Colors.blue),
             title: Text(entry.nodeName),
             subtitle: entry.stepType == 'single'
                 ? Text(entry.completed == true ? 'Выполнено' : 'Не выполнено')
@@ -435,8 +532,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             trailing: entry.stepType == 'stepByStep'
                 ? Text('Шагов: ${entry.completedSteps}')
                 : entry.stepType == 'duration'
-                    ? Text(formatDuration(entry.minutes ?? 0))
-                    : null,
+                ? Text(formatDuration(entry.minutes ?? 0))
+                : null,
           ),
         ),
     ];
