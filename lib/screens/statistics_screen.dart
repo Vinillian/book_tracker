@@ -26,8 +26,8 @@ class StatisticsScreen extends StatelessWidget {
               bottom: hasData
                   ? const TabBar(
                       tabs: [
-                        Tab(text: 'Обзор'),
                         Tab(text: 'Выполнение'),
+                        Tab(text: 'Обзор'),
                         Tab(text: 'Время'),
                       ],
                     )
@@ -37,8 +37,8 @@ class StatisticsScreen extends StatelessWidget {
             body: hasData
                 ? const TabBarView(
                     children: [
-                      OverviewStatisticsTab(),
                       CompletionStatisticsTab(),
+                      OverviewStatisticsTab(),
                       TimeStatisticsTab(),
                     ],
                   )
