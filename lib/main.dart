@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-
+import 'package:intl/date_symbol_data_local.dart';
 import 'screens/home_screen.dart';
 import 'providers/app_state.dart';
 import 'services/hive_startup.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await initializeDateFormatting('ru_RU');
 
   try {
     await Hive.initFlutter();
