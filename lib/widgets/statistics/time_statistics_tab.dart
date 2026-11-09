@@ -17,9 +17,9 @@ class _TimeStatisticsTabState extends State<TimeStatisticsTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return const ListView(
-      padding: EdgeInsets.all(4),
-      children: [
+    return ListView(
+      padding: const EdgeInsets.all(4),
+      children: const [
         TimeAnalyticsSection(),
       ],
     );
