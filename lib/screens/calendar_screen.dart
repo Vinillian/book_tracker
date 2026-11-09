@@ -407,6 +407,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   /// Закреплённая панель выбранной даты, типа дня и общего прогресса.
+
+  /// Закреплённая панель выбранной даты, типа дня и общего прогресса.
   Widget _buildSelectedDayHeader(
     AppState appState,
     Node? plan,
@@ -423,16 +425,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            DateFormat('dd.MM.yyyy').format(day),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 5),
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  DateFormat('dd.MM.yyyy').format(day),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+              DayTypeChip(date: day),
+              const Spacer(),
+              if (plan == null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Text(
+                    'Нет плана',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ),
               FilledButton(
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
@@ -446,26 +459,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: DayTypeChip(date: day),
-                ),
-              ),
-              if (plan == null)
-                Text(
-                  'Нет плана',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-            ],
-          ),
           if (plan != null && total > 0) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Row(
               children: [
                 Text(
