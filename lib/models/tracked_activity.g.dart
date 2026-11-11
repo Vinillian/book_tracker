@@ -25,13 +25,14 @@ class TrackedActivityAdapter extends TypeAdapter<TrackedActivity> {
       isActive: fields[5] as bool,
       isRoutine: fields[6] as bool,
       order: fields[7] == null ? 0 : fields[7] as int,
+      timeTrackingEnabled: fields[8] == null ? false : fields[8] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, TrackedActivity obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class TrackedActivityAdapter extends TypeAdapter<TrackedActivity> {
       ..writeByte(6)
       ..write(obj.isRoutine)
       ..writeByte(7)
-      ..write(obj.order);
+      ..write(obj.order)
+      ..writeByte(8)
+      ..write(obj.timeTrackingEnabled);
   }
 
   @override

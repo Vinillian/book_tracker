@@ -45,11 +45,6 @@ class NodeTile extends StatelessWidget {
         leadingIcon = node.completed
             ? const Icon(Icons.check_circle, color: Colors.green)
             : const Icon(Icons.radio_button_unchecked, color: Colors.grey);
-      } else if (node.isDuration) {
-        leadingIcon = Icon(
-          Icons.timer,
-          color: node.durationReached ? Colors.green : Colors.blue,
-        );
       } else {
         leadingIcon = const Icon(Icons.list, color: Colors.blue);
       }
@@ -83,7 +78,7 @@ class NodeTile extends StatelessWidget {
                     fontWeight: hasChildren ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
-                trailing: hasChildren ? _buildTrailing() : null,
+                trailing: _buildTrailing(),
                 onTap: onTap,
               ),
             ),
@@ -101,11 +96,14 @@ class NodeTile extends StatelessWidget {
                   : TextDecoration.none,
             ),
           ),
-          subtitle: hasChildren && node.stepType == 'stepByStep'
-              ? Text('Шаги: ${node.completedSteps}/${node.totalSteps}')
-              : hasChildren && node.isDuration
-                  ? Text(_durationText())
-                  : null,
+          subtitle: hasChildren && node.hasOwnProgress
+              ? Text(
+                  (node.stepType == 'stepByStep'
+                          ? 'Шаги: ${node.completedSteps}/${node.totalSteps}'
+                          : 'Чекбокс') +
+                      _timeSuffix(),
+                )
+              : null,
           trailing: _buildTrailing(),
           onTap: onTap,
         ),
@@ -113,8 +111,14 @@ class NodeTile extends StatelessWidget {
     );
   }
 
+  bool get _hasTimeInfo =>
+      (node.targetMinutes ?? 0) > 0 || node.loggedMinutes > 0;
+
   String _durationText() =>
       durationProgressLabel(node.loggedMinutes, node.targetMinutes);
+
+  String _timeSuffix() =>
+      _hasTimeInfo ? ' · время ${_durationText()}' : '';
 
   /// Task name, prefixed with its start time (if any) in a muted colour.
   Widget _buildTitle(TextStyle style) {
@@ -144,9 +148,23 @@ class NodeTile extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: Text(
-              '${node.completedLeaves}/${node.totalLeaves}',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${node.completedLeaves}/${node.totalLeaves}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                if (node.hasOwnProgress && _hasTimeInfo)
+                  Text(
+                    _durationText(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: node.timeGoalReached ? Colors.green : Colors.grey,
+                    ),
+                  ),
+              ],
             ),
           ),
           SizedBox(
@@ -172,23 +190,37 @@ class NodeTile extends StatelessWidget {
           ),
         ],
       );
-    } else if (node.isDuration) {
+    } else if (node.stepType == 'stepByStep') {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '${node.completedSteps}/${node.totalSteps}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            if (_hasTimeInfo)
+              Text(
+                _durationText(),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: node.timeGoalReached ? Colors.green : Colors.grey,
+                ),
+              ),
+          ],
+        ),
+      );
+    } else if (_hasTimeInfo) {
       return Padding(
         padding: const EdgeInsets.only(right: 8.0),
         child: Text(
           _durationText(),
           style: TextStyle(
             fontSize: 12,
-            color: node.durationReached ? Colors.green : Colors.grey,
+            color: node.timeGoalReached ? Colors.green : Colors.grey,
           ),
-        ),
-      );
-    } else if (node.stepType == 'stepByStep') {
-      return Padding(
-        padding: const EdgeInsets.only(right: 8.0),
-        child: Text(
-          '${node.completedSteps}/${node.totalSteps}',
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
       );
     }

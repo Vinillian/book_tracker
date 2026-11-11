@@ -8,7 +8,7 @@ String formatDuration(int minutes) {
   return m == 0 ? '$h ч' : '$h ч $m мин';
 }
 
-/// Progress of a duration task: "25 мин" without a goal, "25 мин / 1 ч" with one.
+/// Separate time progress: "25 мин" without a goal, "25 мин / 1 ч" with one.
 String durationProgressLabel(int logged, int? target) {
   if (target == null || target <= 0) return formatDuration(logged);
   return '${formatDuration(logged)} / ${formatDuration(target)}';

@@ -9,6 +9,8 @@ import '../models/settings.dart';
 import '../services/node_service.dart';
 import '../services/note_service.dart';
 import '../services/history_service.dart';
+import '../services/heatmap_service.dart';
+import '../utils/box_keys.dart';
 import '../utils/node_copy.dart';
 import '../utils/plan_date.dart';
 import '../utils/plan_generator.dart';
@@ -22,6 +24,21 @@ class AppState extends ChangeNotifier {
   late final Box<StandardTask> _standardTasksBox;
   late final Box<TrackedActivity> _trackedActivitiesBox;
   late final Box<AppSettings> _settingsBox;
+
+  Map<DateTime, Map<String, double>>? _heatmapIntensityCache;
+
+  /// Heatmap intensities are shared across screen rebuilds and recalculated
+  /// only after History or tracked activities change.
+  Map<DateTime, Map<String, double>> get heatmapIntensityData =>
+      _heatmapIntensityCache ??= HeatmapService(
+        _historyBox,
+        _trackedActivitiesBox,
+      ).getIntensityData();
+
+  void _invalidateHeatmapIntensityCache() {
+    _heatmapIntensityCache = null;
+    notifyListeners();
+  }
 
   String _themeMode = 'system';
   String get themeMode => _themeMode;
@@ -49,8 +66,12 @@ class AppState extends ChangeNotifier {
     _nodeService.migratePlannedDates(); // #114
     _nodeService.migrateNestedBookCategories(); // #139
 
-    _historyBox.watch().listen((_) => notifyListeners());
-    _trackedActivitiesBox.watch().listen((_) => notifyListeners());
+    _historyBox.watch().listen(
+      (_) => _invalidateHeatmapIntensityCache(),
+    );
+    _trackedActivitiesBox.watch().listen(
+      (_) => _invalidateHeatmapIntensityCache(),
+    );
   }
 
   void _loadTheme() {
@@ -120,7 +141,52 @@ class AppState extends ChangeNotifier {
   List<Node> get templates => _visible(_nodeService.templates);
 
   void addNode(Node node) { _nodeService.add(node); notifyListeners(); }
-  void updateNode(dynamic key, Node node) { _nodeService.update(key, node); notifyListeners(); }
+
+  void updateNode(dynamic key, Node node) {
+    _nodeService.update(key, node);
+    _syncTimeTrackingForNodeTree(node);
+    notifyListeners();
+  }
+
+  bool _hasDurationHistory(String trackingId) => _historyBox.values.any(
+        (entry) =>
+            entry.trackingId == trackingId && entry.stepType == 'duration',
+      );
+
+  /// The updated node may be a plan/book root. Sync the time-tracking heatmap
+  /// flag recursively so edits to nested tasks also reach their tracked row.
+  void _syncTimeTrackingForNodeTree(Node node) {
+    final hasDurationHistory = _hasDurationHistory(node.trackingId);
+    for (final key in _trackedActivitiesBox.keys.toList()) {
+      final activity = _trackedActivitiesBox.get(key);
+      if (activity == null || activity.nodeId != node.trackingId) continue;
+
+      final enabled = activity.timeTrackingEnabled ||
+          node.isTimeTrackingEnabled ||
+          hasDurationHistory;
+      if (activity.timeTrackingEnabled == enabled) continue;
+
+      _trackedActivitiesBox.put(
+        key,
+        TrackedActivity(
+          id: activity.id,
+          nodeId: activity.nodeId,
+          name: activity.name,
+          colorValue: activity.colorValue,
+          stepType: activity.stepType,
+          isActive: activity.isActive,
+          isRoutine: activity.isRoutine,
+          order: activity.order,
+          timeTrackingEnabled: enabled,
+        ),
+      );
+    }
+
+    for (final child in node.children) {
+      _syncTimeTrackingForNodeTree(child);
+    }
+  }
+
   void deleteNode(dynamic key) {
     _nodeService.delete(key);
     notifyListeners();
@@ -140,12 +206,7 @@ class AppState extends ChangeNotifier {
   /// Окно «Отменить» закрылось: удалить узел, его заметки и History.
   void commitNodeDeletion(Node node) {
     if (!_pendingDeleteIds.remove(node.id)) return;
-    dynamic key;
-    try {
-      key = _nodeService.getKey(node);
-    } on StateError {
-      key = null; // уже удалён
-    }
+    final key = _nodeService.findKey(node); // null: уже удалён
     if (key != null) _nodeService.delete(key);
     notifyListeners();
   }
@@ -170,11 +231,8 @@ class AppState extends ChangeNotifier {
     for (final node in nodes) {
       if (!_pendingDeleteIds.remove(node.id)) continue;
       changed = true;
-      try {
-        _nodeService.delete(_nodeService.getKey(node));
-      } on StateError {
-        // already gone
-      }
+      final key = _nodeService.findKey(node); // null: already gone
+      if (key != null) _nodeService.delete(key);
     }
     if (changed) notifyListeners();
   }
@@ -273,18 +331,10 @@ class AppState extends ChangeNotifier {
   }
 
   void updateStandardTask(String id, StandardTask task) {
-    dynamic keyToUpdate;
-    String? previousTrackingId;
-    for (var key in _standardTasksBox.keys) {
-      final existing = _standardTasksBox.get(key);
-      if (existing != null && existing.id == id) {
-        keyToUpdate = key;
-        previousTrackingId = existing.trackingId;
-        break;
-      }
-    }
-    if (keyToUpdate != null) {
-      _standardTasksBox.put(keyToUpdate, task);
+    final key = findKeyById<StandardTask>(_standardTasksBox, (t) => t.id, id);
+    if (key != null) {
+      final previousTrackingId = _standardTasksBox.get(key)?.trackingId;
+      _standardTasksBox.put(key, task);
       _syncTrackedActivities(task, previousTrackingId ?? task.trackingId);
       notifyListeners();
     }
@@ -301,22 +351,16 @@ class AppState extends ChangeNotifier {
         activity,
         task,
         previousTrackingId: previousTrackingId,
+        hasDurationHistory: _hasDurationHistory(task.trackingId),
       );
       if (updated != null) _trackedActivitiesBox.put(key, updated);
     }
   }
 
   void deleteStandardTask(String id) {
-    dynamic keyToDelete;
-    for (var key in _standardTasksBox.keys) {
-      final task = _standardTasksBox.get(key);
-      if (task != null && task.id == id) {
-        keyToDelete = key;
-        break;
-      }
-    }
-    if (keyToDelete != null) {
-      _standardTasksBox.delete(keyToDelete);
+    final key = findKeyById<StandardTask>(_standardTasksBox, (t) => t.id, id);
+    if (key != null) {
+      _standardTasksBox.delete(key);
       notifyListeners();
     }
   }
@@ -329,31 +373,25 @@ class AppState extends ChangeNotifier {
   }
 
   void updateTrackedActivity(String id, TrackedActivity activity) {
-    dynamic keyToUpdate;
-    for (var key in _trackedActivitiesBox.keys) {
-      final existing = _trackedActivitiesBox.get(key);
-      if (existing != null && existing.id == id) {
-        keyToUpdate = key;
-        break;
-      }
-    }
-    if (keyToUpdate != null) {
-      _trackedActivitiesBox.put(keyToUpdate, activity);
+    final key = findKeyById<TrackedActivity>(
+      _trackedActivitiesBox,
+      (a) => a.id,
+      id,
+    );
+    if (key != null) {
+      _trackedActivitiesBox.put(key, activity);
       notifyListeners();
     }
   }
 
   void deleteTrackedActivity(String id) {
-    dynamic keyToDelete;
-    for (var key in _trackedActivitiesBox.keys) {
-      final activity = _trackedActivitiesBox.get(key);
-      if (activity != null && activity.id == id) {
-        keyToDelete = key;
-        break;
-      }
-    }
-    if (keyToDelete != null) {
-      _trackedActivitiesBox.delete(keyToDelete);
+    final key = findKeyById<TrackedActivity>(
+      _trackedActivitiesBox,
+      (a) => a.id,
+      id,
+    );
+    if (key != null) {
+      _trackedActivitiesBox.delete(key);
       notifyListeners();
     }
   }

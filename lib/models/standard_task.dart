@@ -25,7 +25,14 @@ class StandardTask {
   int? colorValue;
 
   @HiveField(6)
-  String trackingId;   // новый поле
+  String trackingId;
+
+  /// Optional time goal in minutes, independent of checkbox/step completion.
+  @HiveField(7)
+  int? targetMinutes;
+
+  @HiveField(8, defaultValue: false)
+  bool timeTrackingEnabled;
 
   StandardTask({
     String? id,
@@ -35,8 +42,13 @@ class StandardTask {
     this.excludeFromHistory = false,
     this.colorValue,
     String? trackingId,
+    this.targetMinutes,
+    this.timeTrackingEnabled = false,
   }) : id = id ?? const Uuid().v4(),
-        trackingId = trackingId ?? const Uuid().v4();
+        trackingId = trackingId ?? const Uuid().v4() {
+    // Convert pre-existing duration-only templates to checkbox + time goal.
+    if (stepType == 'duration') stepType = 'single';
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -46,7 +58,32 @@ class StandardTask {
     'excludeFromHistory': excludeFromHistory,
     'colorValue': colorValue,
     'trackingId': trackingId,
+    'targetMinutes': targetMinutes,
+    'timeTrackingEnabled': timeTrackingEnabled,
   };
+
+  String get progressDescription {
+    String description;
+    switch (stepType) {
+      case 'single':
+        description = 'Одиночный чекбокс';
+        break;
+      case 'stepByStep':
+        description = 'Пошаговый ($totalSteps шагов)';
+        break;
+      case 'duration':
+        // Defensive fallback for a manually mutated legacy instance.
+        description = 'Одиночный чекбокс';
+        break;
+      default:
+        description = stepType;
+    }
+    final goal = targetMinutes;
+    if (goal != null && goal > 0) {
+      return '$description · цель времени: $goal мин';
+    }
+    return description;
+  }
 
   factory StandardTask.fromJson(Map<String, dynamic> json) => StandardTask(
     id: json['id'],
@@ -56,6 +93,8 @@ class StandardTask {
     excludeFromHistory: json['excludeFromHistory'] ?? false,
     colorValue: json['colorValue'],
     trackingId: json['trackingId'] ?? const Uuid().v4(),
+    targetMinutes: json['targetMinutes'] as int?,
+    timeTrackingEnabled: json['timeTrackingEnabled'] as bool? ?? false,
   );
 
   Node toNode() {
@@ -64,7 +103,9 @@ class StandardTask {
       stepType: stepType,
       totalSteps: totalSteps,
       excludeFromHistory: excludeFromHistory,
-      trackingId: trackingId,   // важно: передаём сохранённый trackingId
+      trackingId: trackingId,
+      targetMinutes: targetMinutes,
+      timeTrackingEnabled: timeTrackingEnabled,
     );
   }
 }

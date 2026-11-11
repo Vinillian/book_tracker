@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/node.dart';
 import 'note_service.dart';
 import 'history_service.dart';
+import '../utils/box_keys.dart';
 import '../utils/node_copy.dart';
 import '../utils/node_ids.dart';
 import '../utils/nested_category.dart';
@@ -37,8 +38,16 @@ class NodeService {
     }
   }
 
+  /// The box key of [node], found by its id, or null if it is not stored. A
+  /// copy of a stored node (the id is kept by `deepCopy`) finds the same key
+  /// (#73).
+  dynamic findKey(Node node) => findKeyById<Node>(_box, (n) => n.id, node.id);
+
+  /// Like [findKey], but throws a [StateError] when the node is not stored.
   dynamic getKey(Node node) {
-    return _box.keys.firstWhere((k) => _box.get(k) == node);
+    final key = findKey(node);
+    if (key == null) throw StateError('No node with id ${node.id} in the box');
+    return key;
   }
 
   Future<void> add(Node node) async {

@@ -26,8 +26,11 @@ class TrackedActivity {
   @HiveField(6)
   bool isRoutine;
 
-  @HiveField(7, defaultValue: 0)   // <-- новое поле с дефолтом
+  @HiveField(7, defaultValue: 0)
   int order;
+
+  @HiveField(8, defaultValue: false)
+  bool timeTrackingEnabled;
 
   TrackedActivity({
     String? id,
@@ -38,7 +41,12 @@ class TrackedActivity {
     this.isActive = true,
     this.isRoutine = false,
     this.order = 0,
-  }) : id = id ?? const Uuid().v4();
+    this.timeTrackingEnabled = false,
+  }) : id = id ?? const Uuid().v4() {
+    // Old heatmap rows used duration as their primary type. Keep their row,
+    // but normalize it to the checkbox progress type used by current tasks.
+    if (stepType == 'duration') stepType = 'single';
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -49,6 +57,7 @@ class TrackedActivity {
     'isActive': isActive,
     'isRoutine': isRoutine,
     'order': order,
+    'timeTrackingEnabled': timeTrackingEnabled,
   };
 
   factory TrackedActivity.fromJson(Map<String, dynamic> json) => TrackedActivity(
@@ -60,5 +69,6 @@ class TrackedActivity {
     isActive: json['isActive'] ?? true,
     isRoutine: json['isRoutine'] ?? false,
     order: json['order'] ?? 0,
+    timeTrackingEnabled: json['timeTrackingEnabled'] as bool? ?? false,
   );
 }

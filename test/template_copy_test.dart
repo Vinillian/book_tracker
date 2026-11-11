@@ -111,7 +111,7 @@ void main() {
       final source = base();
       final target = Node(name: 'T', category: 'template', children: []);
       appendCopiesOfTasks(target, source);
-      final sourceIds = [for (final n in allNodes(source)) n.id].toSet();
+      final sourceIds = {for (final n in allNodes(source)) n.id};
       expect(allNodes(target).skip(1).any((n) => sourceIds.contains(n.id)),
           isFalse);
       target.children.first.name = 'Другое';

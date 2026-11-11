@@ -8,28 +8,29 @@ class TrackingChoice {
   final String stepType;
   final int totalSteps;
   final String trackingId;
+  final bool timeTrackingEnabled;
 
   const TrackingChoice({
     required this.name,
     required this.stepType,
     required this.totalSteps,
     required this.trackingId,
+    this.timeTrackingEnabled = false,
   });
 
-  /// "Одиночный чекбокс" / "Длительность" / "Пошаговая (N шагов)".
-  String get description => stepType == 'single'
-      ? 'Одиночный чекбокс'
-      : stepType == 'duration'
-          ? 'Длительность'
-          : 'Пошаговая ($totalSteps шагов)';
+  /// The primary completion mode; time sessions are available separately.
+  String get description => stepType == 'stepByStep'
+      ? 'Пошаговая ($totalSteps шагов)'
+      : 'Одиночный чекбокс';
 
-  /// A throw-away task carrying what the tracking needs (name, type, tracking
-  /// id); it is not stored anywhere.
+  /// A throw-away task carrying the primary progress type and tracking id;
+  /// independent time sessions are available for all task progress types.
   Node toNode() => Node.leaf(
         name,
         stepType: stepType,
         totalSteps: totalSteps,
         trackingId: trackingId,
+        timeTrackingEnabled: timeTrackingEnabled,
       );
 }
 
@@ -52,6 +53,7 @@ List<TrackingChoice> trackingChoices({
         stepType: task.stepType,
         totalSteps: task.totalSteps,
         trackingId: task.trackingId,
+        timeTrackingEnabled: task.timeTrackingEnabled,
       ),
     );
   }
@@ -64,6 +66,7 @@ List<TrackingChoice> trackingChoices({
         stepType: node.stepType,
         totalSteps: node.totalSteps,
         trackingId: node.trackingId,
+        timeTrackingEnabled: node.timeTrackingEnabled,
       ),
     );
   }
@@ -80,12 +83,18 @@ TrackedActivity? trackedActivityFollowing(
   TrackedActivity activity,
   StandardTask task, {
   required String previousTrackingId,
+  bool hasDurationHistory = false,
 }) {
   if (activity.nodeId != previousTrackingId &&
       activity.nodeId != task.trackingId) {
     return null;
   }
-  if (activity.name == task.name && activity.stepType == task.stepType) {
+  final nextTimeTrackingEnabled = activity.timeTrackingEnabled ||
+      task.timeTrackingEnabled ||
+      hasDurationHistory;
+  if (activity.name == task.name &&
+      activity.stepType == task.stepType &&
+      activity.timeTrackingEnabled == nextTimeTrackingEnabled) {
     return null;
   }
   return TrackedActivity(
@@ -97,5 +106,6 @@ TrackedActivity? trackedActivityFollowing(
     isActive: activity.isActive,
     isRoutine: activity.isRoutine,
     order: activity.order,
+    timeTrackingEnabled: nextTimeTrackingEnabled,
   );
 }

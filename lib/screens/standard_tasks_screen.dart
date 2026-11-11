@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/standard_task.dart';
 import '../providers/app_state.dart';
@@ -102,8 +103,8 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
                   _searchQuery = value;
                 });
               },
-              elevation: MaterialStateProperty.all(0),
-              shape: MaterialStateProperty.all(
+              elevation: WidgetStateProperty.all(0),
+              shape: WidgetStateProperty.all(
                 RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(color: Colors.grey.shade300),
@@ -129,11 +130,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: ListTile(
               title: Text(task.name),
-              subtitle: Text(
-                task.stepType == 'single'
-                    ? 'Одиночный чекбокс'
-                    : 'Пошаговый (${task.totalSteps} шагов)',
-              ),
+              subtitle: Text(task.progressDescription),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -155,7 +152,7 @@ class _StandardTasksScreenState extends State<StandardTasksScreen> {
   }
 }
 
-// Оставляем StandardTaskEditorScreen без изменений (он уже был)
+// Editor for reusable checkbox and step-based task definitions.
 class StandardTaskEditorScreen extends StatefulWidget {
   final StandardTask task;
   final bool isNew;
@@ -168,14 +165,20 @@ class StandardTaskEditorScreen extends StatefulWidget {
 
 class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
   late TextEditingController _nameController;
+  late TextEditingController _targetController;
   late String _stepType;
   late int _totalSteps;
+  int? _targetMinutes;
   late bool _excludeFromHistory;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.task.name);
+    _targetMinutes = widget.task.targetMinutes;
+    _targetController = TextEditingController(
+      text: _targetMinutes?.toString() ?? '',
+    );
     _stepType = widget.task.stepType;
     _totalSteps = widget.task.totalSteps;
     _excludeFromHistory = widget.task.excludeFromHistory;
@@ -184,7 +187,13 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _targetController.dispose();
     super.dispose();
+  }
+
+  void _updateTarget(String value) {
+    final parsed = int.tryParse(value.trim());
+    setState(() => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null);
   }
 
   void _save() {
@@ -228,6 +237,7 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       totalSteps: _stepType == 'stepByStep' ? _totalSteps : 1,
       excludeFromHistory: _excludeFromHistory,
       trackingId: trackingId,
+      targetMinutes: _targetMinutes,
     );
     if (widget.isNew) {
       appState.addStandardTask(updatedTask);
@@ -248,7 +258,8 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           children: [
             TextField(
               controller: _nameController,
@@ -263,17 +274,50 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
               'Тип прогресса:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            RadioListTile<String>(
-              title: const Text('Одиночный чекбокс'),
-              value: 'single',
+            RadioGroup<String>(
               groupValue: _stepType,
-              onChanged: (value) => setState(() => _stepType = value!),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _stepType = value;
+                  });
+                }
+              },
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<String>(
+                    title: Text('Одиночный чекбокс'),
+                    value: 'single',
+                  ),
+                  RadioListTile<String>(
+                    title: Text('Пошаговый'),
+                    value: 'stepByStep',
+                  ),
+                ],
+              ),
             ),
-            RadioListTile<String>(
-              title: const Text('Пошаговый'),
-              value: 'stepByStep',
-              groupValue: _stepType,
-              onChanged: (value) => setState(() => _stepType = value!),
+            const SizedBox(height: 16),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Цель времени, минут (необязательно):',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _targetController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Без цели',
+                helperText: 'Время учитывается отдельно и не влияет '
+                    'на выполнение чекбокса или шагов.',
+                helperMaxLines: 2,
+              ),
+              onChanged: _updateTarget,
             ),
             if (_stepType == 'stepByStep') ...[
               const SizedBox(height: 16),
@@ -301,6 +345,7 @@ class _StandardTaskEditorScreenState extends State<StandardTaskEditorScreen> {
               onChanged: (value) => setState(() => _excludeFromHistory = value ?? false),
             ),
           ],
+          ),
         ),
       ),
     );

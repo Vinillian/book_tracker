@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../models/note.dart';
-import '../models/history_entry.dart';
 import '../models/standard_task.dart';
 import '../models/tracked_activity.dart';
 import '../providers/app_state.dart';

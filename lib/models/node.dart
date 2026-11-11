@@ -51,15 +51,18 @@ class Node {
   @HiveField(13)
   String? templateTarget;
 
-  /// Optional goal in minutes for a `duration` task; null or 0 means no goal
-  /// (#112).
+  /// Optional time goal in minutes for any task; null or 0 means no goal.
   @HiveField(14)
   int? targetMinutes;
 
-  /// Minutes logged so far for a `duration` task. Several logs a day are summed
-  /// into this value (#112). `defaultValue` makes old records read as 0.
+  /// Total minutes logged for this task. Individual sessions live in History.
   @HiveField(15, defaultValue: 0)
   int loggedMinutes;
+
+  /// Retained for compatibility with records saved by the first #190 version.
+  /// Time tracking is now available to every task with own progress.
+  @HiveField(16, defaultValue: false)
+  bool timeTrackingEnabled;
 
   Node({
     required this.name,
@@ -78,8 +81,11 @@ class Node {
     this.templateTarget,
     this.targetMinutes,
     this.loggedMinutes = 0,
+    this.timeTrackingEnabled = false,
   }) : id = id ?? const Uuid().v4(),
-        trackingId = trackingId ?? const Uuid().v4();
+        trackingId = trackingId ?? const Uuid().v4() {
+    _normalizeLegacyDuration();
+  }
 
   Node.leaf(
       this.name, {
@@ -93,11 +99,29 @@ class Node {
         String? trackingId,
         this.targetMinutes,
         this.loggedMinutes = 0,
+        this.timeTrackingEnabled = false,
       }) : children = [],
         isExpanded = false,
         completed = false,
         id = id ?? const Uuid().v4(),
-        trackingId = trackingId ?? const Uuid().v4();
+        trackingId = trackingId ?? const Uuid().v4() {
+    _normalizeLegacyDuration();
+  }
+
+  /// Convert saved duration-only tasks to checkbox + independent time.
+  /// Their old time goal and logged minutes are preserved. If the old task had
+  /// already met its time goal, keep that one-time completion as a checked box.
+  void _normalizeLegacyDuration() {
+    if (stepType != 'duration') return;
+    final goal = targetMinutes;
+    final wasComplete = goal != null && goal > 0
+        ? loggedMinutes >= goal
+        : loggedMinutes > 0;
+    completed = completed || wasComplete;
+    stepType = 'single';
+    totalSteps = 1;
+    completedSteps = 0;
+  }
 
   Node deepCopy() {
     return Node(
@@ -117,6 +141,7 @@ class Node {
       templateTarget: templateTarget,
       targetMinutes: targetMinutes,
       loggedMinutes: loggedMinutes,
+      timeTrackingEnabled: timeTrackingEnabled,
     );
   }
 
@@ -130,26 +155,23 @@ class Node {
   bool get isTrackableTask =>
       children.isEmpty ? stepType != 'folder' : hasOwnProgress;
 
-  bool get isDuration => stepType == 'duration';
+  /// Every task with checkbox/step progress can also record time sessions.
+  /// The old opt-in flag is intentionally ignored.
+  bool get isTimeTrackingEnabled => hasOwnProgress;
 
-  /// A `duration` task counts as one unit in the statistics: done once its goal
-  /// is reached, or, when it has no goal, once any time is logged (#112).
-  bool get durationReached {
-    if (!isDuration) return false;
-    final goal = targetMinutes;
-    if (goal != null && goal > 0) return loggedMinutes >= goal;
-    return loggedMinutes > 0;
-  }
+  /// True when the separate time goal is reached; this never affects task
+  /// completion or plan progress.
+  bool get timeGoalReached =>
+      (targetMinutes ?? 0) > 0 && loggedMinutes >= targetMinutes!;
 
   int get _ownTotal {
-    if (stepType == 'single' || isDuration) return 1;
+    if (stepType == 'single') return 1;
     if (stepType == 'stepByStep') return totalSteps;
     return 0;
   }
 
   int get _ownCompleted {
     if (stepType == 'single') return completed ? 1 : 0;
-    if (isDuration) return durationReached ? 1 : 0;
     if (stepType == 'stepByStep') return completedSteps;
     return 0;
   }
@@ -207,6 +229,7 @@ class Node {
       'templateTarget': templateTarget,
       'targetMinutes': targetMinutes,
       'loggedMinutes': loggedMinutes,
+      'timeTrackingEnabled': timeTrackingEnabled,
     };
   }
 
@@ -231,6 +254,7 @@ class Node {
       templateTarget: json['templateTarget'] as String?,
       targetMinutes: json['targetMinutes'] as int?,
       loggedMinutes: json['loggedMinutes'] as int? ?? 0,
+      timeTrackingEnabled: json['timeTrackingEnabled'] as bool? ?? false,
     );
   }
 }

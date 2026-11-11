@@ -1,3 +1,17 @@
+## [Unreleased]
+### Changed
+- Heatmap intensity data is cached in `AppState` across screen rebuilds and recalculated only when History or tracked activities change (#81).
+- Calendar: the progress calendar now supports a compact two-week view and a month view, with a fixed selected-day header and a separately scrollable task and History list (#205).
+- Tasks: time is now an independent measurement for every checkbox or step task, with an optional time goal in task and Standard Task editors. The task detail screen logs multiple editable sessions; logged / target time is shown separately in task lists, plans and the calendar and never changes checkbox/step completion. Heatmap points combine progress and time (20 minutes = 1 point). Legacy duration-only tasks load as checkbox + time without losing their goal, logged minutes or session history (#190)
+- Plans tab: the folder button (templates screen) is removed from the app bar; the templates screen is in the menu only, and "+" creates a day from a template (#179)
+- The deprecated `Radio` (`groupValue` / `onChanged`) and `MaterialStateProperty` APIs are replaced by `RadioGroup` and `WidgetStateProperty`, an unused import is gone: `flutter analyze` has no issues left (#89)
+- Finding the key of a record by its id (standard tasks, tracked activities, notes, nodes) goes through one helper, `findKeyById`, instead of five hand-written loops. Tests now cover hiding, undoing and committing the deletion of nodes, notes and History, and the standard task / tracked activity updates (#77, #126)
+
+### Fixed
+- Statistics: "Лидеры прогресса" (progress leaders) no longer gets an unpredictable order, or a broken bar, for an empty book or plan (division by zero); equal progress keeps the original order (#74)
+- Settings: deleting the History of a day or all of it no longer uses a screen context after the screen may have been closed (#88)
+- Saving or deleting a book, plan or template no longer depends on the object being the very same instance as the stored one: the stored record is found by its id, so an edited copy (and a copy handed to the undo window) reaches the right record instead of silently doing nothing (#73)
+
 ## [1.4.0] - 2026-10-31
 ### Added
 - Work schedule: Settings → "График работы" (work schedule) sets a repeating schedule (N work days, M days off, an anchor day and its type; first case 2 / 2 with 23.10.2026 as a day off). The day screen shows a "Рабочий день" / "Выходной" (Work day / Day off) label. The type is computed from the rule, nothing is stored per day; no schedule is set by default. `AppSettings` gets the optional field `workSchedule` (HiveField 1). The day type can be set by hand and the schedule is saved in the full backup, see below (#144)

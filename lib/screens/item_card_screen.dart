@@ -32,6 +32,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   late TextEditingController _nameController;
   late TextEditingController _totalStepsController;
   late TextEditingController _targetController;
+  late TrackingIdIndex _trackingIdIndex;
   int? _targetMinutes;
   late String _stepType;
   late int _totalSteps;
@@ -52,8 +53,14 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _startMinutes = _workingCopy.startMinutes;
     _totalStepsController = TextEditingController(text: _totalSteps.toString());
     _targetMinutes = _workingCopy.targetMinutes;
-    _targetController =
-        TextEditingController(text: _targetMinutes?.toString() ?? '');
+    _targetController = TextEditingController(
+      text: _targetMinutes?.toString() ?? '',
+    );
+    final appState = context.read<AppState>();
+    _trackingIdIndex = TrackingIdIndex(
+      tracked: appState.trackedActivities,
+      roots: [...appState.books, ...appState.plans, ...appState.templates],
+    );
   }
 
   @override
@@ -67,7 +74,10 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
   void _applyAndPop() {
     final name = _nameController.text.trim();
     if (widget.isNew && name.isNotEmpty) {
-      final existingId = _findExistingTrackingId(name);
+      final existingId = _findExistingTrackingId(
+        name,
+        fallback: _workingCopy.trackingId,
+      );
       _workingCopy.trackingId = existingId;
     }
     _workingCopy.name = name;
@@ -76,18 +86,13 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.excludeFromHistory = _excludeFromHistory;
     _workingCopy.startMinutes = _startMinutes;
     if (_stepType == 'single') {
-      _workingCopy.completed = _completedSteps > 0;
       _workingCopy.completedSteps = 0;
     } else if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
       _workingCopy.completed = false;
-    } else if (_stepType == 'duration') {
-      // Logged minutes stay as they are; only the goal is edited here.
-      _workingCopy.targetMinutes = _targetMinutes;
-      _workingCopy.totalSteps = 1;
-      _workingCopy.completedSteps = 0;
-      _workingCopy.completed = false;
     }
+    // Time is an independent measurement for both supported progress types.
+    _workingCopy.targetMinutes = _targetMinutes;
     Navigator.pop(context, _workingCopy);
   }
 
@@ -111,11 +116,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     _workingCopy.totalSteps = _totalSteps;
     _workingCopy.excludeFromHistory = _excludeFromHistory;
     _workingCopy.startMinutes = _startMinutes;
+    _workingCopy.targetMinutes = _targetMinutes;
     if (_stepType == 'stepByStep') {
       _workingCopy.completedSteps = _completedSteps.clamp(0, _totalSteps);
-    }
-    if (_stepType == 'duration') {
-      _workingCopy.targetMinutes = _targetMinutes;
     }
     final updated = await Navigator.push(
       context,
@@ -167,7 +170,9 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
 
   void _updateTarget(String value) {
     final parsed = int.tryParse(value.trim());
-    setState(() => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null);
+    setState(
+      () => _targetMinutes = (parsed != null && parsed > 0) ? parsed : null,
+    );
   }
 
   void _onStepTypeChanged(String? newType) {
@@ -182,7 +187,7 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
       } else if (newType == 'stepByStep') {
         _totalSteps = 3;
         _completedSteps = 0;
-      } else if (newType == 'duration' || newType == 'folder') {
+      } else if (newType == 'folder') {
         _totalSteps = 1;
         _completedSteps = 0;
       }
@@ -198,13 +203,20 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     if (selected != null) {
       final name = selected.name;
       // The standard task's own id is the fallback, as in the quick picker.
-      final existingId =
-          _findExistingTrackingId(name, fallback: selected.trackingId);
+      final existingId = _findExistingTrackingId(
+        name,
+        fallback: selected.trackingId,
+      );
       setState(() {
         _nameController.text = name;
         _stepType = selected.stepType;
-        _totalSteps = selected.stepType == 'stepByStep' ? selected.totalSteps : 1;
+        _totalSteps = selected.stepType == 'stepByStep'
+            ? selected.totalSteps
+            : 1;
         _excludeFromHistory = selected.excludeFromHistory;
+        _targetMinutes = selected.targetMinutes;
+        _targetController.text = _targetMinutes?.toString() ?? '';
+        _workingCopy.targetMinutes = selected.targetMinutes;
         _totalStepsController.text = _totalSteps.toString();
         _completedSteps = 0;
         _workingCopy.trackingId = existingId;
@@ -212,13 +224,11 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
     }
   }
 
-  /// Поиск существующего trackingId для задачи с таким же именем
+  /// Resolve from the snapshot built when this editor opened. Repeated
+  /// TextField changes therefore perform constant-time lookups.
   String _findExistingTrackingId(String name, {String? fallback}) {
-    final appState = context.read<AppState>();
-    return resolveTrackingId(
+    return _trackingIdIndex.resolve(
       name,
-      tracked: appState.trackedActivities,
-      roots: [...appState.books, ...appState.plans, ...appState.templates],
       fallback: fallback ?? const Uuid().v4(),
     );
   }
@@ -322,42 +332,40 @@ class _ItemCardScreenState extends State<ItemCardScreen> {
                   segments: const [
                     ButtonSegment(value: 'single', label: Text('Чекбокс')),
                     ButtonSegment(value: 'stepByStep', label: Text('Шаги')),
-                    ButtonSegment(value: 'duration', label: Text('Длительность')),
                   ],
                   selected: {_stepType},
                   showSelectedIcon: false,
                   onSelectionChanged: (s) => _onStepTypeChanged(s.first),
                 ),
               ),
-              if (_stepType == 'duration') ...[
-                const SizedBox(height: 16),
-                const Text(
-                  'Цель, минут (необязательно):',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(height: 16),
+              const Text(
+                'Цель времени, минут (необязательно):',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _targetController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Без цели',
+                  helperText:
+                      'Время учитывается отдельно и не влияет '
+                      'на выполнение чекбокса или шагов.',
+                  helperMaxLines: 2,
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _targetController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Без цели',
-                    helperText: 'Выполнена, когда набрано нужное время; '
-                        'без цели - когда записано любое время.',
-                    helperMaxLines: 2,
+                onChanged: _updateTarget,
+              ),
+              if (_workingCopy.loggedMinutes > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Записано: ${formatDuration(_workingCopy.loggedMinutes)}',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
                   ),
-                  onChanged: _updateTarget,
                 ),
-                if (_workingCopy.loggedMinutes > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Записано: ${formatDuration(_workingCopy.loggedMinutes)}',
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                  ),
-              ],
               if (_stepType == 'stepByStep') ...[
                 const SizedBox(height: 16),
                 const Text(

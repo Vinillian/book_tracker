@@ -58,11 +58,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   Widget build(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, appState, _) {
-        final heatmapService = HeatmapService(
-          appState.historyBox,
-          appState.trackedActivitiesBox,
-        );
-
         // Сортируем активные задачи по order (если order одинаковый — по имени)
         final trackedActivities = appState.trackedActivities
             .where((t) => t.isActive)
@@ -72,7 +67,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
             return a.name.compareTo(b.name);
           });
 
-        final data = heatmapService.getIntensityData();
+        final data = appState.heatmapIntensityData;
 
         final today = DateTime.now();
         final end = DateTime(today.year, today.month, today.day);
@@ -84,7 +79,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
           start = DateTime(end.year, end.month - _monthsToShow, end.day);
         }
 
-        final days = heatmapService.getDateRange(start, end);
+        final days = HeatmapService.getDateRange(start, end);
 
         if (!_initialScrollDone) {
           _scrollToToday();
@@ -300,7 +295,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                         date.month,
                                         date.day,
                                       );
-                                      final intensity = data[normalizedDate]?[activity.nodeId] ?? 0;
+                                      final intensity = data[normalizedDate]?[activity.nodeId] ?? 0.0;
                                       final color = Color(activity.colorValue);
                                       final isToday = normalizedDate.year == today.year &&
                                           normalizedDate.month == today.month &&
@@ -316,7 +311,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                               : color.withValues(
                                             alpha: heatAlpha(
                                               intensity,
-                                              isDuration: activity.stepType == 'duration',
+                                              isDuration: true,
                                             ),
                                           ),
                                           borderRadius: BorderRadius.circular(2),
@@ -327,18 +322,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                           )
                                               : null,
                                         ),
-                                        child: intensity > 0
-                                            ? Center(
-                                          child: Text(
-                                            intensity.toString(),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 7,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        )
-                                            : null,
                                       );
                                     },
                                   ).toList(),

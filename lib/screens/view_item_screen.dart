@@ -82,7 +82,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   /// Logs [minutes] on this duration task: adds them to the task and, unless
   /// the task is excluded from History, records one History entry (#112).
   void _addMinutes(int minutes) {
-    if (minutes <= 0) return;
+    if (minutes <= 0 || !_node.hasOwnProgress) return;
     setState(() => _node.loggedMinutes += minutes);
     if (!_node.excludeFromHistory) {
       HistoryService.recordDurationLog(
@@ -97,10 +97,53 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   /// Removes one log: its History entry goes and its minutes leave the task.
   void _removeLog(HistoryEntry entry) {
-    HistoryService.deleteEntryById(entry.id);
+    if (!HistoryService.deleteEntryById(entry.id)) return;
     setState(() {
       _node.loggedMinutes =
           math.max(0, _node.loggedMinutes - (entry.minutes ?? 0));
+    });
+    widget.onNodeUpdated();
+  }
+
+  Future<void> _editLog(HistoryEntry entry) async {
+    final controller = TextEditingController(text: '${entry.minutes ?? 0}');
+    final minutes = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Изменить длительность сессии'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(hintText: 'От 1 до 1440'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              final value = int.tryParse(controller.text.trim());
+              Navigator.pop(
+                ctx,
+                value != null && value >= 1 && value <= 1440 ? value : null,
+              );
+            },
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+    if (minutes == null || !mounted) return;
+    final oldMinutes = entry.minutes ?? 0;
+    if (!HistoryService.updateDurationLog(id: entry.id, minutes: minutes)) {
+      return;
+    }
+    setState(() {
+      _node.loggedMinutes =
+          math.max(0, _node.loggedMinutes - oldMinutes + minutes);
     });
     widget.onNodeUpdated();
   }
@@ -171,7 +214,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     return [
       const SizedBox(height: 16),
       Text(
-        'Записи (${logs.length}):',
+        'Сессии (${logs.length}):',
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
       for (final e in logs.take(20))
@@ -181,10 +224,20 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
           leading: const Icon(Icons.timer, size: 20),
           title: Text(formatDuration(e.minutes ?? 0)),
           subtitle: Text(DateFormat('dd.MM HH:mm').format(e.date)),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Удалить запись',
-            onPressed: () => _removeLog(e),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Изменить сессию',
+                onPressed: () => _editLog(e),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Удалить сессию',
+                onPressed: () => _removeLog(e),
+              ),
+            ],
           ),
         ),
       if (logs.length > 20)
@@ -218,6 +271,8 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         isActive: true,
         isRoutine: existing.isRoutine,
         order: existing.order,
+        timeTrackingEnabled:
+            existing.timeTrackingEnabled || _node.isTimeTrackingEnabled,
       );
       appState.updateTrackedActivity(existing.id, updated);
     } else {
@@ -232,6 +287,12 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         stepType: _node.stepType,
         isActive: true,
         order: maxOrder + 1,
+        timeTrackingEnabled: _node.isTimeTrackingEnabled ||
+            appState.historyBox.values.any(
+              (entry) =>
+                  entry.trackingId == _node.trackingId &&
+                  entry.stepType == 'duration',
+            ),
       );
       appState.addTrackedActivity(newActivity);
     }
@@ -248,9 +309,8 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   Widget build(BuildContext context) {
     final bool hasChildren = _node.children.isNotEmpty;
     // Own progress is shown for leaves and for parents that keep it (#111).
-    final bool isLeaf = !hasChildren || _node.hasOwnProgress;
+    final bool isLeaf = _node.hasOwnProgress;
     final bool isSingle = _node.stepType == 'single';
-    final bool isDuration = _node.isDuration;
     final bool isTrackable = isLeaf && !_node.excludeFromHistory;
 
     final appState = context.watch<AppState>();
@@ -277,7 +337,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : isDuration ? 'Длительность' : 'Пошаговый') : 'Папка'}',
+                      'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : 'Пошаговый') : 'Папка'}',
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     if (hasChildren && isLeaf)
@@ -338,41 +398,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                 value: _node.completed,
                 onChanged: _onToggle,
               ),
-            ] else if (isLeaf && isDuration) ...[
-              const Text(
-                'Прогресс:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                durationProgressLabel(_node.loggedMinutes, _node.targetMinutes),
-                style: const TextStyle(fontSize: 18),
-              ),
-              if ((_node.targetMinutes ?? 0) > 0) ...[
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: (_node.loggedMinutes / _node.targetMinutes!)
-                      .clamp(0.0, 1.0),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final m in const [5, 15, 30, 60])
-                    ActionChip(
-                      label: Text('+${formatDuration(m)}'),
-                      onPressed: () => _addMinutes(m),
-                    ),
-                  ActionChip(
-                    avatar: const Icon(Icons.edit, size: 16),
-                    label: const Text('Своё…'),
-                    onPressed: _addCustomMinutes,
-                  ),
-                ],
-              ),
-              ..._buildLogList(),
-            ] else if (isLeaf && !isSingle) ...[
+            ] else if (isLeaf) ...[
               const Text(
                 'Прогресс:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -399,6 +425,50 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
                 'Это папка. Нажмите "Назад", чтобы вернуться.',
                 style: TextStyle(fontSize: 16),
               ),
+            ],
+            if (isLeaf) ...[
+              const SizedBox(height: 20),
+              const Text(
+                'Учёт времени:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                durationProgressLabel(_node.loggedMinutes, _node.targetMinutes),
+                style: TextStyle(
+                  fontSize: 18,
+                  color: _node.timeGoalReached ? Colors.green : null,
+                ),
+              ),
+              if ((_node.targetMinutes ?? 0) > 0) ...[
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (_node.loggedMinutes / _node.targetMinutes!)
+                      .clamp(0.0, 1.0),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _node.timeGoalReached
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final m in const [5, 15, 30, 60])
+                    ActionChip(
+                      label: Text('+ ${formatDuration(m)}'),
+                      onPressed: () => _addMinutes(m),
+                    ),
+                  ActionChip(
+                    avatar: const Icon(Icons.edit, size: 16),
+                    label: const Text('Своё…'),
+                    onPressed: _addCustomMinutes,
+                  ),
+                ],
+              ),
+              ..._buildLogList(),
             ],
           ],
         ),
