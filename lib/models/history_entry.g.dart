@@ -27,13 +27,16 @@ class HistoryEntryAdapter extends TypeAdapter<HistoryEntry> {
       completedSteps: fields[7] as int?,
       trackingId: fields[8] as String,
       minutes: fields[9] as int?,
+      startedAt: fields[10] as DateTime?,
+      endedAt: fields[11] as DateTime?,
+      recordedAt: fields[12] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HistoryEntry obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +56,13 @@ class HistoryEntryAdapter extends TypeAdapter<HistoryEntry> {
       ..writeByte(8)
       ..write(obj.trackingId)
       ..writeByte(9)
-      ..write(obj.minutes);
+      ..write(obj.minutes)
+      ..writeByte(10)
+      ..write(obj.startedAt)
+      ..writeByte(11)
+      ..write(obj.endedAt)
+      ..writeByte(12)
+      ..write(obj.recordedAt);
   }
 
   @override

@@ -37,6 +37,18 @@ class HistoryEntry {
   @HiveField(9)
   int? minutes;
 
+  /// Actual start of a duration session. Null for legacy entries.
+  @HiveField(10)
+  DateTime? startedAt;
+
+  /// Actual end of a duration session. Null for legacy entries.
+  @HiveField(11)
+  DateTime? endedAt;
+
+  /// When the session was entered in the app. Null for legacy entries.
+  @HiveField(12)
+  DateTime? recordedAt;
+
   HistoryEntry({
     String? id,
     required this.bookId,
@@ -48,6 +60,9 @@ class HistoryEntry {
     this.completedSteps,
     required this.trackingId,
     this.minutes,
+    this.startedAt,
+    this.endedAt,
+    this.recordedAt,
   }) : id = id ?? const Uuid().v4();
 
   // для single-задачи
@@ -98,15 +113,22 @@ class HistoryEntry {
     required int minutes,
     required String trackingId,
     DateTime? date,
+    DateTime? startedAt,
+    DateTime? endedAt,
+    DateTime? recordedAt,
   }) {
+    final eventEnd = endedAt ?? date ?? DateTime.now();
     return HistoryEntry(
       bookId: bookId,
       nodeId: nodeId,
-      date: date ?? DateTime.now(),
+      date: eventEnd,
       nodeName: nodeName,
       stepType: 'duration',
       minutes: minutes,
       trackingId: trackingId,
+      startedAt: startedAt,
+      endedAt: endedAt,
+      recordedAt: recordedAt ?? DateTime.now(),
     );
   }
 
@@ -122,6 +144,9 @@ class HistoryEntry {
       'completedSteps': completedSteps,
       'trackingId': trackingId,
       'minutes': minutes,
+      'startedAt': startedAt?.toIso8601String(),
+      'endedAt': endedAt?.toIso8601String(),
+      'recordedAt': recordedAt?.toIso8601String(),
     };
   }
 
@@ -137,6 +162,15 @@ class HistoryEntry {
       completedSteps: json['completedSteps'],
       trackingId: json['trackingId'] ?? '', // для обратной совместимости
       minutes: json['minutes'] as int?,
+      startedAt: json['startedAt'] == null
+          ? null
+          : DateTime.parse(json['startedAt'] as String),
+      endedAt: json['endedAt'] == null
+          ? null
+          : DateTime.parse(json['endedAt'] as String),
+      recordedAt: json['recordedAt'] == null
+          ? null
+          : DateTime.parse(json['recordedAt'] as String),
     );
   }
 }

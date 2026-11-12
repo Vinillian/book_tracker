@@ -106,17 +106,39 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   }
 
   Future<void> _editLog(HistoryEntry entry) async {
-    final controller = TextEditingController(text: '${entry.minutes ?? 0}');
-    final minutes = await showDialog<int>(
+    final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+    final fallbackEnd = entry.endedAt ?? entry.date;
+    final fallbackStart = entry.startedAt ??
+        fallbackEnd.subtract(Duration(minutes: entry.minutes ?? 0));
+    final startController =
+        TextEditingController(text: dateFormat.format(fallbackStart));
+    final endController =
+        TextEditingController(text: dateFormat.format(fallbackEnd));
+
+    final interval = await showDialog<({DateTime start, DateTime end})>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Изменить длительность сессии'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(hintText: 'От 1 до 1440'),
+        title: const Text('Изменить интервал сессии'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: startController,
+              decoration: const InputDecoration(
+                labelText: 'Начало',
+                hintText: 'дд.мм.гггг чч:мм',
+              ),
+            ),
+            TextField(
+              controller: endController,
+              decoration: const InputDecoration(
+                labelText: 'Окончание',
+                hintText: 'дд.мм.гггг чч:мм',
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text('Формат: дд.мм.гггг чч:мм'),
+          ],
         ),
         actions: [
           TextButton(
@@ -125,20 +147,31 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
           ),
           TextButton(
             onPressed: () {
-              final value = int.tryParse(controller.text.trim());
-              Navigator.pop(
-                ctx,
-                value != null && value >= 1 && value <= 1440 ? value : null,
-              );
+              try {
+                final start = dateFormat.parseStrict(startController.text.trim());
+                final end = dateFormat.parseStrict(endController.text.trim());
+                final minutes = end.difference(start).inMinutes;
+                if (minutes < 1 || minutes > 1440) return;
+                Navigator.pop(ctx, (start: start, end: end));
+              } on FormatException {
+                return;
+              }
             },
             child: const Text('Сохранить'),
           ),
         ],
       ),
     );
-    if (minutes == null || !mounted) return;
+
+    if (interval == null || !mounted) return;
+    final minutes = interval.end.difference(interval.start).inMinutes;
     final oldMinutes = entry.minutes ?? 0;
-    if (!HistoryService.updateDurationLog(id: entry.id, minutes: minutes)) {
+    if (!HistoryService.updateDurationLog(
+      id: entry.id,
+      minutes: minutes,
+      startedAt: interval.start,
+      endedAt: interval.end,
+    )) {
       return;
     }
     setState(() {
@@ -223,7 +256,12 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.timer, size: 20),
           title: Text(formatDuration(e.minutes ?? 0)),
-          subtitle: Text(DateFormat('dd.MM HH:mm').format(e.date)),
+          subtitle: Text(
+            e.startedAt != null && e.endedAt != null
+                ? '${DateFormat('dd.MM HH:mm').format(e.startedAt!)} – '
+                    '${DateFormat('dd.MM HH:mm').format(e.endedAt!)}'
+                : DateFormat('dd.MM HH:mm').format(e.date),
+          ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

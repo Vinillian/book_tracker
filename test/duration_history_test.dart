@@ -24,10 +24,33 @@ void main() {
       );
       expect(e.stepType, 'duration');
       expect(e.minutes, 25);
+      expect(e.startedAt, isNull);
+      expect(e.endedAt, isNull);
       expect(e.completed, isNull);
     });
 
-    test('toJson/fromJson keep minutes', () {
+    test('forDuration records an interval ending at the supplied event time', () {
+      final end = DateTime(2026, 10, 25, 19);
+      final id = HistoryService.recordDurationLog;
+      final entry = HistoryEntry.forDuration(
+        bookId: 'b',
+        nodeId: 'n',
+        nodeName: 'Работа',
+        minutes: 60,
+        trackingId: 't',
+        date: end,
+        startedAt: end.subtract(const Duration(hours: 1)),
+        endedAt: end,
+        recordedAt: DateTime(2026, 10, 25, 20),
+      );
+      expect(entry.startedAt, DateTime(2026, 10, 25, 18));
+      expect(entry.endedAt, end);
+      expect(entry.recordedAt, DateTime(2026, 10, 25, 20));
+      expect(entry.date, end);
+      expect(id, isNotNull);
+    });
+
+    test('toJson/fromJson keep minutes and session timestamps', () {
       final e = HistoryEntry.forDuration(
         bookId: 'b',
         nodeId: 'n',
@@ -38,6 +61,20 @@ void main() {
       final back = HistoryEntry.fromJson(e.toJson());
       expect(back.minutes, 40);
       expect(back.stepType, 'duration');
+      final interval = HistoryEntry.forDuration(
+        bookId: 'b',
+        nodeId: 'n',
+        nodeName: 'Работа',
+        minutes: 40,
+        trackingId: 't',
+        startedAt: DateTime(2026, 10, 1, 9),
+        endedAt: DateTime(2026, 10, 1, 9, 40),
+        recordedAt: DateTime(2026, 10, 1, 10),
+      );
+      final intervalBack = HistoryEntry.fromJson(interval.toJson());
+      expect(intervalBack.startedAt, interval.startedAt);
+      expect(intervalBack.endedAt, interval.endedAt);
+      expect(intervalBack.recordedAt, interval.recordedAt);
     });
 
     test('old json without minutes still loads', () {
@@ -53,6 +90,9 @@ void main() {
         'trackingId': 't',
       });
       expect(back.minutes, isNull);
+      expect(back.startedAt, isNull);
+      expect(back.endedAt, isNull);
+      expect(back.recordedAt, isNull);
       expect(back.completed, true);
     });
   });
@@ -158,6 +198,10 @@ void main() {
         HistoryService.getDurationEntriesForNode(n.id).map((e) => e.minutes).toSet(),
         {50, 35},
       );
+      final edited = HistoryService.getDurationEntriesForNode(n.id)
+          .singleWhere((e) => e.id == editedId);
+      expect(edited.endedAt, day);
+      expect(edited.startedAt, day.subtract(const Duration(minutes: 50)));
       expect(
         HistoryService.updateDurationLog(id: editedId, minutes: 0),
         isFalse,
@@ -199,6 +243,10 @@ void main() {
       await Hive.close();
       history = await Hive.openBox<HistoryEntry>('history');
       expect(history.values.single.minutes, 45);
+      expect(history.values.single.startedAt,
+          DateTime(2026, 10, 25).subtract(const Duration(minutes: 45)));
+      expect(history.values.single.endedAt, DateTime(2026, 10, 25));
+      expect(history.values.single.recordedAt, isNotNull);
     });
 
     test('heatmap converts summed duration minutes to fractional 20-minute points',
