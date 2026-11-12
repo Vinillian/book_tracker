@@ -486,12 +486,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  /// Прокручиваемый список задач и записей истории выбранного дня.
+  /// Прокручиваемый список задач выбранного дня.
   Widget _buildDayTasks(AppState appState) {
     final day = _selectedDay!;
     final theme = Theme.of(context);
     final plan = appState.planForDate(day);
-    final events = _getEventsForDay(day);
 
     if (plan == null) {
       return ListView(
@@ -510,19 +509,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 12),
-      children: [
-        ..._planSummary(plan, theme),
-        if (events.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Text(
-              'История выполнения',
-              style: theme.textTheme.titleSmall,
-            ),
-          ),
-          ..._historyCards(events),
-        ],
-      ],
+      children: _planSummary(plan, theme),
     );
   }
 
@@ -617,36 +604,4 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  List<Widget> _historyCards(List<HistoryEntry> events) {
-    return [
-      for (final entry in events)
-        Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-          child: ListTile(
-            dense: true,
-            visualDensity: VisualDensity.compact,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-            leading: entry.stepType == 'single'
-                ? Icon(
-                    entry.completed == true
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    color: entry.completed == true ? Colors.green : Colors.grey,
-                  )
-                : entry.stepType == 'duration'
-                ? const Icon(Icons.timer, color: Colors.blue)
-                : const Icon(Icons.list, color: Colors.blue),
-            title: Text(entry.nodeName),
-            subtitle: entry.stepType == 'single'
-                ? Text(entry.completed == true ? 'Выполнено' : 'Не выполнено')
-                : null,
-            trailing: entry.stepType == 'stepByStep'
-                ? Text('Шагов: ${entry.completedSteps}')
-                : entry.stepType == 'duration'
-                ? Text(formatDuration(entry.minutes ?? 0))
-                : null,
-          ),
-        ),
-    ];
-  }
 }
