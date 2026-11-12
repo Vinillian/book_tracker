@@ -31,7 +31,6 @@ void main() {
 
     test('forDuration records an interval ending at the supplied event time', () {
       final end = DateTime(2026, 10, 25, 19);
-      final id = HistoryService.recordDurationLog;
       final entry = HistoryEntry.forDuration(
         bookId: 'b',
         nodeId: 'n',
@@ -47,7 +46,6 @@ void main() {
       expect(entry.endedAt, end);
       expect(entry.recordedAt, DateTime(2026, 10, 25, 20));
       expect(entry.date, end);
-      expect(id, isNotNull);
     });
 
     test('toJson/fromJson keep minutes and session timestamps', () {
@@ -131,6 +129,24 @@ void main() {
       final entries = HistoryService.getEntriesForDay(day);
       expect(entries.length, 2);
       expect(entries.map((e) => e.minutes).toList()..sort(), [25, 30]);
+    });
+
+    test('quick-add creates an interval ending at the target time', () {
+      final n = durationNode('Работа');
+      final end = DateTime(2026, 10, 25, 19);
+
+      HistoryService.recordDurationLog(
+        bookId: 'b',
+        node: n,
+        minutes: 60,
+        targetDate: end,
+      );
+
+      final entry = history.values.single;
+      expect(entry.startedAt, DateTime(2026, 10, 25, 18));
+      expect(entry.endedAt, end);
+      expect(entry.date, end);
+      expect(entry.recordedAt, isNotNull);
     });
 
     test('checkbox progress changes preserve every duration session', () {
