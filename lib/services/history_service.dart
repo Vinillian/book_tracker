@@ -119,13 +119,18 @@ class HistoryService {
     DateTime? targetDate,
   }) {
     if (minutes <= 0) return null;
+    final endedAt = targetDate ?? DateTime.now();
+    final startedAt = endedAt.subtract(Duration(minutes: minutes));
     final entry = HistoryEntry.forDuration(
       bookId: bookId,
       nodeId: node.id,
       nodeName: node.name,
       minutes: minutes,
       trackingId: node.trackingId,
-      date: targetDate ?? DateTime.now(),
+      date: endedAt,
+      startedAt: startedAt,
+      endedAt: endedAt,
+      recordedAt: DateTime.now(),
     );
     _box.add(entry);
     return entry.id;
@@ -173,12 +178,25 @@ class HistoryService {
   static bool updateDurationLog({
     required String id,
     required int minutes,
+    DateTime? startedAt,
+    DateTime? endedAt,
   }) {
     if (minutes <= 0) return false;
+    if ((startedAt == null) != (endedAt == null)) return false;
+    if (startedAt != null && !endedAt!.isAfter(startedAt)) return false;
+
     for (final key in _box.keys) {
       final entry = _box.get(key);
       if (entry != null && entry.id == id && entry.stepType == 'duration') {
         entry.minutes = minutes;
+        if (startedAt != null && endedAt != null) {
+          entry.startedAt = startedAt;
+          entry.endedAt = endedAt;
+          entry.date = endedAt;
+        } else if (entry.endedAt != null) {
+          // Keep the end fixed when only the duration is edited.
+          entry.startedAt = entry.endedAt!.subtract(Duration(minutes: minutes));
+        }
         _box.put(key, entry);
         return true;
       }
