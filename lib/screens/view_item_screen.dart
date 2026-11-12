@@ -106,60 +106,155 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   }
 
   Future<void> _editLog(HistoryEntry entry) async {
-    final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
-    final fallbackEnd = entry.endedAt ?? entry.date;
-    final fallbackStart = entry.startedAt ??
-        fallbackEnd.subtract(Duration(minutes: entry.minutes ?? 0));
-    final startController =
-        TextEditingController(text: dateFormat.format(fallbackStart));
-    final endController =
-        TextEditingController(text: dateFormat.format(fallbackEnd));
+    var end = entry.endedAt ?? entry.date;
+    var start = entry.startedAt ??
+        end.subtract(Duration(minutes: entry.minutes ?? 0));
+    String? validationError;
 
     final interval = await showDialog<({DateTime start, DateTime end})>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Изменить интервал сессии'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: startController,
-              decoration: const InputDecoration(
-                labelText: 'Начало',
-                hintText: 'дд.мм.гггг чч:мм',
-              ),
-            ),
-            TextField(
-              controller: endController,
-              decoration: const InputDecoration(
-                labelText: 'Окончание',
-                hintText: 'дд.мм.гггг чч:мм',
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text('Формат: дд.мм.гггг чч:мм'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              try {
-                final start = dateFormat.parseStrict(startController.text.trim());
-                final end = dateFormat.parseStrict(endController.text.trim());
-                final minutes = end.difference(start).inMinutes;
-                if (minutes < 1 || minutes > 1440) return;
-                Navigator.pop(ctx, (start: start, end: end));
-              } on FormatException {
-                return;
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> pickDate({required bool isStart}) async {
+            final current = isStart ? start : end;
+            final picked = await showDatePicker(
+              context: dialogContext,
+              initialDate: DateUtils.dateOnly(current),
+              firstDate: DateTime(1900),
+              lastDate: DateTime(2100),
+            );
+            if (picked == null) return;
+            setDialogState(() {
+              final updated = DateTime(
+                picked.year,
+                picked.month,
+                picked.day,
+                current.hour,
+                current.minute,
+              );
+              if (isStart) {
+                start = updated;
+              } else {
+                end = updated;
               }
-            },
-            child: const Text('Сохранить'),
-          ),
-        ],
+              validationError = null;
+            });
+          }
+
+          Future<void> pickTime({required bool isStart}) async {
+            final current = isStart ? start : end;
+            final picked = await showTimePicker(
+              context: dialogContext,
+              initialTime: TimeOfDay.fromDateTime(current),
+              builder: (ctx, child) => MediaQuery(
+                data: MediaQuery.of(ctx).copyWith(
+                  alwaysUse24HourFormat: true,
+                ),
+                child: child!,
+              ),
+            );
+            if (picked == null) return;
+            setDialogState(() {
+              final updated = DateTime(
+                current.year,
+                current.month,
+                current.day,
+                picked.hour,
+                picked.minute,
+              );
+              if (isStart) {
+                start = updated;
+              } else {
+                end = updated;
+              }
+              validationError = null;
+            });
+          }
+
+          Widget intervalControls({
+            required String label,
+            required DateTime value,
+            required bool isStart,
+          }) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => pickDate(isStart: isStart),
+                        icon: const Icon(Icons.calendar_today, size: 18),
+                        label: Text(DateFormat('dd.MM.yyyy').format(value)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => pickTime(isStart: isStart),
+                        icon: const Icon(Icons.access_time, size: 18),
+                        label: Text(DateFormat('HH:mm').format(value)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          }
+
+          final minutes = end.difference(start).inMinutes;
+          return AlertDialog(
+            title: const Text('Изменить интервал сессии'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                intervalControls(
+                  label: 'Начало',
+                  value: start,
+                  isStart: true,
+                ),
+                const SizedBox(height: 16),
+                intervalControls(
+                  label: 'Окончание',
+                  value: end,
+                  isStart: false,
+                ),
+                const SizedBox(height: 12),
+                Text('Длительность: ${formatDuration(minutes)}'),
+                if (validationError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    validationError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Отмена'),
+              ),
+              TextButton(
+                onPressed: () {
+                  if (minutes < 1 || minutes > 1440) {
+                    setDialogState(() {
+                      validationError =
+                          'Интервал должен быть от 1 минуты до 24 часов.';
+                    });
+                    return;
+                  }
+                  Navigator.pop(dialogContext, (start: start, end: end));
+                },
+                child: const Text('Сохранить'),
+              ),
+            ],
+          );
+        },
       ),
     );
 
