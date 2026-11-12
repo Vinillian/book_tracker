@@ -18,7 +18,7 @@ class DayDoneSection extends StatelessWidget {
         shape: const Border(),
         collapsedShape: const Border(),
         title: Text(
-          'Выполнено (${entries.length})',
+          'Действия за день (${entries.length})',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         children: [
@@ -30,17 +30,22 @@ class DayDoneSection extends StatelessWidget {
                 for (final entry in entries)
                   ListTile(
                     dense: true,
-                    leading: entry.stepType == 'single'
-                        ? const Icon(Icons.check_circle, color: Colors.green)
-                        : entry.stepType == 'duration'
-                            ? const Icon(Icons.timer, color: Colors.blue)
-                            : const Icon(Icons.list, color: Colors.blue),
+                    leading: entry.stepType == 'duration'
+                        ? const Icon(Icons.timer, color: Colors.blue)
+                        : entry.progressBefore != null && entry.progressAfter != null &&
+                                entry.progressAfter! < entry.progressBefore!
+                            ? const Icon(Icons.undo, color: Colors.orange)
+                            : entry.stepType == 'single'
+                                ? const Icon(Icons.check_circle, color: Colors.green)
+                                : const Icon(Icons.list, color: Colors.blue),
                     title: Text(entry.nodeName),
-                    trailing: entry.stepType == 'stepByStep'
-                        ? Text('Шагов: ${entry.completedSteps}')
-                        : entry.stepType == 'duration'
-                            ? Text(formatDuration(entry.minutes ?? 0))
-                            : null,
+                    trailing: entry.stepType == 'duration'
+                        ? Text(formatDuration(entry.minutes ?? 0))
+                        : entry.progressBefore != null && entry.progressAfter != null
+                            ? Text('${entry.progressBefore} → ${entry.progressAfter}')
+                            : entry.stepType == 'stepByStep'
+                                ? Text('Шагов: ${entry.completedSteps}')
+                                : Text(entry.completed == true ? 'Выполнено' : 'Снято'),
                   ),
               ],
             ),

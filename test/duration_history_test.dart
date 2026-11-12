@@ -91,6 +91,8 @@ void main() {
       expect(back.startedAt, isNull);
       expect(back.endedAt, isNull);
       expect(back.recordedAt, isNull);
+      expect(back.progressBefore, isNull);
+      expect(back.progressAfter, isNull);
       expect(back.completed, true);
     });
   });
@@ -149,7 +151,7 @@ void main() {
       expect(entry.recordedAt, isNotNull);
     });
 
-    test('checkbox progress changes preserve every duration session', () {
+    test('checkbox progress transitions append events and preserve duration sessions', () {
       final n = Node.leaf('Йога', stepType: 'single');
       final day = DateTime(2026, 10, 25);
       HistoryService.recordDurationLog(
@@ -170,10 +172,15 @@ void main() {
         entries.where((e) => e.stepType == 'duration').map((e) => e.minutes).toList()..sort(),
         [20, 30],
       );
-      expect(entries.where((e) => e.stepType != 'duration'), isEmpty);
+      final progress = entries.where((e) => e.stepType == 'single').toList();
+      expect(progress.length, 2);
+      expect(progress.map((e) => [e.progressBefore, e.progressAfter]).toList(), [
+        [0, 1],
+        [1, 0],
+      ]);
     });
 
-    test('step progress replaces only the progress entry and preserves sessions', () {
+    test('step progress appends each transition and preserves sessions', () {
       final n = Node.leaf('Чтение', stepType: 'stepByStep', totalSteps: 5);
       final day = DateTime(2026, 10, 25);
       HistoryService.recordDurationLog(
@@ -186,14 +193,163 @@ void main() {
         bookId: 'b', node: n, minutes: 25, targetDate: day,
       );
       HistoryService.recordUniqueProgress(
-        bookId: 'b', node: n, newSteps: 4, targetDate: day,
+        bookId: 'b', node: n, newSteps: 4, previousSteps: 2, targetDate: day,
       );
 
       final entries = HistoryService.getEntriesForDay(day);
       expect(entries.where((e) => e.stepType == 'duration').length, 2);
       final progress = entries.where((e) => e.stepType == 'stepByStep').toList();
-      expect(progress.length, 1);
-      expect(progress.single.completedSteps, 4);
+      expect(progress.length, 2);
+      expect(progress.map((e) => [e.progressBefore, e.progressAfter]).toList(), [
+        [0, 2],
+        [2, 4],
+      ]);
+    });
+
+
+    test('progress events retain selected historical date and heatmap uses net change', () async {
+      final n = Node.leaf('Чтение', stepType: 'stepByStep', totalSteps: 5);
+      final monday = DateTime(2026, 11, 9, 18, 30);
+      final tuesday = DateTime(2026, 11, 10, 18, 30);
+
+      HistoryService.recordUniqueProgress(
+        bookId: 'b', node: n, previousSteps: 0, newSteps: 4, targetDate: monday,
+      );
+      HistoryService.recordUniqueProgress(
+        bookId: 'b', node: n, previousSteps: 4, newSteps: 3, targetDate: monday,
+      );
+      HistoryService.recordUniqueProgress(
+        bookId: 'b', node: n, previousSteps: 3, newSteps: 2, targetDate: tuesday,
+      );
+
+      await tracked.add(TrackedActivity(
+        nodeId: n.trackingId,
+        name: n.name,
+        colorValue: 0xFF2196F3,
+        stepType: 'stepByStep',
+      ));
+
+      final mondayEntries = HistoryService.getEntriesForDay(monday);
+      expect(mondayEntries.length, 2);
+      expect(mondayEntries.every((entry) => entry.date.day == 9), isTrue);
+      expect(mondayEntries.every((entry) => entry.recordedAt != null), isTrue);
+
+      final intensity = HeatmapService(history, tracked).getIntensityData();
+      expect(intensity[DateTime(2026, 11, 9)]![n.trackingId], 3.0);
+      expect(intensity.containsKey(DateTime(2026, 11, 10)), isFalse);
+    });
+
+    test('correcting or deleting a progress event updates its historical contribution', () async {
+      final n = Node.leaf('Чтение', stepType: 'stepByStep', totalSteps: 5);
+      final day = DateTime(2026, 11, 9, 18);
+      HistoryService.recordUniqueProgress(
+        bookId: 'b', node: n, previousSteps: 1, newSteps: 4, targetDate: day,
+      );
+      final entry = history.values.single;
+
+      await tracked.add(TrackedActivity(
+        nodeId: n.trackingId,
+        name: n.name,
+        colorValue: 0xFF2196F3,
+        stepType: 'stepByStep',
+      ));
+
+      expect(
+        HistoryService.updateProgressEntry(id: entry.id, newProgress: 3),
+        isTrue,
+      );
+      final corrected = history.values.single;
+      expect(corrected.progressBefore, 1);
+      expect(corrected.progressAfter, 3);
+      expect(corrected.date, day);
+      expect(corrected.recordedAt, isNotNull);
+      expect(
+        HeatmapService(history, tracked).getIntensityData()[DateTime(2026, 11, 9)]![n.trackingId],
+        2.0,
+      );
+
+      expect(HistoryService.deleteEntryById(entry.id), isTrue);
+      expect(history.isEmpty, isTrue);
+      expect(HeatmapService(history, tracked).getIntensityData(), isEmpty);
+    });
+
+    test('progress transition values survive JSON and Hive serialization', () async {
+      final entry = HistoryEntry.forStep(
+        bookId: 'b', nodeId: 'n', nodeName: 'Чтение', trackingId: 't',
+        previousSteps: 2, completedSteps: 4,
+        date: DateTime(2026, 11, 9, 18),
+      );
+      final jsonCopy = HistoryEntry.fromJson(entry.toJson());
+      expect(jsonCopy.progressBefore, 2);
+      expect(jsonCopy.progressAfter, 4);
+
+      await history.add(entry);
+      await Hive.close();
+      history = await Hive.openBox<HistoryEntry>('history');
+      tracked = await Hive.openBox<TrackedActivity>('tracked');
+      HistoryService.init(history);
+      expect(history.values.single.progressBefore, 2);
+      expect(history.values.single.progressAfter, 4);
+    });
+
+    test('quick-add can continue consecutive sessions only within the selected day', () {
+      final n = durationNode('Работа');
+      final previousDay = DateTime(2026, 10, 24);
+      final day = DateTime(2026, 10, 25);
+      HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 30,
+        startedAt: DateTime(2026, 10, 24, 22),
+        endedAt: DateTime(2026, 10, 24, 22, 30),
+      );
+
+      expect(
+        HistoryService.getLatestDurationEntryForNodeOnDay(n.id, day),
+        isNull,
+      );
+
+      var start = HistoryService.suggestDurationStart(
+        nodeId: n.id,
+        day: day,
+        plannedStartMinutes: 17 * 60,
+        now: DateTime(2026, 10, 25, 19),
+      );
+      expect(start, DateTime(2026, 10, 25, 17));
+      var end = start.add(const Duration(minutes: 30));
+      HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 30,
+        startedAt: start, endedAt: end,
+      );
+      final latest = HistoryService.getLatestDurationEntryForNodeOnDay(n.id, day)!;
+      expect(latest.startedAt, DateTime(2026, 10, 25, 17));
+      expect(latest.endedAt, DateTime(2026, 10, 25, 17, 30));
+
+      start = HistoryService.suggestDurationStart(
+        nodeId: n.id,
+        day: day,
+        plannedStartMinutes: 17 * 60,
+      );
+      end = start.add(const Duration(minutes: 30));
+      HistoryService.recordDurationLog(
+        bookId: 'b', node: n, minutes: 30,
+        startedAt: start, endedAt: end,
+      );
+      expect(
+        HistoryService.getLatestDurationEntryForNodeOnDay(n.id, day)!.endedAt,
+        DateTime(2026, 10, 25, 18),
+      );
+      expect(history.values.length, 3);
+      expect(HistoryService.getEntriesForDay(previousDay).length, 1);
+    });
+
+    test('quick-add without a planned start uses the current clock on the selected day', () {
+      final n = durationNode('Работа');
+      final day = DateTime(2026, 10, 25);
+      final suggested = HistoryService.suggestDurationStart(
+        nodeId: n.id,
+        day: day,
+        now: DateTime(2026, 10, 25, 19, 26),
+      );
+      expect(suggested, DateTime(2026, 10, 25, 19, 26));
     });
 
     test('editing one duration session leaves other sessions unchanged', () {
@@ -258,6 +414,8 @@ void main() {
           bookId: 'b', node: n, minutes: 45, targetDate: DateTime(2026, 10, 25));
       await Hive.close();
       history = await Hive.openBox<HistoryEntry>('history');
+      tracked = await Hive.openBox<TrackedActivity>('tracked');
+      HistoryService.init(history);
       expect(history.values.single.minutes, 45);
       expect(history.values.single.startedAt,
           DateTime(2026, 10, 25).subtract(const Duration(minutes: 45)));

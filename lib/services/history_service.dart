@@ -59,6 +59,7 @@ class HistoryService {
     }
   }
 
+  /// Appends a checkbox transition. False transitions are retained as history too.
   static void recordUniqueToggle({
     required String bookId,
     required Node node,
@@ -66,46 +67,35 @@ class HistoryService {
     DateTime? targetDate,
   }) {
     final eventDate = targetDate ?? DateTime.now();
-
-    // Один nodeId — одна запись, независимо от того, на какую дату она
-    // была записана раньше (защита от рассинхрона дат, а не только от
-    // повторных тогглов в один и тот же день).
-    _deleteProgressEntriesByNodeId(node.id);
-
-    if (newValue) {
-      final newEntry = HistoryEntry.forSingle(
-        bookId: bookId,
-        nodeId: node.id,
-        nodeName: node.name,
-        completed: true,
-        trackingId: node.trackingId,
-        date: eventDate,
-      );
-      _box.add(newEntry);
-    }
+    _box.add(HistoryEntry.forSingle(
+      bookId: bookId,
+      nodeId: node.id,
+      nodeName: node.name,
+      completed: newValue,
+      previousCompleted: !newValue,
+      trackingId: node.trackingId,
+      date: eventDate,
+    ));
   }
 
+  /// Appends one step-progress transition instead of replacing earlier events.
   static void recordUniqueProgress({
     required String bookId,
     required Node node,
     required int newSteps,
+    int? previousSteps,
     DateTime? targetDate,
   }) {
     final eventDate = targetDate ?? DateTime.now();
-
-    _deleteProgressEntriesByNodeId(node.id);
-
-    if (newSteps > 0) {
-      final newEntry = HistoryEntry.forStep(
-        bookId: bookId,
-        nodeId: node.id,
-        nodeName: node.name,
-        completedSteps: newSteps,
-        trackingId: node.trackingId,
-        date: eventDate,
-      );
-      _box.add(newEntry);
-    }
+    _box.add(HistoryEntry.forStep(
+      bookId: bookId,
+      nodeId: node.id,
+      nodeName: node.name,
+      completedSteps: newSteps,
+      previousSteps: previousSteps ?? 0,
+      trackingId: node.trackingId,
+      date: eventDate,
+    ));
   }
 
   /// Adds one 'duration' log. Unlike [recordUniqueToggle] and
@@ -117,23 +107,73 @@ class HistoryService {
     required Node node,
     required int minutes,
     DateTime? targetDate,
+    DateTime? startedAt,
+    DateTime? endedAt,
   }) {
     if (minutes <= 0) return null;
-    final endedAt = targetDate ?? DateTime.now();
-    final startedAt = endedAt.subtract(Duration(minutes: minutes));
+    if ((startedAt == null) != (endedAt == null)) return null;
+    final actualEnd = endedAt ?? targetDate ?? DateTime.now();
+    final actualStart = startedAt ?? actualEnd.subtract(Duration(minutes: minutes));
+    if (!actualEnd.isAfter(actualStart) ||
+        actualEnd.difference(actualStart).inMinutes != minutes) {
+      return null;
+    }
     final entry = HistoryEntry.forDuration(
       bookId: bookId,
       nodeId: node.id,
       nodeName: node.name,
       minutes: minutes,
       trackingId: node.trackingId,
-      date: endedAt,
-      startedAt: startedAt,
-      endedAt: endedAt,
+      date: actualEnd,
+      startedAt: actualStart,
+      endedAt: actualEnd,
       recordedAt: DateTime.now(),
     );
     _box.add(entry);
     return entry.id;
+  }
+
+  /// Latest duration session for this node on the selected calendar day.
+  static HistoryEntry? getLatestDurationEntryForNodeOnDay(
+    String nodeId,
+    DateTime day,
+  ) {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    final entries = _box.values.where((entry) =>
+        entry.nodeId == nodeId &&
+        entry.stepType == 'duration' &&
+        entry.date.compareTo(start) >= 0 &&
+        entry.date.compareTo(end) < 0).toList();
+    if (entries.isEmpty) return null;
+    entries.sort((a, b) =>
+        (b.endedAt ?? b.date).compareTo(a.endedAt ?? a.date));
+    return entries.first;
+  }
+
+  /// Suggests a start for quick-add without carrying sessions across days.
+  static DateTime suggestDurationStart({
+    required String nodeId,
+    required DateTime day,
+    int? plannedStartMinutes,
+    DateTime? now,
+  }) {
+    final latest = getLatestDurationEntryForNodeOnDay(nodeId, day);
+    if (latest != null) return latest.endedAt ?? latest.date;
+
+    final dayStart = DateTime(day.year, day.month, day.day);
+    if (plannedStartMinutes != null) {
+      return dayStart.add(Duration(minutes: plannedStartMinutes));
+    }
+
+    final current = now ?? DateTime.now();
+    return DateTime(
+      day.year,
+      day.month,
+      day.day,
+      current.hour,
+      current.minute,
+    );
   }
 
   /// All 'duration' logs of one node, newest first.
@@ -143,6 +183,35 @@ class HistoryService {
         .toList();
     list.sort((a, b) => b.date.compareTo(a.date));
     return list;
+  }
+
+  /// Corrects the resulting progress value of one historical progress event.
+  /// Its event date and previous value stay unchanged; [recordedAt] tracks the correction.
+  static bool updateProgressEntry({
+    required String id,
+    required int newProgress,
+  }) {
+    if (newProgress < 0) return false;
+
+    for (final key in _box.keys) {
+      final entry = _box.get(key);
+      if (entry == null || entry.id != id || entry.stepType == 'duration') {
+        continue;
+      }
+      if (entry.stepType == 'single' && newProgress > 1) return false;
+
+      entry.progressBefore ??= 0;
+      entry.progressAfter = newProgress;
+      if (entry.stepType == 'single') {
+        entry.completed = newProgress == 1;
+      } else {
+        entry.completedSteps = newProgress;
+      }
+      entry.recordedAt = DateTime.now();
+      _box.put(key, entry);
+      return true;
+    }
+    return false;
   }
 
   /// Removes a single History entry by its [HistoryEntry.id]. Returns true
@@ -156,22 +225,6 @@ class HistoryService {
       }
     }
     return false;
-  }
-
-  /// Removes progress entries for one node but never touches duration sessions.
-  static void _deleteProgressEntriesByNodeId(String nodeId) {
-    final keysToDelete = <dynamic>[];
-    for (final key in _box.keys) {
-      final entry = _box.get(key);
-      if (entry != null &&
-          entry.nodeId == nodeId &&
-          entry.stepType != 'duration') {
-        keysToDelete.add(key);
-      }
-    }
-    for (final key in keysToDelete) {
-      _box.delete(key);
-    }
   }
 
   /// Updates one duration session without changing any other session or progress.

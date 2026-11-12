@@ -81,15 +81,85 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   /// Logs [minutes] on this duration task: adds them to the task and, unless
   /// the task is excluded from History, records one History entry (#112).
-  void _addMinutes(int minutes) {
+  Future<void> _addMinutes(int minutes) async {
     if (minutes <= 0 || !_node.hasOwnProgress) return;
+
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Добавить ${formatDuration(minutes)}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.play_circle_outline),
+              title: const Text('Продолжить после последней сессии'),
+              onTap: () => Navigator.pop(ctx, 'continue'),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.schedule),
+              title: const Text('Выбрать время начала'),
+              onTap: () => Navigator.pop(ctx, 'choose'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена'),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || !mounted) return;
+
+    final selectedDay = widget.targetDate ?? DateTime.now();
+    DateTime start;
+    if (choice == 'continue') {
+      start = HistoryService.suggestDurationStart(
+        nodeId: _node.id,
+        day: selectedDay,
+        plannedStartMinutes: _node.startMinutes,
+      );
+    } else {
+      final initial = _resolveEventDate();
+      final pickedDate = await showDatePicker(
+        context: context,
+        initialDate: DateUtils.dateOnly(initial),
+        firstDate: DateTime(1900),
+        lastDate: DateTime(2100),
+      );
+      if (pickedDate == null || !mounted) return;
+      final pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(initial),
+        builder: (ctx, child) => MediaQuery(
+          data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        ),
+      );
+      if (pickedTime == null || !mounted) return;
+      start = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    }
+
+    final end = start.add(Duration(minutes: minutes));
     setState(() => _node.loggedMinutes += minutes);
     if (!_node.excludeFromHistory) {
       HistoryService.recordDurationLog(
         bookId: widget.bookId,
         node: _node,
         minutes: minutes,
-        targetDate: _resolveEventDate(),
+        targetDate: end,
+        startedAt: start,
+        endedAt: end,
       );
     }
     widget.onNodeUpdated();
@@ -306,7 +376,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         ],
       ),
     );
-    if (minutes != null && mounted) _addMinutes(minutes);
+    if (minutes != null && mounted) await _addMinutes(minutes);
   }
 
   void _onSliderChanged(double value) {
@@ -328,6 +398,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
           bookId: widget.bookId,
           node: _node,
           newSteps: newSteps,
+          previousSteps: oldSteps,
           targetDate: _resolveEventDate(),
         );
       }

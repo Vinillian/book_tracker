@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 import '../models/history_entry.dart';
+import '../services/history_service.dart';
 import '../utils/format_minutes.dart';
 
 class ActivityCalendar extends StatefulWidget {
@@ -219,6 +220,104 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
     });
   }
 
+  Future<void> _editProgressEntry(
+    BuildContext sheetContext,
+    HistoryEntry entry,
+  ) async {
+    final isSingle = entry.stepType == 'single';
+    final currentValue = entry.progressAfter ??
+        (isSingle ? (entry.completed == true ? 1 : 0) : entry.completedSteps ?? 0);
+    int? updatedValue;
+
+    if (isSingle) {
+      updatedValue = await showDialog<int>(
+        context: sheetContext,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Исправить отметку'),
+          content: const Text('Какое состояние должно быть у этой записи?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, 0),
+              child: const Text('Не выполнено'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, 1),
+              child: const Text('Выполнено'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Отмена'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      final controller = TextEditingController(text: '$currentValue');
+      updatedValue = await showDialog<int>(
+        context: sheetContext,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Исправить прогресс'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Выполнено шагов'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () {
+                final value = int.tryParse(controller.text.trim());
+                if (value != null && value >= 0) {
+                  Navigator.pop(dialogContext, value);
+                }
+              },
+              child: const Text('Сохранить'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (updatedValue == null || !sheetContext.mounted) return;
+    if (HistoryService.updateProgressEntry(
+      id: entry.id,
+      newProgress: updatedValue,
+    )) {
+      Navigator.pop(sheetContext);
+    }
+  }
+
+  Future<void> _deleteProgressEntry(
+    BuildContext sheetContext,
+    HistoryEntry entry,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: sheetContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Удалить запись?'),
+        content: const Text('Эта запись больше не будет учитываться в истории и статистике.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !sheetContext.mounted) return;
+    if (HistoryService.deleteEntryById(entry.id)) {
+      Navigator.pop(sheetContext);
+    }
+  }
+
   void _showDayDetails(
       BuildContext context,
       DateTime day,
@@ -258,19 +357,49 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
                     String action;
                     IconData icon;
                     if (entry.stepType == 'single') {
-                      action = entry.completed == true ? 'Выполнено' : 'Снято';
+                      if (entry.progressBefore != null && entry.progressAfter != null) {
+                        action = '${entry.progressBefore} → ${entry.progressAfter}';
+                      } else {
+                        action = entry.completed == true ? 'Выполнено' : 'Снято';
+                      }
                       icon = entry.completed == true ? Icons.check_circle : Icons.radio_button_unchecked;
                     } else if (entry.stepType == 'duration') {
                       action = formatDuration(entry.minutes ?? 0);
                       icon = Icons.timer;
                     } else {
-                      action = 'Шагов: ${entry.completedSteps}';
-                      icon = Icons.list;
+                      action = entry.progressBefore != null && entry.progressAfter != null
+                          ? '${entry.progressBefore} → ${entry.progressAfter}'
+                          : 'Шагов: ${entry.completedSteps}';
+                      icon = entry.progressBefore != null && entry.progressAfter != null &&
+                              entry.progressAfter! < entry.progressBefore!
+                          ? Icons.undo
+                          : Icons.list;
                     }
                     return ListTile(
                       leading: Icon(icon, color: Colors.white70, size: 20),
                       title: Text(entry.nodeName, style: const TextStyle(color: Colors.white)),
-                      trailing: Text(action, style: const TextStyle(color: Colors.white54)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(action, style: const TextStyle(color: Colors.white54)),
+                          if (entry.stepType != 'duration')
+                            PopupMenuButton<String>(
+                              tooltip: 'Действия с записью',
+                              icon: const Icon(Icons.more_vert, color: Colors.white54),
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _editProgressEntry(ctx, entry);
+                                } else if (value == 'delete') {
+                                  _deleteProgressEntry(ctx, entry);
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(value: 'edit', child: Text('Исправить')),
+                                PopupMenuItem(value: 'delete', child: Text('Удалить')),
+                              ],
+                            ),
+                        ],
+                      ),
                       dense: true,
                     );
                   },
