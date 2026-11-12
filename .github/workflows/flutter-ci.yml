@@ -33,10 +33,9 @@ jobs:
 
       - name: Analyze code
         run: flutter analyze
-        continue-on-error: true   # не блокирует сборку из-за предупреждений
 
-      - name: Run tests (if any)
-        run: flutter test --no-pub || echo "No tests found yet"
+      - name: Run tests
+        run: flutter test --no-pub
 
       - name: Build debug APK
         run: flutter build apk --debug
