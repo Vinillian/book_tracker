@@ -288,7 +288,7 @@ void main() {
       await Hive.close();
       history = await Hive.openBox<HistoryEntry>('history');
       tracked = await Hive.openBox<TrackedActivity>('tracked');
-      historyService.init(history);
+      historyService = HistoryService(history);
       expect(history.values.single.progressBefore, 2);
       expect(history.values.single.progressAfter, 4);
     });
@@ -573,6 +573,7 @@ void main() {
   group('historyService.getDurationEntriesForNode', () {
     late Directory dir;
     late Box<HistoryEntry> history;
+    late HistoryService historyService;
 
     setUp(() async {
       dir = await Directory.systemTemp.createTemp('duration_entries_test');
