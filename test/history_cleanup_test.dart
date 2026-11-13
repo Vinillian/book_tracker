@@ -34,6 +34,7 @@ void main() {
     late Box<Node> nodes;
     late Box<HistoryEntry> history;
     late Box<Note> notes;
+    late HistoryService historyService;
 
     setUp(() async {
       dir = await Directory.systemTemp.createTemp('history_cleanup_test');
@@ -46,7 +47,7 @@ void main() {
       nodes = await Hive.openBox<Node>('nodes');
       history = await Hive.openBox<HistoryEntry>('history');
       notes = await Hive.openBox<Note>('notes');
-      HistoryService.init(history);
+      historyService = HistoryService(history);
     });
 
     tearDown(() async {
@@ -80,9 +81,9 @@ void main() {
       final root = plan([a, b]);
       done(root, a);
       done(root, b);
-      expect(HistoryService.deleteEntriesForTasks({b.id}), 1);
+      expect(historyService.deleteEntriesForTasks({b.id}), 1);
       expect(doneIds(), {a.id});
-      expect(HistoryService.deleteEntriesForTasks({}), 0);
+      expect(historyService.deleteEntriesForTasks({}), 0);
       expect(doneIds(), {a.id});
     });
 
@@ -94,7 +95,7 @@ void main() {
       final key = await nodes.add(root);
       done(root, a);
       done(root, b);
-      final service = NodeService(nodes, NoteService(notes));
+      final service = NodeService(nodes, NoteService(notes), historyService);
 
       final edited = root.deepCopy()..children.removeWhere((c) => c.id == b.id);
       service.update(key, edited);
@@ -109,7 +110,7 @@ void main() {
       final key = await nodes.add(root);
       done(root, a);
       done(root, b);
-      final service = NodeService(nodes, NoteService(notes));
+      final service = NodeService(nodes, NoteService(notes), historyService);
 
       root.children.removeWhere((c) => c.id == a.id);
       service.update(key, root);
@@ -127,7 +128,7 @@ void main() {
       done(root, parent);
       done(root, sub);
       done(root, keep);
-      final service = NodeService(nodes, NoteService(notes));
+      final service = NodeService(nodes, NoteService(notes), historyService);
 
       service.update(
         key,
@@ -142,7 +143,7 @@ void main() {
       final root = plan([a]);
       final key = await nodes.add(root);
       done(root, a);
-      final service = NodeService(nodes, NoteService(notes));
+      final service = NodeService(nodes, NoteService(notes), historyService);
 
       final edited = root.deepCopy()
         ..name = 'Другое имя'
@@ -161,7 +162,7 @@ void main() {
       await nodes.add(other);
       done(root, a);
       done(other, x);
-      final service = NodeService(nodes, NoteService(notes));
+      final service = NodeService(nodes, NoteService(notes), historyService);
 
       service.update(key, root.deepCopy()..children.clear());
 
@@ -173,7 +174,7 @@ void main() {
       final a = Node.leaf('a');
       final b = Node.leaf('b');
       final root = plan([a, b]);
-      final service = NodeService(nodes, NoteService(notes));
+      final service = NodeService(nodes, NoteService(notes), historyService);
       await service.add(root);
       done(root, a);
       done(root, b);

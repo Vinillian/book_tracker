@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:book_tracker/models/node.dart';
+import 'package:book_tracker/models/history_entry.dart';
 import 'package:book_tracker/models/note.dart';
 import 'package:book_tracker/models/standard_task.dart';
+import 'package:book_tracker/services/history_service.dart';
 import 'package:book_tracker/services/node_service.dart';
 import 'package:book_tracker/services/note_service.dart';
 import 'package:book_tracker/utils/box_keys.dart';
@@ -28,6 +30,7 @@ void main() {
     tempDir = Directory.systemTemp.createTempSync('box_keys_test_');
     Hive.init(tempDir.path);
     Hive.registerAdapter(NodeAdapter());
+    Hive.registerAdapter(HistoryEntryAdapter());
     Hive.registerAdapter(NoteAdapter());
     Hive.registerAdapter(StandardTaskAdapter());
   });
@@ -103,10 +106,15 @@ void main() {
       final n = ++counter;
       final nodes = await Hive.openBox<Node>('nodes_$n');
       final notes = await Hive.openBox<Note>('notes_$n');
+      final history = await Hive.openBox<HistoryEntry>('history_$n');
       try {
-        await body(NodeService(nodes, NoteService(notes)), nodes);
+        await body(
+          NodeService(nodes, NoteService(notes), HistoryService(history)),
+          nodes,
+        );
       } finally {
         await nodes.close();
+        await history.close();
         await notes.close();
       }
     }

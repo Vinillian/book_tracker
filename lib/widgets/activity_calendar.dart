@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 import '../models/history_entry.dart';
-import '../services/history_service.dart';
+import '../providers/app_state.dart';
 import '../utils/format_minutes.dart';
 
 class ActivityCalendar extends StatefulWidget {
@@ -283,7 +284,7 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
     }
 
     if (updatedValue == null || !sheetContext.mounted) return;
-    if (HistoryService.updateProgressEntry(
+    if (sheetContext.read<AppState>().historyService.updateProgressEntry(
       id: entry.id,
       newProgress: updatedValue,
     )) {
@@ -313,7 +314,7 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
       ),
     );
     if (confirmed != true || !sheetContext.mounted) return;
-    if (HistoryService.deleteEntryById(entry.id)) {
+    if (sheetContext.read<AppState>().historyService.deleteEntryById(entry.id)) {
       Navigator.pop(sheetContext);
     }
   }
@@ -422,7 +423,7 @@ class _ActivityCalendarState extends State<ActivityCalendar> {
 
   @override
   Widget build(BuildContext context) {
-    final historyBox = Hive.box<HistoryEntry>('history');
+    final historyBox = context.watch<AppState>().historyBox;
 
     return ValueListenableBuilder(
       valueListenable: historyBox.listenable(),

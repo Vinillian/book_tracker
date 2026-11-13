@@ -11,13 +11,14 @@ import '../utils/plan_date.dart';
 class NodeService {
   final Box<Node> _box;
   final NoteService _noteService;
+  final HistoryService _historyService;
 
   /// The ids of every root's tasks as of the last save (#84). A task removed
   /// from a tree is found by comparing with it: the tree itself cannot tell,
   /// because some screens change the stored node in place before saving.
   final Map<dynamic, Set<String>> _knownIds = {};
 
-  NodeService(this._box, this._noteService) {
+  NodeService(this._box, this._noteService, this._historyService) {
     for (final key in _box.keys) {
       final node = _box.get(key);
       if (node != null) _knownIds[key] = collectNodeIds(node);
@@ -62,7 +63,7 @@ class NodeService {
     final before = _knownIds[key];
     if (before != null) {
       final removed = before.difference(now);
-      if (removed.isNotEmpty) HistoryService.deleteEntriesForTasks(removed);
+      if (removed.isNotEmpty) _historyService.deleteEntriesForTasks(removed);
     }
     _knownIds[key] = now;
     _box.put(key, node);
@@ -78,7 +79,7 @@ class NodeService {
       }
 
       // Удаляем историю для этой книги/плана
-      HistoryService.deleteEntriesForNode(node.id);
+      _historyService.deleteEntriesForNode(node.id);
 
       // Удаляем сам узел
       _knownIds.remove(key);
@@ -135,7 +136,7 @@ class NodeService {
       // name, so fall back to the date its History entries were recorded on.
       final date =
           parseLegacyPlanName(node.name) ??
-          HistoryService.dominantDateForBook(node.id);
+          _historyService.dominantDateForBook(node.id);
       if (date == null) continue;
       node.plannedDate = _dateOnly(date);
       _box.put(key, node);
