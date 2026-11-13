@@ -10,7 +10,6 @@ import '../utils/plan_date.dart';
 import '../utils/tracking_id.dart';
 import 'components/progress_card.dart';
 import 'components/day_note_card.dart';
-import 'components/day_done_section.dart';
 import 'components/chapter_tree_view.dart';
 import 'template_manager_screen.dart';
 import 'components/quick_add_bar.dart';
@@ -290,10 +289,6 @@ class _BookScreenState extends State<BookScreen> {
                   _dayTypeBanner(context),
                   ProgressCard(node: _node),
                   DayNoteCard(node: _node),
-                  if (_planDate != null)
-                    DayDoneSection(
-                      entries: HistoryService.getEntriesForDay(_planDate!),
-                    ),
                 ],
               ),
             ),
