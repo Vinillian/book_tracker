@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:book_tracker/models/node.dart';
 import 'package:book_tracker/providers/app_state.dart';
+import 'package:book_tracker/services/history_service.dart';
 import 'package:book_tracker/services/hive_startup.dart';
 import 'package:book_tracker/services/node_service.dart';
 import 'package:book_tracker/services/note_service.dart';
@@ -103,10 +104,15 @@ void main() {
     expect(migratedBook.children.single.children.single.category, isNull);
     expect(appState.themeMode, 'system');
 
-    expect(migrateLegacyPlanIds(boxes.templatesBox, boxes.notesBox), 0);
+    expect(migrateLegacyPlanIds(
+      boxes.templatesBox,
+      boxes.notesBox,
+      HistoryService(boxes.historyBox),
+    ), 0);
     final nodeService = NodeService(
       boxes.templatesBox,
       NoteService(boxes.notesBox),
+      HistoryService(boxes.historyBox),
     );
     expect(nodeService.migratePlannedDates(), 0);
     expect(nodeService.migrateNestedBookCategories(), 0);
