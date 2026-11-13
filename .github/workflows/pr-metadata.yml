@@ -1,0 +1,156 @@
+name: PR Metadata
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  metadata:
+    name: Labels and issue links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply labels and check related work
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title || '';
+            const body = pr.body || '';
+            const branch = pr.head.ref || '';
+
+            // Apply only labels that already exist in this repository.
+            const rules = [
+              { pattern: /^(feat|feature)(?:[\s(:/-]|$)/i, label: 'feature' },
+              { pattern: /^(fix|bug)(?:[\s(:/-]|$)/i, label: 'bug' },
+              { pattern: /^(refactor|chore|perf|ci|test)(?:[\s(:/-]|$)/i, label: 'technical debt' },
+              { pattern: /^(docs?|documentation)(?:[\s(:/-]|$)/i, label: 'documentation' },
+              { pattern: /^(ui|ux)(?:[\s(:/-]|$)/i, label: 'UX' },
+              { pattern: /^release(?:[\s(:/-]|$)/i, label: 'release' },
+            ];
+
+            const matched = rules.find(rule => rule.pattern.test(title));
+            if (matched) {
+              const { data: existingLabels } = await github.rest.issues.listLabelsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              });
+              const available = new Set(existingLabels.map(label => label.name));
+              if (available.has(matched.label)) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  labels: [matched.label],
+                });
+                core.info('Applied label: ' + matched.label);
+              } else {
+                core.warning('Repository label does not exist: ' + matched.label);
+              }
+            } else {
+              core.info('No label rule matched the PR title; existing labels were left unchanged.');
+            }
+
+            // Accept explicit #number references in the title/body and issue-number
+            // branch names such as feat/79-description or fix/123-description.
+            const refs = new Set();
+            for (const match of (title + '\n' + body).matchAll(/#(\d+)\b/g)) {
+              refs.add(Number(match[1]));
+            }
+            const branchMatch = branch.match(/^(?:feat|feature|fix|bug|issue|refactor)\/(\d+)(?:-|$)/i);
+            if (branchMatch) refs.add(Number(branchMatch[1]));
+            refs.delete(pr.number);
+
+            const linked = [];
+            const invalid = [];
+            for (const number of [...refs].sort((a, b) => a - b)) {
+              try {
+                const { data } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: number,
+                });
+                linked.push({
+                  number,
+                  kind: data.pull_request ? 'PR' : 'Issue',
+                  title: data.title,
+                  url: data.html_url,
+                });
+              } catch (error) {
+                if (error.status === 404) {
+                  invalid.push(number);
+                } else {
+                  throw error;
+                }
+              }
+            }
+
+            const marker = '<!-- pr-metadata-link-check -->';
+            let report;
+            if (linked.length > 0 && invalid.length === 0) {
+              report = [
+                marker,
+                '## 🔗 Related work check',
+                '',
+                'Found and verified these linked items:',
+                ...linked.map(item => '- ' + item.kind + ' [#' + item.number + '](' + item.url + '): ' + item.title),
+                '',
+                'GitHub automatically associates commits in this PR with this pull request.',
+              ].join('\n');
+            } else {
+              const lines = [
+                marker,
+                '## 🔗 Related work check',
+                '',
+              ];
+              if (linked.length > 0) {
+                lines.push('Found these references:', ...linked.map(item => '- ' + item.kind + ' [#' + item.number + '](' + item.url + ')'));
+              }
+              if (invalid.length > 0) {
+                lines.push('', 'These references could not be found: ' + invalid.map(number => '#' + number).join(', ') + '.');
+              }
+              if (linked.length === 0) {
+                lines.push('⚠️ No linked issue or PR was found.');
+              }
+              lines.push(
+                '',
+                'Please add a reference in the PR title or description, for example: Closes #123 when this PR completes an issue, or Refs #123 when it is related but does not close it.',
+                'This is a warning only; it does not block CI or merging.',
+              );
+              report = lines.join('\n');
+            }
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              per_page: 100,
+            });
+            const previous = comments.find(comment => comment.body && comment.body.includes(marker));
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body: report,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: report,
+              });
+            }
+
+            if (linked.length === 0 || invalid.length > 0) {
+              core.warning('PR needs valid issue/PR references; see the Related work check comment.');
+            } else {
+              core.info('All referenced issues and PRs were verified.');
+            }
