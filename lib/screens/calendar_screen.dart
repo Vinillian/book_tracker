@@ -12,7 +12,6 @@ import '../utils/plan_date.dart';
 import '../utils/tracking_id.dart';
 import 'components/day_type_chip.dart';
 import 'components/schedule_day_cell.dart';
-import '../services/history_service.dart';
 import 'book_screen.dart';
 import 'plan_generator_screen.dart';
 import 'components/app_drawer_menu.dart';
@@ -251,7 +250,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ? null
         : appState.planForDate(_selectedDay!);
 
-    _events = HistoryService.getAllEntriesGroupedByDate();
+    _events = appState.historyService.getAllEntriesGroupedByDate();
 
     List<Object> markersForDay(DateTime day) => [
       ..._getEventsForDay(day),
