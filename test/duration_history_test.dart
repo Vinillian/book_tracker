@@ -101,6 +101,7 @@ void main() {
     late Directory dir;
     late Box<HistoryEntry> history;
     late Box<TrackedActivity> tracked;
+    late HistoryService historyService;
 
     setUp(() async {
       dir = await Directory.systemTemp.createTemp('duration_history_test');
@@ -113,7 +114,7 @@ void main() {
       }
       history = await Hive.openBox<HistoryEntry>('history');
       tracked = await Hive.openBox<TrackedActivity>('tracked');
-      HistoryService.init(history);
+      historyService = HistoryService(history);
     });
 
     tearDown(() async {
@@ -124,11 +125,11 @@ void main() {
     test('several logs on one day are all kept', () {
       final n = durationNode('Работа');
       final day = DateTime(2026, 10, 25);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 25, targetDate: day);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 30, targetDate: day);
-      final entries = HistoryService.getEntriesForDay(day);
+      final entries = historyService.getEntriesForDay(day);
       expect(entries.length, 2);
       expect(entries.map((e) => e.minutes).toList()..sort(), [25, 30]);
     });
@@ -137,7 +138,7 @@ void main() {
       final n = durationNode('Работа');
       final end = DateTime(2026, 10, 25, 19);
 
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b',
         node: n,
         minutes: 60,
@@ -154,20 +155,20 @@ void main() {
     test('checkbox progress transitions append events and preserve duration sessions', () {
       final n = Node.leaf('Йога', stepType: 'single');
       final day = DateTime(2026, 10, 25);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 20, targetDate: day,
       );
-      HistoryService.recordUniqueToggle(
+      historyService.recordUniqueToggle(
         bookId: 'b', node: n, newValue: true, targetDate: day,
       );
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 30, targetDate: day,
       );
-      HistoryService.recordUniqueToggle(
+      historyService.recordUniqueToggle(
         bookId: 'b', node: n, newValue: false, targetDate: day,
       );
 
-      final entries = HistoryService.getEntriesForDay(day);
+      final entries = historyService.getEntriesForDay(day);
       expect(
         entries.where((e) => e.stepType == 'duration').map((e) => e.minutes).toList()..sort(),
         [20, 30],
@@ -183,20 +184,20 @@ void main() {
     test('step progress appends each transition and preserves sessions', () {
       final n = Node.leaf('Чтение', stepType: 'stepByStep', totalSteps: 5);
       final day = DateTime(2026, 10, 25);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 15, targetDate: day,
       );
-      HistoryService.recordUniqueProgress(
+      historyService.recordUniqueProgress(
         bookId: 'b', node: n, newSteps: 2, targetDate: day,
       );
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 25, targetDate: day,
       );
-      HistoryService.recordUniqueProgress(
+      historyService.recordUniqueProgress(
         bookId: 'b', node: n, newSteps: 4, previousSteps: 2, targetDate: day,
       );
 
-      final entries = HistoryService.getEntriesForDay(day);
+      final entries = historyService.getEntriesForDay(day);
       expect(entries.where((e) => e.stepType == 'duration').length, 2);
       final progress = entries.where((e) => e.stepType == 'stepByStep').toList();
       expect(progress.length, 2);
@@ -212,13 +213,13 @@ void main() {
       final monday = DateTime(2026, 11, 9, 18, 30);
       final tuesday = DateTime(2026, 11, 10, 18, 30);
 
-      HistoryService.recordUniqueProgress(
+      historyService.recordUniqueProgress(
         bookId: 'b', node: n, previousSteps: 0, newSteps: 4, targetDate: monday,
       );
-      HistoryService.recordUniqueProgress(
+      historyService.recordUniqueProgress(
         bookId: 'b', node: n, previousSteps: 4, newSteps: 3, targetDate: monday,
       );
-      HistoryService.recordUniqueProgress(
+      historyService.recordUniqueProgress(
         bookId: 'b', node: n, previousSteps: 3, newSteps: 2, targetDate: tuesday,
       );
 
@@ -229,7 +230,7 @@ void main() {
         stepType: 'stepByStep',
       ));
 
-      final mondayEntries = HistoryService.getEntriesForDay(monday);
+      final mondayEntries = historyService.getEntriesForDay(monday);
       expect(mondayEntries.length, 2);
       expect(mondayEntries.every((entry) => entry.date.day == 9), isTrue);
       expect(mondayEntries.every((entry) => entry.recordedAt != null), isTrue);
@@ -242,7 +243,7 @@ void main() {
     test('correcting or deleting a progress event updates its historical contribution', () async {
       final n = Node.leaf('Чтение', stepType: 'stepByStep', totalSteps: 5);
       final day = DateTime(2026, 11, 9, 18);
-      HistoryService.recordUniqueProgress(
+      historyService.recordUniqueProgress(
         bookId: 'b', node: n, previousSteps: 1, newSteps: 4, targetDate: day,
       );
       final entry = history.values.single;
@@ -255,7 +256,7 @@ void main() {
       ));
 
       expect(
-        HistoryService.updateProgressEntry(id: entry.id, newProgress: 3),
+        historyService.updateProgressEntry(id: entry.id, newProgress: 3),
         isTrue,
       );
       final corrected = history.values.single;
@@ -268,7 +269,7 @@ void main() {
         2.0,
       );
 
-      expect(HistoryService.deleteEntryById(entry.id), isTrue);
+      expect(historyService.deleteEntryById(entry.id), isTrue);
       expect(history.isEmpty, isTrue);
       expect(HeatmapService(history, tracked).getIntensityData(), isEmpty);
     });
@@ -287,7 +288,7 @@ void main() {
       await Hive.close();
       history = await Hive.openBox<HistoryEntry>('history');
       tracked = await Hive.openBox<TrackedActivity>('tracked');
-      HistoryService.init(history);
+      historyService.init(history);
       expect(history.values.single.progressBefore, 2);
       expect(history.values.single.progressAfter, 4);
     });
@@ -296,18 +297,18 @@ void main() {
       final n = durationNode('Работа');
       final previousDay = DateTime(2026, 10, 24);
       final day = DateTime(2026, 10, 25);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 30,
         startedAt: DateTime(2026, 10, 24, 22),
         endedAt: DateTime(2026, 10, 24, 22, 30),
       );
 
       expect(
-        HistoryService.getLatestDurationEntryForNodeOnDay(n.id, day),
+        historyService.getLatestDurationEntryForNodeOnDay(n.id, day),
         isNull,
       );
 
-      var start = HistoryService.suggestDurationStart(
+      var start = historyService.suggestDurationStart(
         nodeId: n.id,
         day: day,
         plannedStartMinutes: 17 * 60,
@@ -315,36 +316,36 @@ void main() {
       );
       expect(start, DateTime(2026, 10, 25, 17));
       var end = start.add(const Duration(minutes: 30));
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 30,
         startedAt: start, endedAt: end,
       );
-      final latest = HistoryService.getLatestDurationEntryForNodeOnDay(n.id, day)!;
+      final latest = historyService.getLatestDurationEntryForNodeOnDay(n.id, day)!;
       expect(latest.startedAt, DateTime(2026, 10, 25, 17));
       expect(latest.endedAt, DateTime(2026, 10, 25, 17, 30));
 
-      start = HistoryService.suggestDurationStart(
+      start = historyService.suggestDurationStart(
         nodeId: n.id,
         day: day,
         plannedStartMinutes: 17 * 60,
       );
       end = start.add(const Duration(minutes: 30));
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 30,
         startedAt: start, endedAt: end,
       );
       expect(
-        HistoryService.getLatestDurationEntryForNodeOnDay(n.id, day)!.endedAt,
+        historyService.getLatestDurationEntryForNodeOnDay(n.id, day)!.endedAt,
         DateTime(2026, 10, 25, 18),
       );
       expect(history.values.length, 3);
-      expect(HistoryService.getEntriesForDay(previousDay).length, 1);
+      expect(historyService.getEntriesForDay(previousDay).length, 1);
     });
 
     test('quick-add without a planned start uses the current clock on the selected day', () {
       final n = durationNode('Работа');
       final day = DateTime(2026, 10, 25);
-      final suggested = HistoryService.suggestDurationStart(
+      final suggested = historyService.suggestDurationStart(
         nodeId: n.id,
         day: day,
         now: DateTime(2026, 10, 25, 19, 26),
@@ -355,34 +356,34 @@ void main() {
     test('editing one duration session leaves other sessions unchanged', () {
       final n = durationNode('Работа');
       final day = DateTime(2026, 10, 25);
-      final editedId = HistoryService.recordDurationLog(
+      final editedId = historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 20, targetDate: day,
       )!;
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 35, targetDate: day,
       );
 
       expect(
-        HistoryService.updateDurationLog(id: editedId, minutes: 50),
+        historyService.updateDurationLog(id: editedId, minutes: 50),
         isTrue,
       );
       expect(
-        HistoryService.getDurationEntriesForNode(n.id).map((e) => e.minutes).toSet(),
+        historyService.getDurationEntriesForNode(n.id).map((e) => e.minutes).toSet(),
         {50, 35},
       );
-      final edited = HistoryService.getDurationEntriesForNode(n.id)
+      final edited = historyService.getDurationEntriesForNode(n.id)
           .singleWhere((e) => e.id == editedId);
       expect(edited.endedAt, day);
       expect(edited.startedAt, day.subtract(const Duration(minutes: 50)));
       expect(
-        HistoryService.updateDurationLog(id: editedId, minutes: 0),
+        historyService.updateDurationLog(id: editedId, minutes: 0),
         isFalse,
       );
     });
 
     test('non-positive minutes are not recorded', () {
       final n = durationNode('Работа');
-      expect(HistoryService.recordDurationLog(bookId: 'b', node: n, minutes: 0),
+      expect(historyService.recordDurationLog(bookId: 'b', node: n, minutes: 0),
           isNull);
       expect(history.length, 0);
     });
@@ -390,19 +391,19 @@ void main() {
     test('deleteEntryById removes only one session and preserves task progress', () {
       final n = Node.leaf('Йога', stepType: 'single');
       final day = DateTime(2026, 10, 25);
-      HistoryService.recordUniqueToggle(
+      historyService.recordUniqueToggle(
         bookId: 'b', node: n, newValue: true, targetDate: day,
       );
-      final first = HistoryService.recordDurationLog(
+      final first = historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 25, targetDate: day,
       )!;
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 30, targetDate: day,
       );
 
-      expect(HistoryService.deleteEntryById(first), isTrue);
-      expect(HistoryService.deleteEntryById(first), isFalse);
-      final left = HistoryService.getEntriesForDay(day);
+      expect(historyService.deleteEntryById(first), isTrue);
+      expect(historyService.deleteEntryById(first), isFalse);
+      final left = historyService.getEntriesForDay(day);
       expect(left.where((e) => e.stepType == 'duration').length, 1);
       expect(left.singleWhere((e) => e.stepType == 'single').completed, isTrue);
       expect(left.singleWhere((e) => e.stepType == 'duration').minutes, 30);
@@ -410,12 +411,12 @@ void main() {
 
     test('minutes survive a close and reopen of the box', () async {
       final n = durationNode('Работа');
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 45, targetDate: DateTime(2026, 10, 25));
       await Hive.close();
       history = await Hive.openBox<HistoryEntry>('history');
       tracked = await Hive.openBox<TrackedActivity>('tracked');
-      HistoryService.init(history);
+      historyService.init(history);
       expect(history.values.single.minutes, 45);
       expect(history.values.single.startedAt,
           DateTime(2026, 10, 25).subtract(const Duration(minutes: 45)));
@@ -435,32 +436,32 @@ void main() {
       final day15 = DateTime(2026, 10, 26);
       final day45 = DateTime(2026, 10, 27);
 
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 20, targetDate: day20);
 
       // Separate sessions are summed before converting minutes to points.
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 20, targetDate: day40);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 20, targetDate: day40);
 
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 25, targetDate: day60);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 35, targetDate: day60);
 
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 5, targetDate: day5);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 10, targetDate: day10);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 15, targetDate: day15);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 45, targetDate: day45);
 
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 15, targetDate: dayTwoSessions);
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 15, targetDate: dayTwoSessions);
 
       await tracked.add(TrackedActivity(
@@ -544,7 +545,7 @@ void main() {
         trackingId: n.trackingId,
         date: day,
       ));
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
         bookId: 'b', node: n, minutes: 30, targetDate: day,
       );
       await tracked.add(TrackedActivity(
@@ -562,14 +563,14 @@ void main() {
 
     test('heatmap ignores untracked tasks', () {
       final n = durationNode('Работа');
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'b', node: n, minutes: 25, targetDate: DateTime(2026, 10, 25));
       final data = HeatmapService(history, tracked).getIntensityData();
       expect(data.isEmpty, isTrue);
     });
   });
 
-  group('HistoryService.getDurationEntriesForNode', () {
+  group('historyService.getDurationEntriesForNode', () {
     late Directory dir;
     late Box<HistoryEntry> history;
 
@@ -580,7 +581,7 @@ void main() {
         Hive.registerAdapter(HistoryEntryAdapter());
       }
       history = await Hive.openBox<HistoryEntry>('history');
-      HistoryService.init(history);
+      historyService.init(history);
     });
 
     tearDown(() async {
@@ -591,17 +592,17 @@ void main() {
     test('returns only duration logs of that node, newest first', () {
       final a = durationNode('A');
       final b = durationNode('B');
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'x', node: a, minutes: 10, targetDate: DateTime(2026, 10, 24, 9));
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'x', node: a, minutes: 20, targetDate: DateTime(2026, 10, 25, 9));
-      HistoryService.recordDurationLog(
+      historyService.recordDurationLog(
           bookId: 'x', node: b, minutes: 99, targetDate: DateTime(2026, 10, 25, 9));
-      HistoryService.recordUniqueToggle(
+      historyService.recordUniqueToggle(
           bookId: 'x',
           node: Node(name: 'C', children: [], stepType: 'single'),
           newValue: true);
-      final logs = HistoryService.getDurationEntriesForNode(a.id);
+      final logs = historyService.getDurationEntriesForNode(a.id);
       expect(logs.map((e) => e.minutes).toList(), [20, 10]);
     });
   });
