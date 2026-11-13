@@ -18,7 +18,8 @@ class TrackedActivityAdapter extends TypeAdapter<TrackedActivity> {
     };
     return TrackedActivity(
       id: fields[0] as String?,
-      nodeId: fields[1] as String,
+      trackingId: fields[9] == null ? '' : fields[9] as String,
+      legacyNodeId: fields[1] as String,
       name: fields[2] as String,
       colorValue: fields[3] as int,
       stepType: fields[4] as String,
@@ -32,11 +33,11 @@ class TrackedActivityAdapter extends TypeAdapter<TrackedActivity> {
   @override
   void write(BinaryWriter writer, TrackedActivity obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.nodeId)
+      ..write(obj.legacyNodeId)
       ..writeByte(2)
       ..write(obj.name)
       ..writeByte(3)
@@ -50,7 +51,9 @@ class TrackedActivityAdapter extends TypeAdapter<TrackedActivity> {
       ..writeByte(7)
       ..write(obj.order)
       ..writeByte(8)
-      ..write(obj.timeTrackingEnabled);
+      ..write(obj.timeTrackingEnabled)
+      ..writeByte(9)
+      ..write(obj.trackingId);
   }
 
   @override

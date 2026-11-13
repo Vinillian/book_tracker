@@ -10,14 +10,13 @@ StandardTask standard(
   int steps = 1,
   String trackingId = 't',
   bool excluded = false,
-}) =>
-    StandardTask(
-      name: name,
-      stepType: stepType,
-      totalSteps: steps,
-      trackingId: trackingId,
-      excludeFromHistory: excluded,
-    );
+}) => StandardTask(
+  name: name,
+  stepType: stepType,
+  totalSteps: steps,
+  trackingId: trackingId,
+  excludeFromHistory: excluded,
+);
 
 Node planTask(
   String name, {
@@ -25,47 +24,53 @@ Node planTask(
   int steps = 1,
   String trackingId = 't',
   bool excluded = false,
-}) =>
-    Node.leaf(
-      name,
-      stepType: stepType,
-      totalSteps: steps,
-      trackingId: trackingId,
-      excludeFromHistory: excluded,
-    );
+}) => Node.leaf(
+  name,
+  stepType: stepType,
+  totalSteps: steps,
+  trackingId: trackingId,
+  excludeFromHistory: excluded,
+);
 
 TrackedActivity tracked({
-  String nodeId = 'x',
+  String trackingId = 'x',
   String name = 'Reading',
   String stepType = 'single',
-}) =>
-    TrackedActivity(
-      id: 'a1',
-      nodeId: nodeId,
-      name: name,
-      colorValue: 0xFF123456,
-      stepType: stepType,
-      isActive: false,
-      isRoutine: true,
-      order: 7,
-    );
+}) => TrackedActivity(
+  id: 'a1',
+  trackingId: trackingId,
+  name: name,
+  colorValue: 0xFF123456,
+  stepType: stepType,
+  isActive: false,
+  isRoutine: true,
+  order: 7,
+);
 
 void main() {
   group('trackingChoices', () {
-    test('an edited standard task shows its new type, not the old plan copy', () {
-      // The task was a checkbox, a plan still holds that copy, then it became
-      // a task of 2 steps.
-      final choices = trackingChoices(
-        standardTasks: [
-          standard('Reading', stepType: 'stepByStep', steps: 2, trackingId: 'r'),
-        ],
-        planLeaves: [planTask('Reading', trackingId: 'r')],
-      );
-      expect(choices.length, 1);
-      expect(choices.single.stepType, 'stepByStep');
-      expect(choices.single.totalSteps, 2);
-      expect(choices.single.description, 'Пошаговая (2 шагов)');
-    });
+    test(
+      'an edited standard task shows its new type, not the old plan copy',
+      () {
+        // The task was a checkbox, a plan still holds that copy, then it became
+        // a task of 2 steps.
+        final choices = trackingChoices(
+          standardTasks: [
+            standard(
+              'Reading',
+              stepType: 'stepByStep',
+              steps: 2,
+              trackingId: 'r',
+            ),
+          ],
+          planLeaves: [planTask('Reading', trackingId: 'r')],
+        );
+        expect(choices.length, 1);
+        expect(choices.single.stepType, 'stepByStep');
+        expect(choices.single.totalSteps, 2);
+        expect(choices.single.description, 'Пошаговая (2 шагов)');
+      },
+    );
 
     test('plan tasks without a standard task are still offered', () {
       final choices = trackingChoices(
@@ -109,11 +114,11 @@ void main() {
 
     test('descriptions of the three kinds', () {
       TrackingChoice choice(String type, int steps) => TrackingChoice(
-            name: 'n',
-            stepType: type,
-            totalSteps: steps,
-            trackingId: 'id',
-          );
+        name: 'n',
+        stepType: type,
+        totalSteps: steps,
+        trackingId: 'id',
+      );
       expect(choice('single', 1).description, 'Одиночный чекбокс');
       expect(choice('duration', 1).description, 'Одиночный чекбокс');
       expect(choice('stepByStep', 5).description, 'Пошаговая (5 шагов)');
@@ -122,7 +127,12 @@ void main() {
     test('toNode carries what the tracking needs', () {
       final node = trackingChoices(
         standardTasks: [
-          standard('Reading', stepType: 'stepByStep', steps: 2, trackingId: 'r'),
+          standard(
+            'Reading',
+            stepType: 'stepByStep',
+            steps: 2,
+            trackingId: 'r',
+          ),
         ],
         planLeaves: const [],
       ).single.toNode();
@@ -136,14 +146,19 @@ void main() {
   group('trackedActivityFollowing', () {
     test('takes the new name and type, keeps everything else', () {
       final updated = trackedActivityFollowing(
-        tracked(nodeId: 'r'),
-        standard('Reading books', stepType: 'stepByStep', steps: 2, trackingId: 'r'),
+        tracked(trackingId: 'r'),
+        standard(
+          'Reading books',
+          stepType: 'stepByStep',
+          steps: 2,
+          trackingId: 'r',
+        ),
         previousTrackingId: 'r',
       )!;
       expect(updated.name, 'Reading books');
       expect(updated.stepType, 'stepByStep');
       expect(updated.id, 'a1');
-      expect(updated.nodeId, 'r');
+      expect(updated.trackingId, 'r');
       expect(updated.colorValue, 0xFF123456);
       expect(updated.isActive, isFalse);
       expect(updated.isRoutine, isTrue);
@@ -153,7 +168,7 @@ void main() {
     test('nothing to do when it already says the same', () {
       expect(
         trackedActivityFollowing(
-          tracked(nodeId: 'r', name: 'Reading', stepType: 'single'),
+          tracked(trackingId: 'r', name: 'Reading', stepType: 'single'),
           standard('Reading', trackingId: 'r'),
           previousTrackingId: 'r',
         ),
@@ -164,7 +179,7 @@ void main() {
     test('another task\'s activity is left alone', () {
       expect(
         trackedActivityFollowing(
-          tracked(nodeId: 'other'),
+          tracked(trackingId: 'other'),
           standard('Reading', stepType: 'duration', trackingId: 'r'),
           previousTrackingId: 'r',
         ),
@@ -174,12 +189,12 @@ void main() {
 
     test('found by the old tracking id when a rename changed it', () {
       final updated = trackedActivityFollowing(
-        tracked(nodeId: 'old-id'),
+        tracked(trackingId: 'old-id'),
         standard('New name', trackingId: 'new-id'),
         previousTrackingId: 'old-id',
       )!;
       expect(updated.name, 'New name');
-      expect(updated.nodeId, 'old-id');
+      expect(updated.trackingId, 'old-id');
     });
   });
 }

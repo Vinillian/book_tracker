@@ -6,39 +6,46 @@ import 'package:book_tracker/utils/node_copy.dart';
 
 void main() {
   group('universal supplementary time tracking', () {
-    test('old Node JSON loads with time available even without the legacy flag', () {
-      final node = Node.fromJson({
-        'name': 'Тайчи',
-        'children': [],
-        'stepType': 'single',
-        'totalSteps': 1,
-        'completedSteps': 0,
-        'timeTrackingEnabled': false,
-      });
-      expect(node.timeTrackingEnabled, isFalse);
-      expect(node.isTimeTrackingEnabled, isTrue);
-    });
+    test(
+      'old Node JSON loads with time available even without the legacy flag',
+      () {
+        final node = Node.fromJson({
+          'name': 'Тайчи',
+          'children': [],
+          'stepType': 'single',
+          'totalSteps': 1,
+          'completedSteps': 0,
+          'timeTrackingEnabled': false,
+        });
+        expect(node.timeTrackingEnabled, isFalse);
+        expect(node.isTimeTrackingEnabled, isTrue);
+      },
+    );
 
-    test('Node JSON and reset copies keep the time goal, but reset logged minutes', () {
-      final node = Node.leaf(
-        'Тайчи',
-        stepType: 'stepByStep',
-        totalSteps: 4,
-        targetMinutes: 90,
-      )
-        ..completedSteps = 2
-        ..loggedMinutes = 45;
-      final restored = Node.fromJson(node.toJson());
-      expect(restored.isTimeTrackingEnabled, isTrue);
-      expect(restored.targetMinutes, 90);
-      expect(restored.completedLeaves, 2);
-      expect(restored.totalLeaves, 4);
-      final copy = copyAndReset(restored);
-      expect(copy.targetMinutes, 90);
-      expect(copy.completedSteps, 0);
-      expect(copy.loggedMinutes, 0);
-      expect(copy.completedLeaves, 0);
-    });
+    test(
+      'Node JSON and reset copies keep the time goal, but reset logged minutes',
+      () {
+        final node =
+            Node.leaf(
+                'Тайчи',
+                stepType: 'stepByStep',
+                totalSteps: 4,
+                targetMinutes: 90,
+              )
+              ..completedSteps = 2
+              ..loggedMinutes = 45;
+        final restored = Node.fromJson(node.toJson());
+        expect(restored.isTimeTrackingEnabled, isTrue);
+        expect(restored.targetMinutes, 90);
+        expect(restored.completedLeaves, 2);
+        expect(restored.totalLeaves, 4);
+        final copy = copyAndReset(restored);
+        expect(copy.targetMinutes, 90);
+        expect(copy.completedSteps, 0);
+        expect(copy.loggedMinutes, 0);
+        expect(copy.completedLeaves, 0);
+      },
+    );
 
     test('legacy duration Node becomes checkbox + time and retains goal', () {
       final restored = Node.fromJson({
@@ -99,7 +106,7 @@ void main() {
 
     test('TrackedActivity continues to serialize legacy fields safely', () {
       final activity = TrackedActivity(
-        nodeId: 't',
+        trackingId: 't',
         name: 'Тайчи',
         colorValue: 0xFF2196F3,
         stepType: 'single',
