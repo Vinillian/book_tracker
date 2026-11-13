@@ -116,8 +116,16 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     if (choice == null || !mounted) return;
 
     final selectedDay = widget.targetDate ?? DateTime.now();
+    final hasSessionOnSelectedDay =
+        HistoryService.getLatestDurationEntryForNodeOnDay(
+          _node.id,
+          selectedDay,
+        ) !=
+        null;
     DateTime start;
     if (choice == 'continue') {
+      // A fallback to the current time is only an interval anchor. It must
+      // not turn an unscheduled task into a scheduled one.
       start = HistoryService.suggestDurationStart(
         nodeId: _node.id,
         day: selectedDay,
@@ -141,6 +149,13 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         pickedTime.hour,
         pickedTime.minute,
       );
+
+      // Only the first manually placed session establishes the task's
+      // planned start. Later sessions may use any interval without moving
+      // the task in the day plan.
+      if (!hasSessionOnSelectedDay) {
+        _node.startMinutes = pickedTime.hour * 60 + pickedTime.minute;
+      }
     }
 
     final end = start.add(Duration(minutes: minutes));
