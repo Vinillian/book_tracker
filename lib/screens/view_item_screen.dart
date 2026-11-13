@@ -153,7 +153,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
       // Only the first manually placed session establishes the task's
       // planned start. Later sessions may use any interval without moving
       // the task in the day plan.
-      if (!hasSessionOnSelectedDay) {
+      if (widget.targetDate != null && !hasSessionOnSelectedDay) {
         _node.startMinutes = pickedTime.hour * 60 + pickedTime.minute;
       }
     }
