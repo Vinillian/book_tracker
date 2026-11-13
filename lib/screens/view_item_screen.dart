@@ -125,13 +125,6 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
       );
     } else {
       final initial = _resolveEventDate();
-      final pickedDate = await showDatePicker(
-        context: context,
-        initialDate: DateUtils.dateOnly(initial),
-        firstDate: DateTime(1900),
-        lastDate: DateTime(2100),
-      );
-      if (pickedDate == null || !mounted) return;
       final pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.fromDateTime(initial),
@@ -142,9 +135,9 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
       );
       if (pickedTime == null || !mounted) return;
       start = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
+        selectedDay.year,
+        selectedDay.month,
+        selectedDay.day,
         pickedTime.hour,
         pickedTime.minute,
       );
