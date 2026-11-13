@@ -1,4 +1,3 @@
-
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -37,12 +36,12 @@ class TrackedActivity {
 
   // New field. ID 9 is intentionally unused by the old schema.
   @HiveField(9, defaultValue: '')
-  String trackingId;
+  late String trackingId;
 
   TrackedActivity({
     String? id,
     required String trackingId,
-    String legacyNodeId = '',
+    this.legacyNodeId = '',
     required this.name,
     required this.colorValue,
     required this.stepType,
@@ -50,12 +49,14 @@ class TrackedActivity {
     this.isRoutine = false,
     this.order = 0,
     this.timeTrackingEnabled = false,
-  })  : id = id ?? const Uuid().v4(),
-        legacyNodeId = legacyNodeId,
-        trackingId = trackingId.isNotEmpty ? trackingId : legacyNodeId {
+  }) : id = id ?? const Uuid().v4() {
+    this.trackingId = trackingId.isNotEmpty ? trackingId : legacyNodeId;
+
     // Old heatmap rows used duration as their primary type. Keep their row,
     // but normalize it to the checkbox progress type used by current tasks.
-    if (stepType == 'duration') stepType = 'single';
+    if (stepType == 'duration') {
+      stepType = 'single';
+    }
   }
 
   Map<String, dynamic> toJson() => {

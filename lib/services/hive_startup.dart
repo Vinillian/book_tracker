@@ -64,8 +64,9 @@ void registerAppHiveAdapters() {
   if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(HistoryEntryAdapter());
   if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(NoteAdapter());
   if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(StandardTaskAdapter());
-  if (!Hive.isAdapterRegistered(5))
+  if (!Hive.isAdapterRegistered(5)) {
     Hive.registerAdapter(TrackedActivityAdapter());
+  }
 }
 
 /// Opens each required box once. If a later box or migration fails, only boxes

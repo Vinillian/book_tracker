@@ -175,8 +175,9 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   /// Removes one log: its History entry goes and its minutes leave the task.
   void _removeLog(HistoryEntry entry) {
-    if (!context.read<AppState>().historyService.deleteEntryById(entry.id))
+    if (!context.read<AppState>().historyService.deleteEntryById(entry.id)) {
       return;
+    }
     setState(() {
       _node.loggedMinutes = math.max(
         0,
