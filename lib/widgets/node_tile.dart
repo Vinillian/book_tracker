@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/node.dart';
-import '../services/history_service.dart';
+import '../providers/app_state.dart';
 import '../utils/day_part.dart';
 import '../utils/format_minutes.dart';
 
@@ -62,7 +63,7 @@ class NodeTile extends StatelessWidget {
               onChanged: (_) {
                 onCheckboxChanged?.call();
                 if (!node.excludeFromHistory) {
-                  HistoryService.recordUniqueToggle(
+                  context.read<AppState>().historyService.recordUniqueToggle(
                     bookId: bookId,
                     node: node,
                     newValue: node.completed,
