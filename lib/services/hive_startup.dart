@@ -100,8 +100,8 @@ class HiveStartup {
           await openTracked<TrackedActivity>(names.trackedActivities);
 
       // NodeService.update may clean history for removed ids.
-      HistoryService.init(history);
-      migrateLegacyPlanIds(templates, notes);
+      final historyService = HistoryService(history);
+      migrateLegacyPlanIds(templates, notes, historyService);
 
       return OpenedHiveBoxes(
         templatesBox: templates,
@@ -130,8 +130,13 @@ class HiveStartup {
 
 /// Replaces reserved IDs on legacy day plans with unique IDs.
 /// Returns the number of updated plans; running it again changes nothing.
-int migrateLegacyPlanIds(Box<Node> templatesBox, Box<Note> notesBox) {
-  final nodeService = NodeService(templatesBox, NoteService(notesBox));
+int migrateLegacyPlanIds(
+  Box<Node> templatesBox,
+  Box<Note> notesBox,
+  HistoryService historyService,
+) {
+  final nodeService =
+      NodeService(templatesBox, NoteService(notesBox), historyService);
   var updated = 0;
 
   for (final plan in nodeService.plans) {
