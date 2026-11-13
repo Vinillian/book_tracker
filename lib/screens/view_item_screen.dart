@@ -8,7 +8,6 @@ import '../models/history_entry.dart';
 import '../models/node.dart';
 import '../models/tracked_activity.dart';
 import '../providers/app_state.dart';
-import '../services/history_service.dart';
 import '../utils/format_minutes.dart';
 
 class ViewItemScreen extends StatefulWidget {
@@ -69,7 +68,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
       _node.completed = newValue;
     });
     if (!_node.excludeFromHistory) {
-      HistoryService.recordUniqueToggle(
+      context.read<AppState>().historyService.recordUniqueToggle(
         bookId: widget.bookId,
         node: _node,
         newValue: newValue,
@@ -117,7 +116,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
     final selectedDay = widget.targetDate ?? DateTime.now();
     final hasSessionOnSelectedDay =
-        HistoryService.getLatestDurationEntryForNodeOnDay(
+        context.read<AppState>().historyService.getLatestDurationEntryForNodeOnDay(
           _node.id,
           selectedDay,
         ) !=
@@ -126,7 +125,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     if (choice == 'continue') {
       // A fallback to the current time is only an interval anchor. It must
       // not turn an unscheduled task into a scheduled one.
-      start = HistoryService.suggestDurationStart(
+      start = context.read<AppState>().historyService.suggestDurationStart(
         nodeId: _node.id,
         day: selectedDay,
         plannedStartMinutes: _node.startMinutes,
@@ -161,7 +160,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     final end = start.add(Duration(minutes: minutes));
     setState(() => _node.loggedMinutes += minutes);
     if (!_node.excludeFromHistory) {
-      HistoryService.recordDurationLog(
+      context.read<AppState>().historyService.recordDurationLog(
         bookId: widget.bookId,
         node: _node,
         minutes: minutes,
@@ -175,7 +174,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   /// Removes one log: its History entry goes and its minutes leave the task.
   void _removeLog(HistoryEntry entry) {
-    if (!HistoryService.deleteEntryById(entry.id)) return;
+    if (!context.read<AppState>().historyService.deleteEntryById(entry.id)) return;
     setState(() {
       _node.loggedMinutes =
           math.max(0, _node.loggedMinutes - (entry.minutes ?? 0));
@@ -339,7 +338,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     if (interval == null || !mounted) return;
     final minutes = interval.end.difference(interval.start).inMinutes;
     final oldMinutes = entry.minutes ?? 0;
-    if (!HistoryService.updateDurationLog(
+    if (!context.read<AppState>().historyService.updateDurationLog(
       id: entry.id,
       minutes: minutes,
       startedAt: interval.start,
@@ -402,7 +401,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         _tempSteps = newSteps;
       });
       if (!_node.excludeFromHistory) {
-        HistoryService.recordUniqueProgress(
+        context.read<AppState>().historyService.recordUniqueProgress(
           bookId: widget.bookId,
           node: _node,
           newSteps: newSteps,
@@ -416,7 +415,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   /// The task's logged times (History entries), newest first, each removable.
   List<Widget> _buildLogList() {
-    final logs = HistoryService.getDurationEntriesForNode(_node.id);
+    final logs = context.read<AppState>().historyService.getDurationEntriesForNode(_node.id);
     if (logs.isEmpty) return const [];
     return [
       const SizedBox(height: 16),
