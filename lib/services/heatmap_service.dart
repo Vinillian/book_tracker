@@ -11,6 +11,7 @@ class HeatmapService {
   Map<DateTime, Map<String, double>> getIntensityData() {
     final Map<DateTime, Map<String, double>> result = {};
     final Map<DateTime, Map<String, int>> durationMinutesByDay = {};
+    final Map<DateTime, Map<String, double>> progressDeltaByDay = {};
 
     // Собираем trackingId активных отслеживаемых задач.
     final activeTrackingIds = _trackedBox.values
@@ -35,19 +36,41 @@ class HeatmapService {
         continue;
       }
 
-      double intensity;
-      if (entry.stepType == 'single' && entry.completed == true) {
-        intensity = 1;
+      double delta;
+      if (entry.progressBefore != null && entry.progressAfter != null) {
+        delta = (entry.progressAfter! - entry.progressBefore!).toDouble();
+      } else if (entry.stepType == 'single' && entry.completed == true) {
+        // Legacy records contain only the latest positive snapshot.
+        delta = 1;
       } else if (entry.stepType == 'stepByStep' &&
           entry.completedSteps != null) {
-        intensity = entry.completedSteps!.toDouble();
+        // Legacy records contain only the latest progress snapshot.
+        delta = entry.completedSteps!.toDouble();
       } else {
         continue;
       }
 
-      final dayData = result.putIfAbsent(date, () => <String, double>{});
+      final dayData = progressDeltaByDay.putIfAbsent(
+        date,
+        () => <String, double>{},
+      );
       dayData[entry.trackingId] =
-          (dayData[entry.trackingId] ?? 0.0) + intensity;
+          (dayData[entry.trackingId] ?? 0.0) + delta;
+    }
+
+    // Apply the net progress change for each task/day. Reversals offset
+    // progress on the day they were recorded but never create positive points.
+    for (final dayEntry in progressDeltaByDay.entries) {
+      for (final activityEntry in dayEntry.value.entries) {
+        final netProgress = activityEntry.value < 0 ? 0.0 : activityEntry.value;
+        if (netProgress == 0) continue;
+        final dayData = result.putIfAbsent(
+          dayEntry.key,
+          () => <String, double>{},
+        );
+        dayData[activityEntry.key] =
+            (dayData[activityEntry.key] ?? 0.0) + netProgress;
+      }
     }
 
     // 20 minutes = 1 point. Keep partial points instead of rounding.

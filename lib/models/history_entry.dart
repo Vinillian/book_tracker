@@ -14,6 +14,7 @@ class HistoryEntry {
   @HiveField(2)
   String nodeId;        // ID экземпляра задачи (может меняться)
 
+  /// When the event occurred (the selected plan day and event time).
   @HiveField(3)
   DateTime date;
 
@@ -45,9 +46,17 @@ class HistoryEntry {
   @HiveField(11)
   DateTime? endedAt;
 
-  /// When the session was entered in the app. Null for legacy entries.
+  /// When this history entry was entered in the app. Null for legacy entries.
   @HiveField(12)
   DateTime? recordedAt;
+
+  /// Progress value before this event (0/1 for checkbox tasks, step count otherwise).
+  @HiveField(13)
+  int? progressBefore;
+
+  /// Progress value after this event (0/1 for checkbox tasks, step count otherwise).
+  @HiveField(14)
+  int? progressAfter;
 
   HistoryEntry({
     String? id,
@@ -63,6 +72,8 @@ class HistoryEntry {
     this.startedAt,
     this.endedAt,
     this.recordedAt,
+    this.progressBefore,
+    this.progressAfter,
   }) : id = id ?? const Uuid().v4();
 
   // для single-задачи
@@ -73,6 +84,7 @@ class HistoryEntry {
     required bool completed,
     required String trackingId,
     DateTime? date,
+    bool? previousCompleted,
   }) {
     return HistoryEntry(
       bookId: bookId,
@@ -82,6 +94,9 @@ class HistoryEntry {
       stepType: 'single',
       completed: completed,
       trackingId: trackingId,
+      progressBefore: (previousCompleted ?? false) ? 1 : 0,
+      progressAfter: completed ? 1 : 0,
+      recordedAt: DateTime.now(),
     );
   }
 
@@ -93,6 +108,7 @@ class HistoryEntry {
     required int completedSteps,
     required String trackingId,
     DateTime? date,
+    int? previousSteps,
   }) {
     return HistoryEntry(
       bookId: bookId,
@@ -102,6 +118,9 @@ class HistoryEntry {
       stepType: 'stepByStep',
       completedSteps: completedSteps,
       trackingId: trackingId,
+      progressBefore: previousSteps ?? 0,
+      progressAfter: completedSteps,
+      recordedAt: DateTime.now(),
     );
   }
 
@@ -147,6 +166,8 @@ class HistoryEntry {
       'startedAt': startedAt?.toIso8601String(),
       'endedAt': endedAt?.toIso8601String(),
       'recordedAt': recordedAt?.toIso8601String(),
+      'progressBefore': progressBefore,
+      'progressAfter': progressAfter,
     };
   }
 
@@ -171,6 +192,8 @@ class HistoryEntry {
       recordedAt: json['recordedAt'] == null
           ? null
           : DateTime.parse(json['recordedAt'] as String),
+      progressBefore: json['progressBefore'] as int?,
+      progressAfter: json['progressAfter'] as int?,
     );
   }
 }
