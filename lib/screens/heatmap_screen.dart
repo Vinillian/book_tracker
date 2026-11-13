@@ -31,8 +31,19 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
   String _monthName(int month) {
     const months = [
-      '', 'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
-      'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек',
+      '',
+      'Янв',
+      'Фев',
+      'Мар',
+      'Апр',
+      'Май',
+      'Июн',
+      'Июл',
+      'Авг',
+      'Сен',
+      'Окт',
+      'Ноя',
+      'Дек',
     ];
     return months[month];
   }
@@ -59,13 +70,12 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
     return Consumer<AppState>(
       builder: (context, appState, _) {
         // Сортируем активные задачи по order (если order одинаковый — по имени)
-        final trackedActivities = appState.trackedActivities
-            .where((t) => t.isActive)
-            .toList()
-          ..sort((a, b) {
-            if (a.order != b.order) return a.order.compareTo(b.order);
-            return a.name.compareTo(b.name);
-          });
+        final trackedActivities =
+            appState.trackedActivities.where((t) => t.isActive).toList()
+              ..sort((a, b) {
+                if (a.order != b.order) return a.order.compareTo(b.order);
+                return a.name.compareTo(b.name);
+              });
 
         final data = appState.heatmapIntensityData;
 
@@ -190,10 +200,12 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                           ),
                         ),
                         ...trackedActivities.map(
-                              (activity) => SizedBox(
+                          (activity) => SizedBox(
                             height: rowHeight,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
                               child: Text(
                                 activity.name,
                                 style: const TextStyle(fontSize: 9),
@@ -225,22 +237,26 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                 children: days.asMap().entries.map((entry) {
                                   final index = entry.key;
                                   final date = entry.value;
-                                  final showMonth = index == 0 || date.month != days[index - 1].month;
+                                  final showMonth =
+                                      index == 0 ||
+                                      date.month != days[index - 1].month;
                                   return Container(
                                     width: cellSize + 2,
                                     height: 28,
                                     alignment: Alignment.centerLeft,
                                     child: showMonth
                                         ? Padding(
-                                      padding: const EdgeInsets.only(left: 2),
-                                      child: Text(
-                                        _monthName(date.month),
-                                        style: const TextStyle(
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    )
+                                            padding: const EdgeInsets.only(
+                                              left: 2,
+                                            ),
+                                            child: Text(
+                                              _monthName(date.month),
+                                              style: const TextStyle(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          )
                                         : null,
                                   );
                                 }).toList(),
@@ -251,7 +267,8 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                               height: 28,
                               child: Row(
                                 children: days.map((date) {
-                                  final isToday = date.year == today.year &&
+                                  final isToday =
+                                      date.year == today.year &&
                                       date.month == today.month &&
                                       date.day == today.day;
                                   return Container(
@@ -259,15 +276,20 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                                     height: 28,
                                     decoration: isToday
                                         ? BoxDecoration(
-                                      border: Border.all(
-                                        color: Theme.of(context).colorScheme.primary,
-                                        width: 1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(3),
-                                    )
+                                            border: Border.all(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                              width: 1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              3,
+                                            ),
+                                          )
                                         : null,
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Text(
                                           '${date.day}',
@@ -285,46 +307,50 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                             ),
                             // Строки задач
                             ...trackedActivities.map(
-                                  (activity) => SizedBox(
+                              (activity) => SizedBox(
                                 height: rowHeight,
                                 child: Row(
-                                  children: days.map(
-                                        (date) {
-                                      final normalizedDate = DateTime(
-                                        date.year,
-                                        date.month,
-                                        date.day,
-                                      );
-                                      final intensity = data[normalizedDate]?[activity.nodeId] ?? 0.0;
-                                      final color = Color(activity.colorValue);
-                                      final isToday = normalizedDate.year == today.year &&
-                                          normalizedDate.month == today.month &&
-                                          normalizedDate.day == today.day;
+                                  children: days.map((date) {
+                                    final normalizedDate = DateTime(
+                                      date.year,
+                                      date.month,
+                                      date.day,
+                                    );
+                                    final intensity =
+                                        data[normalizedDate]?[activity
+                                            .trackingId] ??
+                                        0.0;
+                                    final color = Color(activity.colorValue);
+                                    final isToday =
+                                        normalizedDate.year == today.year &&
+                                        normalizedDate.month == today.month &&
+                                        normalizedDate.day == today.day;
 
-                                      return Container(
-                                        width: cellSize,
-                                        height: rowHeight - 2,
-                                        margin: const EdgeInsets.all(1),
-                                        decoration: BoxDecoration(
-                                          color: intensity == 0
-                                              ? Colors.grey.shade200
-                                              : color.withValues(
-                                            alpha: heatAlpha(
-                                              intensity,
-                                              isDuration: true,
-                                            ),
-                                          ),
-                                          borderRadius: BorderRadius.circular(2),
-                                          border: isToday
-                                              ? Border.all(
-                                            color: Theme.of(context).colorScheme.primary,
-                                            width: 1,
-                                          )
-                                              : null,
-                                        ),
-                                      );
-                                    },
-                                  ).toList(),
+                                    return Container(
+                                      width: cellSize,
+                                      height: rowHeight - 2,
+                                      margin: const EdgeInsets.all(1),
+                                      decoration: BoxDecoration(
+                                        color: intensity == 0
+                                            ? Colors.grey.shade200
+                                            : color.withValues(
+                                                alpha: heatAlpha(
+                                                  intensity,
+                                                  isDuration: true,
+                                                ),
+                                              ),
+                                        borderRadius: BorderRadius.circular(2),
+                                        border: isToday
+                                            ? Border.all(
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
+                                                width: 1,
+                                              )
+                                            : null,
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
                               ),
                             ),

@@ -6,13 +6,7 @@ import '../models/tracked_activity.dart';
 /// The ranges are calendar based: week starts on Monday, month starts on the
 /// first day of the current month, three months covers the current and two
 /// preceding calendar months, and year starts on January 1.
-enum TimeAnalyticsPeriod {
-  week,
-  month,
-  threeMonths,
-  year,
-  allTime,
-}
+enum TimeAnalyticsPeriod { week, month, threeMonths, year, allTime }
 
 extension TimeAnalyticsPeriodLabel on TimeAnalyticsPeriod {
   String get label {
@@ -89,7 +83,7 @@ class TimeAnalyticsService {
   }) {
     final trackedById = <String, TrackedActivity>{};
     for (final activity in trackedActivities) {
-      trackedById.putIfAbsent(activity.nodeId, () => activity);
+      trackedById.putIfAbsent(activity.trackingId, () => activity);
     }
 
     final namesById = <String, String>{};
@@ -147,8 +141,9 @@ class TimeAnalyticsService {
   }) {
     final currentDay = _day(now ?? DateTime.now());
     final durationEntries = entries
-        .where((entry) =>
-            entry.stepType == 'duration' && (entry.minutes ?? 0) > 0)
+        .where(
+          (entry) => entry.stepType == 'duration' && (entry.minutes ?? 0) > 0,
+        )
         .toList();
 
     final selectedDurationEntries = durationEntries
@@ -169,7 +164,9 @@ class TimeAnalyticsService {
       firstSessionDate: firstSessionDate,
     );
     final end = currentDay;
-    final daysInPeriod = end.isBefore(start) ? 0 : end.difference(start).inDays + 1;
+    final daysInPeriod = end.isBefore(start)
+        ? 0
+        : end.difference(start).inDays + 1;
 
     final byActivity = <String, int>{};
     final byDay = <DateTime, int>{};

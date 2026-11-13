@@ -8,7 +8,7 @@ TrackedActivity activity(
   String trackingId, {
   bool active = true,
 }) => TrackedActivity(
-  nodeId: trackingId,
+  trackingId: trackingId,
   name: name,
   colorValue: 0xFF2196F3,
   stepType: 'single',

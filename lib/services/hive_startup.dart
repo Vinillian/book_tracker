@@ -31,13 +31,13 @@ class HiveBoxNames {
   });
 
   factory HiveBoxNames.prefixed(String prefix) => HiveBoxNames(
-        templates: '${prefix}_templates',
-        settings: '${prefix}_settings',
-        history: '${prefix}_history',
-        notes: '${prefix}_notes',
-        standardTasks: '${prefix}_standard_tasks',
-        trackedActivities: '${prefix}_tracked_activities',
-      );
+    templates: '${prefix}_templates',
+    settings: '${prefix}_settings',
+    history: '${prefix}_history',
+    notes: '${prefix}_notes',
+    standardTasks: '${prefix}_standard_tasks',
+    trackedActivities: '${prefix}_tracked_activities',
+  );
 }
 
 class OpenedHiveBoxes {
@@ -64,7 +64,9 @@ void registerAppHiveAdapters() {
   if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(HistoryEntryAdapter());
   if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(NoteAdapter());
   if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(StandardTaskAdapter());
-  if (!Hive.isAdapterRegistered(5)) Hive.registerAdapter(TrackedActivityAdapter());
+  if (!Hive.isAdapterRegistered(5)) {
+    Hive.registerAdapter(TrackedActivityAdapter());
+  }
 }
 
 /// Opens each required box once. If a later box or migration fails, only boxes
@@ -95,9 +97,15 @@ class HiveStartup {
       final settings = await openTracked<AppSettings>(names.settings);
       final history = await openTracked<HistoryEntry>(names.history);
       final notes = await openTracked<Note>(names.notes);
-      final standardTasks = await openTracked<StandardTask>(names.standardTasks);
-      final trackedActivities =
-          await openTracked<TrackedActivity>(names.trackedActivities);
+      final standardTasks = await openTracked<StandardTask>(
+        names.standardTasks,
+      );
+      final trackedActivities = await openTracked<TrackedActivity>(
+        names.trackedActivities,
+      );
+
+      // Migrate the old TrackedActivity.nodeId field to trackingId.
+      await migrateLegacyTrackedActivityIds(trackedActivities);
 
       // NodeService.update may clean history for removed ids.
       final historyService = HistoryService(history);
@@ -128,6 +136,45 @@ class HiveStartup {
   }
 }
 
+/// Moves legacy TrackedActivity IDs into the new trackingId field.
+///
+/// Records are rewritten under their existing Hive keys. The migration is
+/// idempotent: once legacyNodeId is empty, subsequent runs do nothing.
+Future<int> migrateLegacyTrackedActivityIds(
+  Box<TrackedActivity> trackedActivitiesBox,
+) async {
+  var updated = 0;
+
+  for (final key in trackedActivitiesBox.keys.toList()) {
+    final activity = trackedActivitiesBox.get(key);
+    if (activity == null) continue;
+
+    // ignore: deprecated_member_use
+    final legacyNodeId = activity.legacyNodeId;
+    if (legacyNodeId.isEmpty) continue;
+
+    final migrated = TrackedActivity(
+      id: activity.id,
+      trackingId: activity.trackingId.isNotEmpty
+          ? activity.trackingId
+          : legacyNodeId,
+      legacyNodeId: '',
+      name: activity.name,
+      colorValue: activity.colorValue,
+      stepType: activity.stepType,
+      isActive: activity.isActive,
+      isRoutine: activity.isRoutine,
+      order: activity.order,
+      timeTrackingEnabled: activity.timeTrackingEnabled,
+    );
+
+    await trackedActivitiesBox.put(key, migrated);
+    updated++;
+  }
+
+  return updated;
+}
+
 /// Replaces reserved IDs on legacy day plans with unique IDs.
 /// Returns the number of updated plans; running it again changes nothing.
 int migrateLegacyPlanIds(
@@ -135,8 +182,11 @@ int migrateLegacyPlanIds(
   Box<Note> notesBox,
   HistoryService historyService,
 ) {
-  final nodeService =
-      NodeService(templatesBox, NoteService(notesBox), historyService);
+  final nodeService = NodeService(
+    templatesBox,
+    NoteService(notesBox),
+    historyService,
+  );
   var updated = 0;
 
   for (final plan in nodeService.plans) {

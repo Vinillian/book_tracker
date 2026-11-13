@@ -48,7 +48,8 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
     final now = DateTime.now();
     final target = widget.targetDate;
     if (target == null) return now;
-    final isToday = target.year == now.year &&
+    final isToday =
+        target.year == now.year &&
         target.month == now.month &&
         target.day == now.day;
     if (isToday) return now;
@@ -116,10 +117,10 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
     final selectedDay = widget.targetDate ?? DateTime.now();
     final hasSessionOnSelectedDay =
-        context.read<AppState>().historyService.getLatestDurationEntryForNodeOnDay(
-          _node.id,
-          selectedDay,
-        ) !=
+        context
+            .read<AppState>()
+            .historyService
+            .getLatestDurationEntryForNodeOnDay(_node.id, selectedDay) !=
         null;
     DateTime start;
     if (choice == 'continue') {
@@ -174,18 +175,22 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   /// Removes one log: its History entry goes and its minutes leave the task.
   void _removeLog(HistoryEntry entry) {
-    if (!context.read<AppState>().historyService.deleteEntryById(entry.id)) return;
+    if (!context.read<AppState>().historyService.deleteEntryById(entry.id)) {
+      return;
+    }
     setState(() {
-      _node.loggedMinutes =
-          math.max(0, _node.loggedMinutes - (entry.minutes ?? 0));
+      _node.loggedMinutes = math.max(
+        0,
+        _node.loggedMinutes - (entry.minutes ?? 0),
+      );
     });
     widget.onNodeUpdated();
   }
 
   Future<void> _editLog(HistoryEntry entry) async {
     var end = entry.endedAt ?? entry.date;
-    var start = entry.startedAt ??
-        end.subtract(Duration(minutes: entry.minutes ?? 0));
+    var start =
+        entry.startedAt ?? end.subtract(Duration(minutes: entry.minutes ?? 0));
     String? validationError;
 
     final interval = await showDialog<({DateTime start, DateTime end})>(
@@ -224,9 +229,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
               context: dialogContext,
               initialTime: TimeOfDay.fromDateTime(current),
               builder: (ctx, child) => MediaQuery(
-                data: MediaQuery.of(ctx).copyWith(
-                  alwaysUse24HourFormat: true,
-                ),
+                data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
                 child: child!,
               ),
             );
@@ -256,7 +259,10 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -287,11 +293,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                intervalControls(
-                  label: 'Начало',
-                  value: start,
-                  isStart: true,
-                ),
+                intervalControls(label: 'Начало', value: start, isStart: true),
                 const SizedBox(height: 16),
                 intervalControls(
                   label: 'Окончание',
@@ -347,8 +349,10 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
       return;
     }
     setState(() {
-      _node.loggedMinutes =
-          math.max(0, _node.loggedMinutes - oldMinutes + minutes);
+      _node.loggedMinutes = math.max(
+        0,
+        _node.loggedMinutes - oldMinutes + minutes,
+      );
     });
     widget.onNodeUpdated();
   }
@@ -415,7 +419,10 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
 
   /// The task's logged times (History entries), newest first, each removable.
   List<Widget> _buildLogList() {
-    final logs = context.read<AppState>().historyService.getDurationEntriesForNode(_node.id);
+    final logs = context
+        .read<AppState>()
+        .historyService
+        .getDurationEntriesForNode(_node.id);
     if (logs.isEmpty) return const [];
     return [
       const SizedBox(height: 16),
@@ -432,7 +439,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
           subtitle: Text(
             e.startedAt != null && e.endedAt != null
                 ? '${DateFormat('dd.MM HH:mm').format(e.startedAt!)} – '
-                    '${DateFormat('dd.MM HH:mm').format(e.endedAt!)}'
+                      '${DateFormat('dd.MM HH:mm').format(e.endedAt!)}'
                 : DateFormat('dd.MM HH:mm').format(e.date),
           ),
           trailing: Row(
@@ -460,10 +467,10 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
   }
 
   /// Ищет запись TrackedActivity для этого узла по trackingId
-  /// (TrackedActivity.nodeId исторически хранит именно trackingId, см. #79).
+  /// (TrackedActivity.trackingId исторически хранит именно trackingId, см. #79).
   TrackedActivity? _findTrackedActivity(AppState appState) {
     for (final a in appState.trackedActivities) {
-      if (a.nodeId == _node.trackingId) {
+      if (a.trackingId == _node.trackingId) {
         return a;
       }
     }
@@ -475,7 +482,7 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
       // Уже была запись, но неактивна (снята с отслеживания ранее) — включаем обратно.
       final updated = TrackedActivity(
         id: existing.id,
-        nodeId: existing.nodeId,
+        trackingId: existing.trackingId,
         name: existing.name,
         colorValue: existing.colorValue,
         stepType: existing.stepType,
@@ -492,13 +499,14 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
           ? 0
           : activities.map((a) => a.order).reduce((a, b) => a > b ? a : b);
       final newActivity = TrackedActivity(
-        nodeId: _node.trackingId,
+        trackingId: _node.trackingId,
         name: _node.name,
         colorValue: Colors.blue.toARGB32(),
         stepType: _node.stepType,
         isActive: true,
         order: maxOrder + 1,
-        timeTrackingEnabled: _node.isTimeTrackingEnabled ||
+        timeTrackingEnabled:
+            _node.isTimeTrackingEnabled ||
             appState.historyBox.values.any(
               (entry) =>
                   entry.trackingId == _node.trackingId &&
@@ -534,155 +542,170 @@ class _ViewItemScreenState extends State<ViewItemScreen> {
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Название: ${_node.name}',
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : 'Пошаговый') : 'Папка'}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    if (hasChildren && isLeaf)
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        'Подзадач: ${_node.children.length}. Общий прогресс: '
-                        '${_node.completedLeaves}/${_node.totalLeaves}',
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        'Название: ${_node.name}',
+                        style: const TextStyle(fontSize: 18),
                       ),
-                    if (_node.excludeFromHistory)
-                      const Text(
-                        ' (не учитывается в прогрессе)',
-                        style: TextStyle(fontSize: 14, color: Colors.orange),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Тип: ${isLeaf ? (isSingle ? 'Одиночный чекбокс' : 'Пошаговый') : 'Папка'}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
                       ),
-                    if (isTrackable) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(
-                            isTracked ? Icons.show_chart : Icons.visibility_off,
-                            size: 18,
-                            color: isTracked ? Colors.green : Colors.grey,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isTracked
-                                ? 'Отслеживается на heatmap'
-                                : 'Не отслеживается на heatmap',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isTracked ? Colors.green : Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (!isTracked)
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            onPressed: () =>
-                                _quickAddToTracking(appState, trackedActivity),
-                            icon: const Icon(Icons.add_chart, size: 18),
-                            label: const Text('Добавить в отслеживаемые'),
+                      if (hasChildren && isLeaf)
+                        Text(
+                          'Подзадач: ${_node.children.length}. Общий прогресс: '
+                          '${_node.completedLeaves}/${_node.totalLeaves}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
                           ),
                         ),
+                      if (_node.excludeFromHistory)
+                        const Text(
+                          ' (не учитывается в прогрессе)',
+                          style: TextStyle(fontSize: 14, color: Colors.orange),
+                        ),
+                      if (isTrackable) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(
+                              isTracked
+                                  ? Icons.show_chart
+                                  : Icons.visibility_off,
+                              size: 18,
+                              color: isTracked ? Colors.green : Colors.grey,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isTracked
+                                  ? 'Отслеживается на heatmap'
+                                  : 'Не отслеживается на heatmap',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isTracked ? Colors.green : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (!isTracked)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              onPressed: () => _quickAddToTracking(
+                                appState,
+                                trackedActivity,
+                              ),
+                              icon: const Icon(Icons.add_chart, size: 18),
+                              label: const Text('Добавить в отслеживаемые'),
+                            ),
+                          ),
+                      ],
                     ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (isLeaf && isSingle) ...[
+                const Text(
+                  'Прогресс:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                CheckboxListTile(
+                  title: const Text('Выполнено'),
+                  value: _node.completed,
+                  onChanged: _onToggle,
+                ),
+              ] else if (isLeaf) ...[
+                const Text(
+                  'Прогресс:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text('Всего шагов: ${_node.totalSteps}'),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Slider(
+                        value: _tempSteps.toDouble(),
+                        min: 0,
+                        max: _node.totalSteps.toDouble(),
+                        divisions: _node.totalSteps,
+                        onChanged: _onSliderChanged,
+                        onChangeEnd: _onSliderChangeEnd,
+                      ),
+                    ),
+                    Text('$_tempSteps/${_node.totalSteps}'),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (isLeaf && isSingle) ...[
-              const Text(
-                'Прогресс:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              CheckboxListTile(
-                title: const Text('Выполнено'),
-                value: _node.completed,
-                onChanged: _onToggle,
-              ),
-            ] else if (isLeaf) ...[
-              const Text(
-                'Прогресс:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              Text('Всего шагов: ${_node.totalSteps}'),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Slider(
-                      value: _tempSteps.toDouble(),
-                      min: 0,
-                      max: _node.totalSteps.toDouble(),
-                      divisions: _node.totalSteps,
-                      onChanged: _onSliderChanged,
-                      onChangeEnd: _onSliderChangeEnd,
-                    ),
-                  ),
-                  Text('$_tempSteps/${_node.totalSteps}'),
-                ],
-              ),
-            ] else if (!isLeaf) ...[
-              const Text(
-                'Это папка. Нажмите "Назад", чтобы вернуться.',
-                style: TextStyle(fontSize: 16),
-              ),
-            ],
-            if (isLeaf) ...[
-              const SizedBox(height: 20),
-              const Text(
-                'Учёт времени:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                durationProgressLabel(_node.loggedMinutes, _node.targetMinutes),
-                style: TextStyle(
-                  fontSize: 18,
-                  color: _node.timeGoalReached ? Colors.green : null,
-                ),
-              ),
-              if ((_node.targetMinutes ?? 0) > 0) ...[
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: (_node.loggedMinutes / _node.targetMinutes!)
-                      .clamp(0.0, 1.0),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    _node.timeGoalReached
-                        ? Colors.green
-                        : Theme.of(context).colorScheme.primary,
-                  ),
+              ] else if (!isLeaf) ...[
+                const Text(
+                  'Это папка. Нажмите "Назад", чтобы вернуться.',
+                  style: TextStyle(fontSize: 16),
                 ),
               ],
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final m in const [5, 15, 30, 60])
-                    ActionChip(
-                      label: Text('+ ${formatDuration(m)}'),
-                      onPressed: () => _addMinutes(m),
+              if (isLeaf) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  'Учёт времени:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  durationProgressLabel(
+                    _node.loggedMinutes,
+                    _node.targetMinutes,
+                  ),
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: _node.timeGoalReached ? Colors.green : null,
+                  ),
+                ),
+                if ((_node.targetMinutes ?? 0) > 0) ...[
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: (_node.loggedMinutes / _node.targetMinutes!).clamp(
+                      0.0,
+                      1.0,
                     ),
-                  ActionChip(
-                    avatar: const Icon(Icons.edit, size: 16),
-                    label: const Text('Своё…'),
-                    onPressed: _addCustomMinutes,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _node.timeGoalReached
+                          ? Colors.green
+                          : Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ],
-              ),
-              ..._buildLogList(),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final m in const [5, 15, 30, 60])
+                      ActionChip(
+                        label: Text('+ ${formatDuration(m)}'),
+                        onPressed: () => _addMinutes(m),
+                      ),
+                    ActionChip(
+                      avatar: const Icon(Icons.edit, size: 16),
+                      label: const Text('Своё…'),
+                      onPressed: _addCustomMinutes,
+                    ),
+                  ],
+                ),
+                ..._buildLogList(),
+              ],
             ],
-          ],
-        ),
+          ),
         ),
       ),
     );

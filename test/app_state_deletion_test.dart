@@ -10,37 +10,34 @@ import 'package:book_tracker/models/standard_task.dart';
 import 'package:book_tracker/models/tracked_activity.dart';
 import 'package:book_tracker/providers/app_state.dart';
 
-Node book(String name) => Node(
-      name: name,
-      children: [Node.leaf('chapter')],
-      category: 'book',
-    );
+Node book(String name) =>
+    Node(name: name, children: [Node.leaf('chapter')], category: 'book');
 
 Node plan(int day) => Node(
-      name: 'P$day',
-      children: [Node.leaf('task $day')],
-      category: 'planner',
-      plannedDate: DateTime(2026, 11, day),
-    );
+  name: 'P$day',
+  children: [Node.leaf('task $day')],
+  category: 'planner',
+  plannedDate: DateTime(2026, 11, day),
+);
 
 Note noteOf(Node node, String content) =>
     Note(content: content, linkedNodeId: node.id);
 
 HistoryEntry entryOf(Node root, String id) => HistoryEntry(
-      id: id,
-      bookId: root.id,
-      nodeId: root.children.first.id,
-      date: DateTime(2026, 11, 1),
-      nodeName: 'n',
-      stepType: 'single',
-      completed: true,
-      trackingId: 't-$id',
-    );
+  id: id,
+  bookId: root.id,
+  nodeId: root.children.first.id,
+  date: DateTime(2026, 11, 1),
+  nodeName: 'n',
+  stepType: 'single',
+  completed: true,
+  trackingId: 't-$id',
+);
 
-TrackedActivity activity(String id, String nodeId, String name) =>
+TrackedActivity activity(String id, String trackingId, String name) =>
     TrackedActivity(
       id: id,
-      nodeId: nodeId,
+      trackingId: trackingId,
       name: name,
       colorValue: 0xFF123456,
       stepType: 'single',
@@ -64,7 +61,7 @@ class Env extends Boxes {
   final AppState app;
 
   Env(this.app, Boxes b)
-      : super(b.nodes, b.notes, b.history, b.standard, b.tracked);
+    : super(b.nodes, b.notes, b.history, b.standard, b.tracked);
 }
 
 void main() {
@@ -141,27 +138,32 @@ void main() {
       );
     });
 
-    test('committing erases the node, its notes and its History only',
-        () async {
-      await withApp(
-        (env) async {
-          final a = env.app.books.firstWhere((b) => b.name == 'A');
-          env.app.hideNodeForDeletion(a);
-          env.app.commitNodeDeletion(a);
+    test(
+      'committing erases the node, its notes and its History only',
+      () async {
+        await withApp(
+          (env) async {
+            final a = env.app.books.firstWhere((b) => b.name == 'A');
+            env.app.hideNodeForDeletion(a);
+            env.app.commitNodeDeletion(a);
 
-          expect(env.nodes.values.map((n) => n.name), ['B']);
-          expect(env.notes.values.map((n) => n.content), ['note of B']);
-          expect(env.history.values.map((h) => h.id), ['h-B']);
-        },
-        seed: (env) async {
-          final a = book('A');
-          final b = book('B');
-          await env.nodes.addAll([a, b]);
-          await env.notes.addAll([noteOf(a, 'note of A'), noteOf(b, 'note of B')]);
-          await env.history.addAll([entryOf(a, 'h-A'), entryOf(b, 'h-B')]);
-        },
-      );
-    });
+            expect(env.nodes.values.map((n) => n.name), ['B']);
+            expect(env.notes.values.map((n) => n.content), ['note of B']);
+            expect(env.history.values.map((h) => h.id), ['h-B']);
+          },
+          seed: (env) async {
+            final a = book('A');
+            final b = book('B');
+            await env.nodes.addAll([a, b]);
+            await env.notes.addAll([
+              noteOf(a, 'note of A'),
+              noteOf(b, 'note of B'),
+            ]);
+            await env.history.addAll([entryOf(a, 'h-A'), entryOf(b, 'h-B')]);
+          },
+        );
+      },
+    );
 
     test('committing a node that was not hidden does nothing', () async {
       await withApp(
@@ -211,76 +213,82 @@ void main() {
       );
     });
 
-    test('a hidden plan is not found for its date until it is restored',
-        () async {
-      await withApp(
-        (env) async {
-          final day = DateTime(2026, 11, 5);
-          final p = env.app.planForDate(day)!;
-          env.app.hideNodeForDeletion(p);
-          expect(env.app.planForDate(day), isNull);
-          env.app.restoreNode(p);
-          expect(env.app.planForDate(day), isNotNull);
-        },
-        seed: (env) async {
-          await env.nodes.add(plan(5));
-        },
-      );
-    });
+    test(
+      'a hidden plan is not found for its date until it is restored',
+      () async {
+        await withApp(
+          (env) async {
+            final day = DateTime(2026, 11, 5);
+            final p = env.app.planForDate(day)!;
+            env.app.hideNodeForDeletion(p);
+            expect(env.app.planForDate(day), isNull);
+            env.app.restoreNode(p);
+            expect(env.app.planForDate(day), isNotNull);
+          },
+          seed: (env) async {
+            await env.nodes.add(plan(5));
+          },
+        );
+      },
+    );
 
-    test('the listeners hear each step once, and nothing when nothing changed',
-        () async {
-      await withApp(
-        (env) async {
-          var heard = 0;
-          env.app.addListener(() => heard++);
-          final a = env.app.books.first;
+    test(
+      'the listeners hear each step once, and nothing when nothing changed',
+      () async {
+        await withApp(
+          (env) async {
+            var heard = 0;
+            env.app.addListener(() => heard++);
+            final a = env.app.books.first;
 
-          env.app.restoreNode(a); // not hidden: nothing to restore
-          expect(heard, 0);
-          env.app.hideNodeForDeletion(a);
-          expect(heard, 1);
-          env.app.restoreNode(a);
-          expect(heard, 2);
-        },
-        seed: (env) async {
-          await env.nodes.add(book('A'));
-        },
-      );
-    });
+            env.app.restoreNode(a); // not hidden: nothing to restore
+            expect(heard, 0);
+            env.app.hideNodeForDeletion(a);
+            expect(heard, 1);
+            env.app.restoreNode(a);
+            expect(heard, 2);
+          },
+          seed: (env) async {
+            await env.nodes.add(book('A'));
+          },
+        );
+      },
+    );
   });
 
   group('several nodes at once', () {
-    test('hide all, restore one, commit all: only the still hidden are erased',
-        () async {
-      await withApp(
-        (env) async {
-          final a = env.app.plans.firstWhere((p) => p.name == 'P1');
-          final b = env.app.plans.firstWhere((p) => p.name == 'P2');
-          final c = env.app.plans.firstWhere((p) => p.name == 'P3');
-          env.app.hideNodesForDeletion([a, b, c]);
-          expect(env.app.plans, isEmpty);
+    test(
+      'hide all, restore one, commit all: only the still hidden are erased',
+      () async {
+        await withApp(
+          (env) async {
+            final a = env.app.plans.firstWhere((p) => p.name == 'P1');
+            final b = env.app.plans.firstWhere((p) => p.name == 'P2');
+            final c = env.app.plans.firstWhere((p) => p.name == 'P3');
+            env.app.hideNodesForDeletion([a, b, c]);
+            expect(env.app.plans, isEmpty);
 
-          env.app.restoreNodes([a]);
-          expect(env.app.plans.map((p) => p.name), ['P1']);
+            env.app.restoreNodes([a]);
+            expect(env.app.plans.map((p) => p.name), ['P1']);
 
-          env.app.commitNodesDeletion([a, b, c]);
-          expect(env.nodes.values.map((n) => n.name), ['P1']);
-          expect(env.notes.values.map((n) => n.content), ['of P1']);
-        },
-        seed: (env) async {
-          final a = plan(1);
-          final b = plan(2);
-          final c = plan(3);
-          await env.nodes.addAll([a, b, c]);
-          await env.notes.addAll([
-            noteOf(a, 'of P1'),
-            noteOf(b, 'of P2'),
-            noteOf(c, 'of P3'),
-          ]);
-        },
-      );
-    });
+            env.app.commitNodesDeletion([a, b, c]);
+            expect(env.nodes.values.map((n) => n.name), ['P1']);
+            expect(env.notes.values.map((n) => n.content), ['of P1']);
+          },
+          seed: (env) async {
+            final a = plan(1);
+            final b = plan(2);
+            final c = plan(3);
+            await env.nodes.addAll([a, b, c]);
+            await env.notes.addAll([
+              noteOf(a, 'of P1'),
+              noteOf(b, 'of P2'),
+              noteOf(c, 'of P3'),
+            ]);
+          },
+        );
+      },
+    );
 
     test('one notification for a whole batch', () async {
       await withApp(
@@ -346,31 +354,38 @@ void main() {
       await withApp(
         (env) async {
           env.app.updateStandardTask('b', std('b', 'B renamed'));
-          expect(
-            env.standard.values.map((t) => t.name),
-            ['A', 'B renamed', 'C'],
-          );
+          expect(env.standard.values.map((t) => t.name), [
+            'A',
+            'B renamed',
+            'C',
+          ]);
         },
         seed: (env) async {
-          await env.standard.addAll([std('a', 'A'), std('b', 'B'), std('c', 'C')]);
+          await env.standard.addAll([
+            std('a', 'A'),
+            std('b', 'B'),
+            std('c', 'C'),
+          ]);
         },
       );
     });
 
-    test('update and delete work for tasks stored under their id too',
-        () async {
-      await withApp(
-        (env) async {
-          env.app.updateStandardTask('x', std('x', 'X renamed'));
-          expect(env.standard.get('x')!.name, 'X renamed');
-          env.app.deleteStandardTask('x');
-          expect(env.standard.isEmpty, isTrue);
-        },
-        seed: (env) async {
-          await env.standard.put('x', std('x', 'X'));
-        },
-      );
-    });
+    test(
+      'update and delete work for tasks stored under their id too',
+      () async {
+        await withApp(
+          (env) async {
+            env.app.updateStandardTask('x', std('x', 'X renamed'));
+            expect(env.standard.get('x')!.name, 'X renamed');
+            env.app.deleteStandardTask('x');
+            expect(env.standard.isEmpty, isTrue);
+          },
+          seed: (env) async {
+            await env.standard.put('x', std('x', 'X'));
+          },
+        );
+      },
+    );
 
     test('an unknown id changes nothing and does not notify', () async {
       await withApp(
@@ -395,45 +410,55 @@ void main() {
           expect(env.standard.values.map((t) => t.id), ['a', 'c']);
         },
         seed: (env) async {
-          await env.standard.addAll([std('a', 'A'), std('b', 'B'), std('c', 'C')]);
-        },
-      );
-    });
-
-    test('renaming a standard task reaches its tracked activity (#173)',
-        () async {
-      await withApp(
-        (env) async {
-          env.app.updateStandardTask(
-            's1',
-            std('s1', 'Чтение книг', trackingId: 'X'),
-          );
-          final a = env.tracked.values.firstWhere((t) => t.id == 'a1');
-          final other = env.tracked.values.firstWhere((t) => t.id == 'a2');
-          expect(a.name, 'Чтение книг');
-          expect(a.nodeId, 'X');
-          expect(other.name, 'Йога');
-        },
-        seed: (env) async {
-          await env.standard.add(std('s1', 'Чтение', trackingId: 'X'));
-          await env.tracked.addAll([
-            activity('a1', 'X', 'Чтение'),
-            activity('a2', 'Y', 'Йога'),
+          await env.standard.addAll([
+            std('a', 'A'),
+            std('b', 'B'),
+            std('c', 'C'),
           ]);
         },
       );
     });
+
+    test(
+      'renaming a standard task reaches its tracked activity (#173)',
+      () async {
+        await withApp(
+          (env) async {
+            env.app.updateStandardTask(
+              's1',
+              std('s1', 'Чтение книг', trackingId: 'X'),
+            );
+            final a = env.tracked.values.firstWhere((t) => t.id == 'a1');
+            final other = env.tracked.values.firstWhere((t) => t.id == 'a2');
+            expect(a.name, 'Чтение книг');
+            expect(a.trackingId, 'X');
+            expect(other.name, 'Йога');
+          },
+          seed: (env) async {
+            await env.standard.add(std('s1', 'Чтение', trackingId: 'X'));
+            await env.tracked.addAll([
+              activity('a1', 'X', 'Чтение'),
+              activity('a2', 'Y', 'Йога'),
+            ]);
+          },
+        );
+      },
+    );
   });
 
   group('tracked activities by id', () {
     test('update and delete find the activity by its id', () async {
       await withApp(
         (env) async {
-          env.app.updateTrackedActivity('a2', activity('a2', 'Y', 'Йога утром'));
-          expect(
-            env.tracked.values.map((t) => t.name),
-            ['Чтение', 'Йога утром', 'Бег'],
+          env.app.updateTrackedActivity(
+            'a2',
+            activity('a2', 'Y', 'Йога утром'),
           );
+          expect(env.tracked.values.map((t) => t.name), [
+            'Чтение',
+            'Йога утром',
+            'Бег',
+          ]);
           env.app.deleteTrackedActivity('a1');
           expect(env.tracked.values.map((t) => t.id), ['a2', 'a3']);
         },

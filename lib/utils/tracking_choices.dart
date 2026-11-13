@@ -26,12 +26,12 @@ class TrackingChoice {
   /// A throw-away task carrying the primary progress type and tracking id;
   /// independent time sessions are available for all task progress types.
   Node toNode() => Node.leaf(
-        name,
-        stepType: stepType,
-        totalSteps: totalSteps,
-        trackingId: trackingId,
-        timeTrackingEnabled: timeTrackingEnabled,
-      );
+    name,
+    stepType: stepType,
+    totalSteps: totalSteps,
+    trackingId: trackingId,
+    timeTrackingEnabled: timeTrackingEnabled,
+  );
 }
 
 /// The tasks offered for tracking: every standard task first, with its own
@@ -85,11 +85,12 @@ TrackedActivity? trackedActivityFollowing(
   required String previousTrackingId,
   bool hasDurationHistory = false,
 }) {
-  if (activity.nodeId != previousTrackingId &&
-      activity.nodeId != task.trackingId) {
+  if (activity.trackingId != previousTrackingId &&
+      activity.trackingId != task.trackingId) {
     return null;
   }
-  final nextTimeTrackingEnabled = activity.timeTrackingEnabled ||
+  final nextTimeTrackingEnabled =
+      activity.timeTrackingEnabled ||
       task.timeTrackingEnabled ||
       hasDurationHistory;
   if (activity.name == task.name &&
@@ -99,7 +100,7 @@ TrackedActivity? trackedActivityFollowing(
   }
   return TrackedActivity(
     id: activity.id,
-    nodeId: activity.nodeId,
+    trackingId: activity.trackingId,
     name: task.name,
     colorValue: activity.colorValue,
     stepType: task.stepType,

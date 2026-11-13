@@ -9,7 +9,8 @@ class TrackedActivitiesScreen extends StatefulWidget {
   const TrackedActivitiesScreen({super.key});
 
   @override
-  State<TrackedActivitiesScreen> createState() => _TrackedActivitiesScreenState();
+  State<TrackedActivitiesScreen> createState() =>
+      _TrackedActivitiesScreenState();
 }
 
 class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
@@ -56,7 +57,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
     // Проверяем дубликат
     TrackedActivity? existing;
     for (final a in appState.trackedActivities) {
-      if (a.nodeId == selectedNode.trackingId) {
+      if (a.trackingId == selectedNode.trackingId) {
         existing = a;
         break;
       }
@@ -66,7 +67,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       if (!existing.isActive) {
         final updated = TrackedActivity(
           id: existing.id,
-          nodeId: existing.nodeId,
+          trackingId: existing.trackingId,
           name: existing.name,
           colorValue: existing.colorValue,
           stepType: existing.stepType,
@@ -74,7 +75,8 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
           isRoutine: existing.isRoutine,
           order: existing.order,
           timeTrackingEnabled:
-              existing.timeTrackingEnabled || selectedNode.isTimeTrackingEnabled,
+              existing.timeTrackingEnabled ||
+              selectedNode.isTimeTrackingEnabled,
         );
         appState.updateTrackedActivity(existing.id, updated);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -96,17 +98,20 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
     if (selectedColor == null) return;
 
     // Максимальный order для новой задачи
-    final maxOrder = _activities.isEmpty ? 0 : _activities.map((a) => a.order).reduce((a, b) => a > b ? a : b);
+    final maxOrder = _activities.isEmpty
+        ? 0
+        : _activities.map((a) => a.order).reduce((a, b) => a > b ? a : b);
     final newOrder = maxOrder + 1;
 
     final newActivity = TrackedActivity(
-      nodeId: selectedNode.trackingId,
+      trackingId: selectedNode.trackingId,
       name: selectedNode.name,
       colorValue: selectedColor.toARGB32(),
       stepType: selectedNode.stepType,
       isActive: true,
       order: newOrder,
-      timeTrackingEnabled: selectedNode.isTimeTrackingEnabled ||
+      timeTrackingEnabled:
+          selectedNode.isTimeTrackingEnabled ||
           appState.historyBox.values.any(
             (entry) =>
                 entry.trackingId == selectedNode.trackingId &&
@@ -130,10 +135,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
           children: _presetColors.map((color) {
             return GestureDetector(
               onTap: () => Navigator.pop(ctx, color),
-              child: CircleAvatar(
-                backgroundColor: color,
-                radius: 25,
-              ),
+              child: CircleAvatar(backgroundColor: color, radius: 25),
             );
           }).toList(),
         ),
@@ -149,7 +151,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
     final appState = Provider.of<AppState>(context, listen: false);
     final updated = TrackedActivity(
       id: activity.id,
-      nodeId: activity.nodeId,
+      trackingId: activity.trackingId,
       name: activity.name,
       colorValue: newColor.toARGB32(),
       stepType: activity.stepType,
@@ -167,7 +169,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
     final appState = Provider.of<AppState>(context, listen: false);
     final updated = TrackedActivity(
       id: activity.id,
-      nodeId: activity.nodeId,
+      trackingId: activity.trackingId,
       name: activity.name,
       colorValue: activity.colorValue,
       stepType: activity.stepType,
@@ -186,7 +188,9 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Удалить задачу?'),
-        content: Text('Задача "${activity.name}" больше не будет отслеживаться.'),
+        content: Text(
+          'Задача "${activity.name}" больше не будет отслеживаться.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -222,7 +226,7 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
       if (activity.order != i) {
         final updated = TrackedActivity(
           id: activity.id,
-          nodeId: activity.nodeId,
+          trackingId: activity.trackingId,
           name: activity.name,
           colorValue: activity.colorValue,
           stepType: activity.stepType,
@@ -248,7 +252,9 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
         final currentActivities = appState.trackedActivities.toList()
           ..sort((a, b) => a.order.compareTo(b.order));
         if (_activities.length != currentActivities.length ||
-            _activities.any((a) => !currentActivities.any((b) => b.id == a.id))) {
+            _activities.any(
+              (a) => !currentActivities.any((b) => b.id == a.id),
+            )) {
           _activities = currentActivities;
         }
 
@@ -256,57 +262,64 @@ class _TrackedActivitiesScreenState extends State<TrackedActivitiesScreen> {
           appBar: AppBar(
             title: const Text('Отслеживаемые задачи'),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: _addActivity,
-              ),
+              IconButton(icon: const Icon(Icons.add), onPressed: _addActivity),
             ],
           ),
           body: _activities.isEmpty
               ? const Center(
-            child: Text('Нет отслеживаемых задач. Нажмите + для добавления.'),
-          )
+                  child: Text(
+                    'Нет отслеживаемых задач. Нажмите + для добавления.',
+                  ),
+                )
               : ReorderableListView.builder(
-            itemCount: _activities.length,
-            onReorder: _onReorder,
-            itemBuilder: (ctx, index) {
-              final activity = _activities[index];
-              return Card(
-                key: Key(activity.id),
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: ListTile(
-                  leading: GestureDetector(
-                    onTap: () => _changeColor(activity),
-                    child: CircleAvatar(
-                      backgroundColor: Color(activity.colorValue),
-                      child: const Icon(Icons.color_lens, color: Colors.white, size: 18),
-                    ),
-                  ),
-                  title: Text(activity.name),
-                  subtitle: Text(
-                    activity.stepType == 'single' ? 'Чекбокс' : 'Шаги',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Switch(
-                        value: activity.isActive,
-                        onChanged: (value) => _toggleActive(activity, value),
+                  itemCount: _activities.length,
+                  onReorder: _onReorder,
+                  itemBuilder: (ctx, index) {
+                    final activity = _activities[index];
+                    return Card(
+                      key: Key(activity.id),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _deleteActivity(activity),
+                      child: ListTile(
+                        leading: GestureDetector(
+                          onTap: () => _changeColor(activity),
+                          child: CircleAvatar(
+                            backgroundColor: Color(activity.colorValue),
+                            child: const Icon(
+                              Icons.color_lens,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                        title: Text(activity.name),
+                        subtitle: Text(
+                          activity.stepType == 'single' ? 'Чекбокс' : 'Шаги',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Switch(
+                              value: activity.isActive,
+                              onChanged: (value) =>
+                                  _toggleActive(activity, value),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () => _deleteActivity(activity),
+                            ),
+                            const ReorderableDragStartListener(
+                              index: 0, // будет переопределено
+                              child: Icon(Icons.drag_handle),
+                            ),
+                          ],
+                        ),
                       ),
-                      const ReorderableDragStartListener(
-                        index: 0, // будет переопределено
-                        child: Icon(Icons.drag_handle),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         );
       },
     );

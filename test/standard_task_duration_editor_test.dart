@@ -57,8 +57,7 @@ void main() {
   setUp(() async {
     registerAppHiveAdapters();
     final boxes = await HiveStartup(
-      openBox: <T>(String name) =>
-          Hive.openBox<T>(name, bytes: Uint8List(0)),
+      openBox: <T>(String name) => Hive.openBox<T>(name, bytes: Uint8List(0)),
     ).open();
     appState = AppState(
       templatesBox: boxes.templatesBox,
@@ -75,30 +74,34 @@ void main() {
     await Hive.close();
   });
 
-  testWidgets('creates a checkbox standard task with an optional time goal',
-      (tester) async {
-    await _openEditor(
-      tester,
-      appState,
-      StandardTask(name: '', stepType: 'single'),
-      isNew: true,
-    );
+  testWidgets(
+    'creates a checkbox standard task with an optional time goal',
+    (tester) async {
+      await _openEditor(
+        tester,
+        appState,
+        StandardTask(name: '', stepType: 'single'),
+        isNew: true,
+      );
 
-    await tester.enterText(find.byType(TextField).first, 'Чтение');
-    final targetField = find.byType(TextField).at(1);
-    await tester.ensureVisible(targetField);
-    await tester.enterText(targetField, '45');
-    await tester.tap(find.byIcon(Icons.check));
-    await _pumpRouteTransition(tester);
+      await tester.enterText(find.byType(TextField).first, 'Чтение');
+      final targetField = find.byType(TextField).at(1);
+      await tester.ensureVisible(targetField);
+      await tester.enterText(targetField, '45');
+      await tester.tap(find.byIcon(Icons.check));
+      await _pumpRouteTransition(tester);
 
-    expect(appState.standardTasks, hasLength(1));
-    expect(appState.standardTasks.single.name, 'Чтение');
-    expect(appState.standardTasks.single.stepType, 'single');
-    expect(appState.standardTasks.single.targetMinutes, 45);
-  }, timeout: const Timeout(Duration(seconds: 60)));
+      expect(appState.standardTasks, hasLength(1));
+      expect(appState.standardTasks.single.name, 'Чтение');
+      expect(appState.standardTasks.single.stepType, 'single');
+      expect(appState.standardTasks.single.targetMinutes, 45);
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 
-  testWidgets('item-card picker copies step progress and time goal',
-      (tester) async {
+  testWidgets('item-card picker copies step progress and time goal', (
+    tester,
+  ) async {
     appState.addStandardTask(
       StandardTask(
         name: 'Бег',
@@ -156,43 +159,45 @@ void main() {
     expect(createdNode!.trackingId, 'running-standard-task');
   });
 
-  testWidgets('editing legacy duration standard task keeps its time goal and tracking row',
-      (tester) async {
-    final task = StandardTask(
-      name: 'Чтение',
-      stepType: 'duration',
-      targetMinutes: 60,
-      trackingId: 'reading-tracking',
-    );
-    appState.addStandardTask(task);
-    appState.addTrackedActivity(
-      TrackedActivity(
-        id: 'reading-activity',
-        nodeId: 'reading-tracking',
+  testWidgets(
+    'editing legacy duration standard task keeps its time goal and tracking row',
+    (tester) async {
+      final task = StandardTask(
         name: 'Чтение',
-        colorValue: 0xFF2196F3,
         stepType: 'duration',
-      ),
-    );
+        targetMinutes: 60,
+        trackingId: 'reading-tracking',
+      );
+      appState.addStandardTask(task);
+      appState.addTrackedActivity(
+        TrackedActivity(
+          id: 'reading-activity',
+          trackingId: 'reading-tracking',
+          name: 'Чтение',
+          colorValue: 0xFF2196F3,
+          stepType: 'duration',
+        ),
+      );
 
-    expect(task.stepType, 'single');
-    await _openEditor(tester, appState, task, isNew: false);
-    await tester.enterText(find.byType(TextField).first, 'Чтение книг');
-    final targetField = find.byType(TextField).at(1);
-    await tester.ensureVisible(targetField);
-    await tester.enterText(targetField, '75');
-    await tester.tap(find.byIcon(Icons.check));
-    await _pumpRouteTransition(tester);
+      expect(task.stepType, 'single');
+      await _openEditor(tester, appState, task, isNew: false);
+      await tester.enterText(find.byType(TextField).first, 'Чтение книг');
+      final targetField = find.byType(TextField).at(1);
+      await tester.ensureVisible(targetField);
+      await tester.enterText(targetField, '75');
+      await tester.tap(find.byIcon(Icons.check));
+      await _pumpRouteTransition(tester);
 
-    final updatedTask = appState.standardTasks.single;
-    final tracked = appState.trackedActivities.single;
-    expect(updatedTask.name, 'Чтение книг');
-    expect(updatedTask.stepType, 'single');
-    expect(updatedTask.targetMinutes, 75);
-    expect(updatedTask.trackingId, 'reading-tracking');
-    expect(tracked.id, 'reading-activity');
-    expect(tracked.nodeId, 'reading-tracking');
-    expect(tracked.name, 'Чтение книг');
-    expect(tracked.stepType, 'single');
-  });
+      final updatedTask = appState.standardTasks.single;
+      final tracked = appState.trackedActivities.single;
+      expect(updatedTask.name, 'Чтение книг');
+      expect(updatedTask.stepType, 'single');
+      expect(updatedTask.targetMinutes, 75);
+      expect(updatedTask.trackingId, 'reading-tracking');
+      expect(tracked.id, 'reading-activity');
+      expect(tracked.trackingId, 'reading-tracking');
+      expect(tracked.name, 'Чтение книг');
+      expect(tracked.stepType, 'single');
+    },
+  );
 }

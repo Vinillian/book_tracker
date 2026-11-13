@@ -16,11 +16,11 @@ class TrackingIdIndex {
   }) {
     for (final activity in tracked) {
       final key = _normalize(activity.name);
-      if (key.isEmpty || activity.nodeId.isEmpty) continue;
+      if (key.isEmpty || activity.trackingId.isEmpty) continue;
       if (activity.isActive) {
-        _activeTracked.putIfAbsent(key, () => activity.nodeId);
+        _activeTracked.putIfAbsent(key, () => activity.trackingId);
       } else {
-        _inactiveTracked.putIfAbsent(key, () => activity.nodeId);
+        _inactiveTracked.putIfAbsent(key, () => activity.trackingId);
       }
     }
     _indexNodes(roots);

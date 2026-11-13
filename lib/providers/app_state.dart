@@ -67,9 +67,7 @@ class AppState extends ChangeNotifier {
     _nodeService.migratePlannedDates(); // #114
     _nodeService.migrateNestedBookCategories(); // #139
 
-    _historyBox.watch().listen(
-      (_) => _invalidateHeatmapIntensityCache(),
-    );
+    _historyBox.watch().listen((_) => _invalidateHeatmapIntensityCache());
     _trackedActivitiesBox.watch().listen(
       (_) => _invalidateHeatmapIntensityCache(),
     );
@@ -117,7 +115,8 @@ class AppState extends ChangeNotifier {
   void setThemeMode(String mode) {
     if (_themeMode == mode) return;
     _themeMode = mode;
-    final settings = _settingsBox.get('appSettings') ?? AppSettings(themeMode: mode);
+    final settings =
+        _settingsBox.get('appSettings') ?? AppSettings(themeMode: mode);
     settings.themeMode = mode;
     _settingsBox.put('appSettings', settings);
     notifyListeners();
@@ -142,7 +141,10 @@ class AppState extends ChangeNotifier {
   List<Node> get plans => _visible(_nodeService.plans);
   List<Node> get templates => _visible(_nodeService.templates);
 
-  void addNode(Node node) { _nodeService.add(node); notifyListeners(); }
+  void addNode(Node node) {
+    _nodeService.add(node);
+    notifyListeners();
+  }
 
   void updateNode(dynamic key, Node node) {
     _nodeService.update(key, node);
@@ -151,9 +153,8 @@ class AppState extends ChangeNotifier {
   }
 
   bool _hasDurationHistory(String trackingId) => _historyBox.values.any(
-        (entry) =>
-            entry.trackingId == trackingId && entry.stepType == 'duration',
-      );
+    (entry) => entry.trackingId == trackingId && entry.stepType == 'duration',
+  );
 
   /// The updated node may be a plan/book root. Sync the time-tracking heatmap
   /// flag recursively so edits to nested tasks also reach their tracked row.
@@ -161,9 +162,10 @@ class AppState extends ChangeNotifier {
     final hasDurationHistory = _hasDurationHistory(node.trackingId);
     for (final key in _trackedActivitiesBox.keys.toList()) {
       final activity = _trackedActivitiesBox.get(key);
-      if (activity == null || activity.nodeId != node.trackingId) continue;
+      if (activity == null || activity.trackingId != node.trackingId) continue;
 
-      final enabled = activity.timeTrackingEnabled ||
+      final enabled =
+          activity.timeTrackingEnabled ||
           node.isTimeTrackingEnabled ||
           hasDurationHistory;
       if (activity.timeTrackingEnabled == enabled) continue;
@@ -172,7 +174,7 @@ class AppState extends ChangeNotifier {
         key,
         TrackedActivity(
           id: activity.id,
-          nodeId: activity.nodeId,
+          trackingId: activity.trackingId,
           name: activity.name,
           colorValue: activity.colorValue,
           stepType: activity.stepType,
@@ -307,7 +309,9 @@ class AppState extends ChangeNotifier {
   Node? getNodeById(String id) => _nodeService.getById(id);
   dynamic getKeyForNode(Node node) => _nodeService.getKey(node);
 
-  Note? getNoteForDay(String linkedNodeId) => _noteService.getNoteForDay(linkedNodeId);
+  Note? getNoteForDay(String linkedNodeId) =>
+      _noteService.getNoteForDay(linkedNodeId);
+
   /// Silent on purpose (no notifyListeners): called from DayNoteCard.initState.
   Note getOrCreateNoteForDay(String linkedNodeId) =>
       _noteService.getOrCreateNoteForDay(linkedNodeId);
@@ -315,14 +319,17 @@ class AppState extends ChangeNotifier {
     _noteService.createNoteForDay(linkedNodeId);
     notifyListeners();
   }
+
   void saveNote(Note note) {
     _noteService.save(note);
     notifyListeners();
   }
+
   void deleteNote(String id) {
     _noteService.delete(id);
     notifyListeners();
   }
+
   List<Note> get inboxNotes => _noteService.inboxNotes;
 
   List<StandardTask> get standardTasks => _standardTasksBox.values.toList();
@@ -367,7 +374,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  List<TrackedActivity> get trackedActivities => _trackedActivitiesBox.values.toList();
+  List<TrackedActivity> get trackedActivities =>
+      _trackedActivitiesBox.values.toList();
 
   void addTrackedActivity(TrackedActivity activity) {
     _trackedActivitiesBox.put(activity.id, activity);

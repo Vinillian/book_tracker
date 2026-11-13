@@ -16,7 +16,7 @@ class HeatmapService {
     // Собираем trackingId активных отслеживаемых задач.
     final activeTrackingIds = _trackedBox.values
         .where((activity) => activity.isActive)
-        .map((activity) => activity.nodeId)
+        .map((activity) => activity.trackingId)
         .toSet();
 
     for (final entry in _historyBox.values) {
@@ -29,8 +29,10 @@ class HeatmapService {
         if (minutes <= 0) continue;
 
         // Сначала суммируем все сессии за день и trackingId.
-        final dayMinutes =
-            durationMinutesByDay.putIfAbsent(date, () => <String, int>{});
+        final dayMinutes = durationMinutesByDay.putIfAbsent(
+          date,
+          () => <String, int>{},
+        );
         dayMinutes[entry.trackingId] =
             (dayMinutes[entry.trackingId] ?? 0) + minutes;
         continue;
@@ -54,8 +56,7 @@ class HeatmapService {
         date,
         () => <String, double>{},
       );
-      dayData[entry.trackingId] =
-          (dayData[entry.trackingId] ?? 0.0) + delta;
+      dayData[entry.trackingId] = (dayData[entry.trackingId] ?? 0.0) + delta;
     }
 
     // Apply the net progress change for each task/day. Reversals offset
@@ -75,8 +76,10 @@ class HeatmapService {
 
     // 20 minutes = 1 point. Keep partial points instead of rounding.
     for (final dayEntry in durationMinutesByDay.entries) {
-      final dayData =
-          result.putIfAbsent(dayEntry.key, () => <String, double>{});
+      final dayData = result.putIfAbsent(
+        dayEntry.key,
+        () => <String, double>{},
+      );
       for (final activityEntry in dayEntry.value.entries) {
         final points = activityEntry.value / 20;
         dayData[activityEntry.key] =
@@ -89,9 +92,11 @@ class HeatmapService {
 
   static List<DateTime> getDateRange(DateTime start, DateTime end) {
     final List<DateTime> days = [];
-    for (var d = start;
-        d.isBefore(end) || d.isAtSameMomentAs(end);
-        d = d.add(const Duration(days: 1))) {
+    for (
+      var d = start;
+      d.isBefore(end) || d.isAtSameMomentAs(end);
+      d = d.add(const Duration(days: 1))
+    ) {
       days.add(DateTime(d.year, d.month, d.day));
     }
     return days;
