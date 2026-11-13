@@ -21,6 +21,7 @@ class AppState extends ChangeNotifier {
   late final NodeService _nodeService;
   late final NoteService _noteService;
   late final Box<HistoryEntry> _historyBox;
+  late final HistoryService _historyService;
   late final Box<StandardTask> _standardTasksBox;
   late final Box<TrackedActivity> _trackedActivitiesBox;
   late final Box<AppSettings> _settingsBox;
@@ -59,10 +60,10 @@ class AppState extends ChangeNotifier {
     _standardTasksBox = standardTasksBox;
     _trackedActivitiesBox = trackedActivitiesBox;
 
-    HistoryService.init(historyBox);
+    _historyService = HistoryService(historyBox);
 
     _noteService = NoteService(notesBox);
-    _nodeService = NodeService(templatesBox, _noteService);
+    _nodeService = NodeService(templatesBox, _noteService, _historyService);
     _nodeService.migratePlannedDates(); // #114
     _nodeService.migrateNestedBookCategories(); // #139
 
@@ -125,6 +126,7 @@ class AppState extends ChangeNotifier {
   Box<Node> get templatesBox => _nodeService.box;
   Box<Note> get notesBox => _noteService.box;
   Box<HistoryEntry> get historyBox => _historyBox;
+  HistoryService get historyService => _historyService;
   Box<StandardTask> get standardTasksBox => _standardTasksBox;
   Box<TrackedActivity> get trackedActivitiesBox => _trackedActivitiesBox;
 
