@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
-import '../services/history_service.dart';
 import 'components/app_drawer_menu.dart';
 import 'components/app_menu_button.dart';
 import 'work_schedule_screen.dart';
@@ -51,7 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (confirm != true || !mounted) return;
 
-    await HistoryService.deleteHistoryForDate(selectedDate);
+    await appState.historyService.deleteHistoryForDate(selectedDate);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('История за $label удалена')),
@@ -82,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (confirm != true || !mounted) return;
 
-    await HistoryService.clear();
+    await appState.historyService.clear();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Вся история удалена')),
