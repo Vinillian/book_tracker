@@ -416,7 +416,7 @@ void main() {
       await Hive.close();
       history = await Hive.openBox<HistoryEntry>('history');
       tracked = await Hive.openBox<TrackedActivity>('tracked');
-      historyService.init(history);
+      historyService = HistoryService(history);
       expect(history.values.single.minutes, 45);
       expect(history.values.single.startedAt,
           DateTime(2026, 10, 25).subtract(const Duration(minutes: 45)));
@@ -582,7 +582,7 @@ void main() {
         Hive.registerAdapter(HistoryEntryAdapter());
       }
       history = await Hive.openBox<HistoryEntry>('history');
-      historyService.init(history);
+      historyService = HistoryService(history);
     });
 
     tearDown(() async {
