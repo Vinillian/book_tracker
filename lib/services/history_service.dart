@@ -3,16 +3,11 @@ import '../models/history_entry.dart';
 import '../models/node.dart';
 
 class HistoryService {
-  static Box<HistoryEntry>? _customBox;
+  final Box<HistoryEntry> _box;
 
-  static void init(Box<HistoryEntry> box) {
-    _customBox = box;
-  }
+  HistoryService(this._box);
 
-  static Box<HistoryEntry> get _box =>
-      _customBox ?? Hive.box<HistoryEntry>('history');
-
-  static void deleteEntriesForNode(String bookId) {
+  void deleteEntriesForNode(String bookId) {
     final keysToDelete = <dynamic>[];
     for (var key in _box.keys) {
       final entry = _box.get(key);
@@ -27,7 +22,7 @@ class HistoryService {
 
   /// Removes the History entries of tasks that were deleted from a tree
   /// (#84). Returns how many entries were removed.
-  static int deleteEntriesForTasks(Set<String> nodeIds) {
+  int deleteEntriesForTasks(Set<String> nodeIds) {
     if (nodeIds.isEmpty) return 0;
     final keysToDelete = <dynamic>[];
     for (var key in _box.keys) {
@@ -42,7 +37,7 @@ class HistoryService {
     return keysToDelete.length;
   }
 
-  static Future<void> deleteHistoryForDate(DateTime date) async {
+  Future<void> deleteHistoryForDate(DateTime date) async {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
     final keysToDelete = <dynamic>[];
@@ -60,7 +55,7 @@ class HistoryService {
   }
 
   /// Appends a checkbox transition. False transitions are retained as history too.
-  static void recordUniqueToggle({
+  void recordUniqueToggle({
     required String bookId,
     required Node node,
     required bool newValue,
@@ -79,7 +74,7 @@ class HistoryService {
   }
 
   /// Appends one step-progress transition instead of replacing earlier events.
-  static void recordUniqueProgress({
+  void recordUniqueProgress({
     required String bookId,
     required Node node,
     required int newSteps,
@@ -102,7 +97,7 @@ class HistoryService {
   /// [recordUniqueProgress] it never replaces earlier entries of the same
   /// node: several logs per day (and per node) are the point. Returns the
   /// new entry's id, or null when [minutes] is not positive.
-  static String? recordDurationLog({
+  String? recordDurationLog({
     required String bookId,
     required Node node,
     required int minutes,
@@ -134,7 +129,7 @@ class HistoryService {
   }
 
   /// Latest duration session for this node on the selected calendar day.
-  static HistoryEntry? getLatestDurationEntryForNodeOnDay(
+  HistoryEntry? getLatestDurationEntryForNodeOnDay(
     String nodeId,
     DateTime day,
   ) {
@@ -152,7 +147,7 @@ class HistoryService {
   }
 
   /// Suggests a start for quick-add without carrying sessions across days.
-  static DateTime suggestDurationStart({
+  DateTime suggestDurationStart({
     required String nodeId,
     required DateTime day,
     int? plannedStartMinutes,
@@ -177,7 +172,7 @@ class HistoryService {
   }
 
   /// All 'duration' logs of one node, newest first.
-  static List<HistoryEntry> getDurationEntriesForNode(String nodeId) {
+  List<HistoryEntry> getDurationEntriesForNode(String nodeId) {
     final list = _box.values
         .where((e) => e.nodeId == nodeId && e.stepType == 'duration')
         .toList();
@@ -187,7 +182,7 @@ class HistoryService {
 
   /// Corrects the resulting progress value of one historical progress event.
   /// Its event date and previous value stay unchanged; [recordedAt] tracks the correction.
-  static bool updateProgressEntry({
+  bool updateProgressEntry({
     required String id,
     required int newProgress,
   }) {
@@ -216,7 +211,7 @@ class HistoryService {
 
   /// Removes a single History entry by its [HistoryEntry.id]. Returns true
   /// if something was removed.
-  static bool deleteEntryById(String id) {
+  bool deleteEntryById(String id) {
     for (var key in _box.keys) {
       final entry = _box.get(key);
       if (entry != null && entry.id == id) {
@@ -228,7 +223,7 @@ class HistoryService {
   }
 
   /// Updates one duration session without changing any other session or progress.
-  static bool updateDurationLog({
+  bool updateDurationLog({
     required String id,
     required int minutes,
     DateTime? startedAt,
@@ -260,7 +255,7 @@ class HistoryService {
   /// Most frequent date (without time) among the entries recorded for
   /// [bookId], or null if there are none. Used to recover the date of a day
   /// plan that was renamed before plannedDate existed (#114).
-  static DateTime? dominantDateForBook(String bookId) {
+  DateTime? dominantDateForBook(String bookId) {
     final counts = <DateTime, int>{};
     for (final e in _box.values) {
       if (e.bookId != bookId) continue;
@@ -271,7 +266,7 @@ class HistoryService {
     return counts.entries.reduce((a, b) => b.value > a.value ? b : a).key;
   }
 
-  static List<HistoryEntry> getEntriesForDay(DateTime day) {
+  List<HistoryEntry> getEntriesForDay(DateTime day) {
     final start = DateTime(day.year, day.month, day.day);
     final end = start.add(const Duration(days: 1));
     return _box.values
@@ -279,7 +274,7 @@ class HistoryService {
         .toList();
   }
 
-  static Map<DateTime, List<HistoryEntry>> getAllEntriesGroupedByDate() {
+  Map<DateTime, List<HistoryEntry>> getAllEntriesGroupedByDate() {
     final Map<DateTime, List<HistoryEntry>> grouped = {};
     for (var entry in _box.values) {
       final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
@@ -288,7 +283,7 @@ class HistoryService {
     return grouped;
   }
 
-  static Future<void> clear() async {
+  Future<void> clear() async {
     await _box.clear();
   }
 }
