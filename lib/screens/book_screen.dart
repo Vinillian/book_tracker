@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../models/node.dart';
 import '../providers/app_state.dart';
 import 'components/day_type_chip.dart';
-import '../services/history_service.dart';
 import '../utils/day_dialogs.dart';
 import '../utils/plan_date.dart';
 import '../utils/tracking_id.dart';
